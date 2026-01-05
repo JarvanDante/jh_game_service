@@ -9,6 +9,7 @@ type (
 	IGame interface {
 		GetGames(ctx context.Context, req *v1.GetGamesReq) (*v1.GetGamesRes, error)
 		UpdateGames(ctx context.Context, req *v1.UpdateGamesReq) (*v1.UpdateGamesRes, error)
+		GetGameRecords(ctx context.Context, req *v1.GetGameRecordsReq) (*v1.GetGameRecordsRes, error)
 	}
 )
 

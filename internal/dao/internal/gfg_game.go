@@ -41,6 +41,7 @@ type GfgGameColumns struct {
 	BetAmount             string //
 	WinAmount             string // 赢取的金额
 	ValidAmount           string //
+	JackpotAmount         string // 奖池金额
 	BetStatus             string // 投注状态
 	VendorSettleTime      string // 供应商结算时间
 	IsFreeSpin            string // 是否免费旋转
@@ -53,7 +54,6 @@ type GfgGameColumns struct {
 	RoundBeginTime        string // 局开始时间
 	BetTime               string //
 	RoundEndTime          string // 局结束时间
-	JackpotAmount         string // 奖池金额
 	Ip                    string // IP地址
 	Currency              string // 币种
 	CreatedAt             string // 创建时间
@@ -85,6 +85,7 @@ var gfgGameColumns = GfgGameColumns{
 	BetAmount:             "bet_amount",
 	WinAmount:             "winAmount",
 	ValidAmount:           "valid_amount",
+	JackpotAmount:         "jackpotAmount",
 	BetStatus:             "bet_status",
 	VendorSettleTime:      "vendorSettleTime",
 	IsFreeSpin:            "isFreeSpin",
@@ -97,7 +98,6 @@ var gfgGameColumns = GfgGameColumns{
 	RoundBeginTime:        "round_begin_time",
 	BetTime:               "bet_time",
 	RoundEndTime:          "round_end_time",
-	JackpotAmount:         "jackpot_amount",
 	Ip:                    "ip",
 	Currency:              "currency",
 	CreatedAt:             "created_at",

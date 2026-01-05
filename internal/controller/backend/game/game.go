@@ -26,3 +26,8 @@ func (*Controller) GetGames(ctx context.Context, req *v1.GetGamesReq) (res *v1.G
 func (*Controller) UpdateGames(ctx context.Context, req *v1.UpdateGamesReq) (res *v1.UpdateGamesRes, err error) {
 	return backend.Game().UpdateGames(ctx, req)
 }
+
+// GetGameRecords 获取游戏记录
+func (*Controller) GetGameRecords(ctx context.Context, req *v1.GetGameRecordsReq) (res *v1.GetGameRecordsRes, err error) {
+	return backend.Game().GetGameRecords(ctx, req)
+}
