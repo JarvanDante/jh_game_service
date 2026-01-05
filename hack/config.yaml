@@ -1,0 +1,24 @@
+# GoFrame CLI tool configuration.
+gfcli:
+  gen:
+    dao:
+      - link: "mysql:root:654321@tcp(127.0.0.1:3306)/jh_game"
+        #        tables: "user"
+        removePrefix: "gf_"
+        descriptionTag: true
+        noModelComment: true
+
+    pbentity:
+      - link: "mysql:root:654321@tcp(127.0.0.1:3306)/jh_game"
+    #        tables: "user"
+
+    # protobuf 生成配置
+    pb:
+      # protobuf 生成配置
+      option: "json_names_for_fields=false"
+      # 禁用自动生成控制器
+      controller: false
+      # 或者指定生成路径
+      # controllerPath: "internal/controller/generated"
+      # 只生成 pb 文件，不生成控制器
+      onlyPb: true

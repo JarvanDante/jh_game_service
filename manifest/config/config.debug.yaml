@@ -1,0 +1,81 @@
+# GRPC Server.
+grpc:
+  address: ":8006"
+  name: "jh_game_service_debug"
+  logPath: ""
+  logStdout: true
+  errorStack: true
+  errorLogEnabled: true
+  errorLogPattern: "error-{Ymd}.log"
+  accessLogEnabled: true
+  accessLogPattern: "access-{Ymd}.log"
+
+# Consul 配置
+consul:
+  addr: "172.19.0.29:8500" # 容器内直接访问Consul
+  serviceName: "jh_game_service_debug"
+  servicePort: 8006
+  serviceAddr: "" # 留空，让程序自动获取容器IP
+
+# Jaeger 配置
+jaeger:
+  endpoint: "jaeger:4317" # Jaeger OTLP gRPC 端点
+  serviceName: "jh_game_service" # 服务名称
+  serviceVersion: "1.0.0" # 服务版本
+  environment: "development" # 环境
+  enabled: true # 是否启用追踪
+
+# JWT 配置
+jwt:
+  secret: "be0axSSXmguDZ2Q0EIPgRwq9e5G9nRH3zq3iEw6nllU="
+
+# MinIO 配置
+minio:
+  endpoint: "172.19.0.23:9000" # MinIO 服务地址
+  accessKey: "minioadmin" # 访问密钥
+  secretKey: "minioadmin123" # 秘密密钥
+  bucket: "uploads" # 存储桶名称
+  useSSL: false # 是否使用SSL
+  publicURL: "http://localhost:19000" # 公网访问地址
+
+# 站点配置
+site:
+  code: "site_1" # 站点代码
+
+# 上传配置
+upload:
+  default:
+    imgType:
+      - "image/jpg"
+      - "image/jpeg"
+      - "image/gif"
+      - "image/png"
+    maxSize: 500 # KB
+  mobile_logo:
+    imgType:
+      - "image/svg+xml"
+    maxSize: 100 # KB
+
+# Workerman 配置 (用于Socket地址)
+workerman:
+  host: "localhost"
+  port: "2346"
+
+# Global logging - JSON格式
+logger:
+  level: "all"
+  stdout: true
+  # 使用JSON格式输出
+  format: "json"
+  # 时间格式
+  timeFormat: "2006-01-02T15:04:05.000Z07:00"
+
+# Database.
+database:
+  logger:
+    level: "all"
+    stdout: true
+
+  default:
+    link: "mysql:root:654321@tcp(172.19.0.4:3306)/jh_game" # 容器内直接访问MySQL
+    debug: true
