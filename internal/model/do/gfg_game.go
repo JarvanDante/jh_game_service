@@ -32,7 +32,6 @@ type GfgGame struct {
 	BetAmount             any         //
 	WinAmount             any         // 赢取的金额
 	ValidAmount           any         //
-	JackpotAmount         any         // 奖池金额
 	BetStatus             any         // 投注状态
 	VendorSettleTime      any         // 供应商结算时间
 	IsFreeSpin            any         // 是否免费旋转

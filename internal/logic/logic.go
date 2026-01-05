@@ -5,5 +5,5 @@
 package logic
 
 import (
-//_ "github.com/gogf/gf-demo-grpc/internal/logic/user"
+	_ "jh_game_service/internal/logic/backend/game"
 )

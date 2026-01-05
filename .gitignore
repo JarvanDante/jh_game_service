@@ -1,0 +1,28 @@
+.DS_Store
+.buildpath
+.hgignore.swp
+.project
+.orig
+.swp
+.idea/
+.settings/
+.vscode/
+vender/
+log/
+composer.lock
+gitpush.sh
+pkg/
+bin/
+cbuild
+*/.DS_Store
+main
+.vscode
+temp/
+
+# 忽略 gf gen pb 自动生成的控制器文件
+# 忽略 controller 下所有内容
+internal/controller/*
+
+# 但保留 backend 目录
+!internal/controller/backend/
+!internal/controller/backend/**

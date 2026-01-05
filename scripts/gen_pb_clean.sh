@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# jh_app_service 项目专用脚本
+# jh_game_service 项目专用脚本
 # 生成 protobuf 文件并移除 omitempty 标签
 
 set -e  # 遇到错误立即退出
@@ -29,7 +29,7 @@ print_error() {
     echo -e "${RED}[ERROR]${NC} $1"
 }
 
-print_info "=== jh_app_service - 生成并清理 protobuf 文件 ==="
+print_info "=== jh_game_service - 生成并清理 protobuf 文件 ==="
 
 # 获取脚本所在目录的父目录（项目根目录）
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -47,8 +47,8 @@ if [ ! -f "go.mod" ]; then
 fi
 
 # 检查项目名称
-if ! grep -q "jh_app_service" go.mod; then
-    print_warning "当前项目可能不是 jh_app_service"
+if ! grep -q "jh_game_service" go.mod; then
+    print_warning "当前项目可能不是 jh_game_service"
 fi
 
 # 检查是否安装了 gf 命令
@@ -60,11 +60,23 @@ fi
 
 print_info "=== 第一步: 生成 protobuf 文件 ==="
 
-# 运行 gf gen pb
-if gf gen pb; then
+# 创建临时目录用于controller生成
+TEMP_CTRL_DIR=$(mktemp -d)
+print_info "使用临时controller目录: $TEMP_CTRL_DIR"
+
+# 运行 gf gen pb，将controller生成到临时目录
+if gf gen pb -c "$TEMP_CTRL_DIR"; then
     print_success "protobuf 文件生成完成"
+    
+    # 删除临时生成的controller文件
+    if [ -d "$TEMP_CTRL_DIR" ]; then
+        rm -rf "$TEMP_CTRL_DIR"
+        print_info "已清理临时controller文件"
+    fi
 else
     print_error "protobuf 文件生成失败"
+    # 清理临时目录
+    [ -d "$TEMP_CTRL_DIR" ] && rm -rf "$TEMP_CTRL_DIR"
     exit 1
 fi
 
@@ -135,7 +147,7 @@ if [ $failed -gt 0 ]; then
     print_error "失败: $failed"
     exit 1
 else
-    print_success "jh_app_service protobuf 文件生成和清理完成！"
+    print_success "jh_game_service protobuf 文件生成和清理完成！"
 fi
 
 # 显示使用建议

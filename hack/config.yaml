@@ -18,7 +18,5 @@ gfcli:
       option: "json_names_for_fields=false"
       # 禁用自动生成控制器
       controller: false
-      # 或者指定生成路径
-      # controllerPath: "internal/controller/generated"
       # 只生成 pb 文件，不生成控制器
       onlyPb: true

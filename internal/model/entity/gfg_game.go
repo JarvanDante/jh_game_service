@@ -30,7 +30,6 @@ type GfgGame struct {
 	BetAmount             float64     `json:"betAmount"             orm:"bet_amount"            description:""`
 	WinAmount             float64     `json:"winAmount"             orm:"winAmount"             description:"赢取的金额"`
 	ValidAmount           float64     `json:"validAmount"           orm:"valid_amount"          description:""`
-	JackpotAmount         int         `json:"jackpotAmount"         orm:"jackpotAmount"         description:"奖池金额"`
 	BetStatus             int         `json:"betStatus"             orm:"bet_status"            description:"投注状态"`
 	VendorSettleTime      int64       `json:"vendorSettleTime"      orm:"vendorSettleTime"      description:"供应商结算时间"`
 	IsFreeSpin            int         `json:"isFreeSpin"            orm:"isFreeSpin"            description:"是否免费旋转"`

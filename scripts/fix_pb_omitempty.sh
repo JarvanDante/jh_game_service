@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# jh_app_service 项目专用脚本
+# jh_game_service 项目专用脚本
 # 移除当前项目中所有 .pb.go 文件的 omitempty 标签
 
 set -e  # 遇到错误立即退出
@@ -29,7 +29,7 @@ print_error() {
     echo -e "${RED}[ERROR]${NC} $1"
 }
 
-print_info "=== jh_app_service - 移除 protobuf 文件中的 omitempty 标签 ==="
+print_info "=== jh_game_service - 移除 protobuf 文件中的 omitempty 标签 ==="
 
 # 获取脚本所在目录的父目录（项目根目录）
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -47,8 +47,8 @@ if [ ! -f "go.mod" ]; then
 fi
 
 # 检查项目名称
-if ! grep -q "jh_app_service" go.mod; then
-    print_warning "当前项目可能不是 jh_app_service"
+if ! grep -q "jh_game_service" go.mod; then
+    print_warning "当前项目可能不是 jh_game_service"
 fi
 
 # 查找所有 .pb.go 文件
