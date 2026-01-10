@@ -3,7 +3,7 @@ grpc:
   address: ":8005"
   name: "jh_game_service"
   logPath: ""
-  logStdout: true
+  logStdout: false
   errorStack: true
   errorLogEnabled: true
   errorLogPattern: "error-{Ymd}.log"
@@ -70,6 +70,9 @@ logger:
   # 时间格式
   timeFormat: "2006-01-02T15:04:05.000Z07:00"
 
+# 时区配置
+timezone: "Asia/Shanghai" # 北京时间
+
 # Database.
 database:
   logger:
@@ -77,5 +80,5 @@ database:
     stdout: true
 
   default:
-    link: "mysql:root:654321@tcp(172.19.0.4:3306)/jh_game" # 容器内直接访问MySQL
+    link: "mysql:root:654321@tcp(172.19.0.4:3306)/jh_game?parseTime=true&loc=Local" # 容器内直接访问MySQL
     debug: true
