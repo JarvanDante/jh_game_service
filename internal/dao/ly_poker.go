@@ -5,7 +5,10 @@
 package dao
 
 import (
+	"context"
 	"jh_game_service/internal/dao/internal"
+
+	"github.com/gogf/gf/v2/database/gdb"
 )
 
 // lyPokerDao is the data access object for the table ly_poker.
@@ -18,5 +21,12 @@ var (
 	// LyPoker is a globally accessible object for table ly_poker operations.
 	LyPoker = lyPokerDao{internal.NewLyPokerDao()}
 )
+
+// Ctx 重写Ctx方法，使用动态数据库连接
+func (d lyPokerDao) Ctx(ctx context.Context) *gdb.Model {
+	// 使用辅助函数获取动态Model
+	originalModel := d.LyPokerDao.Ctx(ctx)
+	return GetDynamicModel(ctx, d.Table(), originalModel)
+}
 
 // Add your custom methods and functionality below.

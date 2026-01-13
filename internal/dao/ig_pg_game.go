@@ -5,7 +5,10 @@
 package dao
 
 import (
+	"context"
 	"jh_game_service/internal/dao/internal"
+
+	"github.com/gogf/gf/v2/database/gdb"
 )
 
 // igPgGameDao is the data access object for the table ig_pg_game.
@@ -18,5 +21,12 @@ var (
 	// IgPgGame is a globally accessible object for table ig_pg_game operations.
 	IgPgGame = igPgGameDao{internal.NewIgPgGameDao()}
 )
+
+// Ctx 重写Ctx方法，使用动态数据库连接
+func (d igPgGameDao) Ctx(ctx context.Context) *gdb.Model {
+	// 使用辅助函数获取动态Model
+	originalModel := d.IgPgGameDao.Ctx(ctx)
+	return GetDynamicModel(ctx, d.Table(), originalModel)
+}
 
 // Add your custom methods and functionality below.

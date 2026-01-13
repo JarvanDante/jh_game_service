@@ -43,7 +43,7 @@ var (
 
 			// 初始化 Consul 客户端
 			fmt.Println("初始化Consul客户端...")
-			registry.InitConsul()
+			consulClient := registry.InitConsul()
 
 			// 注册服务到 Consul
 			fmt.Println("注册服务到Consul...")
@@ -54,13 +54,32 @@ var (
 
 			fmt.Println("Consul服务注册成功")
 
+			// 初始化数据库配置管理器
+			fmt.Println("初始化Game服务数据库配置管理器...")
+			dbManager := registry.GetDBConfigManager()
+			if err := dbManager.Init(consulClient); err != nil {
+				fmt.Printf("Game服务数据库配置管理器初始化失败: %v\n", err)
+				g.Log().Fatalf(ctx, "init game db config manager failed: %v", err)
+			}
+			fmt.Println("Game服务数据库配置管理器初始化成功")
+
+			// 确保在退出时停止数据库配置管理器
+			defer dbManager.Stop()
+
+			// 创建数据库拦截器
+			dbInterceptor := middleware.NewDBInterceptor()
+
 			c := grpcx.Server.NewConfig()
 			c.Options = append(c.Options, []grpc.ServerOption{
 				// 使用 StatsHandler 替代 Interceptor 进行追踪和统计
 				grpc.StatsHandler(middleware.NewTraceStatsHandler()),
-				// 保留验证拦截器
+				// 添加数据库拦截器和验证拦截器
 				grpcx.Server.ChainUnary(
+					dbInterceptor.UnaryServerInterceptor(),
 					grpcx.Server.UnaryValidate,
+				),
+				grpcx.Server.ChainStream(
+					dbInterceptor.StreamServerInterceptor(),
 				),
 			}...)
 			s := grpcx.Server.New(c)

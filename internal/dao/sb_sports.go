@@ -5,7 +5,10 @@
 package dao
 
 import (
+	"context"
 	"jh_game_service/internal/dao/internal"
+
+	"github.com/gogf/gf/v2/database/gdb"
 )
 
 // sbSportsDao is the data access object for the table sb_sports.
@@ -18,5 +21,12 @@ var (
 	// SbSports is a globally accessible object for table sb_sports operations.
 	SbSports = sbSportsDao{internal.NewSbSportsDao()}
 )
+
+// Ctx 重写Ctx方法，使用动态数据库连接
+func (d sbSportsDao) Ctx(ctx context.Context) *gdb.Model {
+	// 使用辅助函数获取动态Model
+	originalModel := d.SbSportsDao.Ctx(ctx)
+	return GetDynamicModel(ctx, d.Table(), originalModel)
+}
 
 // Add your custom methods and functionality below.

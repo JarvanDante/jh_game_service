@@ -5,7 +5,10 @@
 package dao
 
 import (
+	"context"
 	"jh_game_service/internal/dao/internal"
+
+	"github.com/gogf/gf/v2/database/gdb"
 )
 
 // ogLiveDao is the data access object for the table og_live.
@@ -18,5 +21,12 @@ var (
 	// OgLive is a globally accessible object for table og_live operations.
 	OgLive = ogLiveDao{internal.NewOgLiveDao()}
 )
+
+// Ctx 重写Ctx方法，使用动态数据库连接
+func (d ogLiveDao) Ctx(ctx context.Context) *gdb.Model {
+	// 使用辅助函数获取动态Model
+	originalModel := d.OgLiveDao.Ctx(ctx)
+	return GetDynamicModel(ctx, d.Table(), originalModel)
+}
 
 // Add your custom methods and functionality below.

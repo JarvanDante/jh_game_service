@@ -5,7 +5,10 @@
 package dao
 
 import (
+	"context"
 	"jh_game_service/internal/dao/internal"
+
+	"github.com/gogf/gf/v2/database/gdb"
 )
 
 // oneApiGameDao is the data access object for the table one_api_game.
@@ -18,5 +21,12 @@ var (
 	// OneApiGame is a globally accessible object for table one_api_game operations.
 	OneApiGame = oneApiGameDao{internal.NewOneApiGameDao()}
 )
+
+// Ctx 重写Ctx方法，使用动态数据库连接
+func (d oneApiGameDao) Ctx(ctx context.Context) *gdb.Model {
+	// 使用辅助函数获取动态Model
+	originalModel := d.OneApiGameDao.Ctx(ctx)
+	return GetDynamicModel(ctx, d.Table(), originalModel)
+}
 
 // Add your custom methods and functionality below.
