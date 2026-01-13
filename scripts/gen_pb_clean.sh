@@ -7,6 +7,16 @@ echo "=== 开始生成protobuf文件 ==="
 # 生成protobuf文件
 gf gen pb
 
+echo "=== 开始清理omitempty标签 ==="
+
+# 查找并清理所有生成的protobuf Go文件中的omitempty标签
+find api -name "*.pb.go" | while read file; do
+    if grep -q "omitempty" "$file"; then
+        echo "清理文件: $file"
+        sed -i '' 's/,omitempty//g' "$file"
+    fi
+done
+
 echo "=== protobuf文件生成完成 ==="
 echo
 
@@ -96,9 +106,6 @@ find internal/dao -name "*.go" -not -path "*/internal/*" -not -name "dynamic_db_
     
     # 检查需要的额外imports
     extra_imports=$(check_imports "$custom_methods")
-    
-    # 备份原文件
-    cp "$file" "$file.bak"
     
     # 根据是否支持 handlers 生成不同的初始化代码
     if [ "$supports_handlers" = "true" ]; then
