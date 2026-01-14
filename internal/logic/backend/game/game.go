@@ -130,8 +130,8 @@ func (s *sGame) UpdateGames(ctx context.Context, req *v1.UpdateGamesReq) (*v1.Up
 		siteId = 1 // 默认站点ID
 	}
 
-	// 使用事务处理
-	err := dao.SiteGame.DB().Transaction(ctx, func(ctx context.Context, tx gdb.TX) error {
+	// 使用事务处理 - 使用 Ctx(ctx) 保持动态数据库路由
+	err := dao.SiteGame.Ctx(ctx).Transaction(ctx, func(ctx context.Context, tx gdb.TX) error {
 		for _, gameUpdate := range req.Data {
 			if gameUpdate == nil {
 				continue
