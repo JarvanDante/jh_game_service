@@ -41,19 +41,11 @@ func (s *sGame) GetGames(ctx context.Context, req *v1.GetGamesReq) (*v1.GetGames
 		siteId = 1 // 默认站点ID
 	}
 
-	// 获取所有启用的游戏
-	var games []entity.Game
-	err := dao.Game.Ctx(ctx).Where(do.Game{Status: 1}).Scan(&games)
-	if err != nil {
-		return nil, fmt.Errorf("获取游戏列表失败: %v", err)
-	}
-
-	// 获取站点游戏配置
+	// 直接从site_game表获取站点游戏配置
 	var siteGames []entity.SiteGame
-	err = dao.SiteGame.Ctx(ctx).
+	err := dao.SiteGame.Ctx(ctx).
 		Where(do.SiteGame{
-			SiteId:      int(siteId),
-			IsAvailable: 1,
+			SiteId: int(siteId),
 		}).
 		Order("type ASC, sort ASC").
 		Scan(&siteGames)
@@ -61,35 +53,24 @@ func (s *sGame) GetGames(ctx context.Context, req *v1.GetGamesReq) (*v1.GetGames
 		return nil, fmt.Errorf("获取站点游戏配置失败: %v", err)
 	}
 
-	// 构建游戏ID到游戏信息的映射
-	gameMap := make(map[int]*entity.Game)
-	for i := range games {
-		gameMap[int(games[i].Id)] = &games[i]
-	}
-
 	// 按类型分组
 	gamesByType := make(map[int32]*v1.GameTypeList)
 	totalCount := int32(0)
 
 	for _, siteGame := range siteGames {
-		game, exists := gameMap[siteGame.GameId]
-		if !exists {
-			continue
-		}
-
 		gameInfo := &v1.GameInfo{
-			Id:        int32(game.Id),
-			Name:      game.Name,
+			Id:        int32(siteGame.GameId),
+			Name:      siteGame.Name,
 			Status:    int32(siteGame.Status),
 			Sort:      int32(siteGame.Sort),
-			Type:      int32(game.Type),
-			Platform:  game.Platform,
-			Code:      game.Code,
-			ImageCode: game.ImageCode,
-			DbName:    game.DbName,
+			Type:      int32(siteGame.Type),
+			Platform:  siteGame.Platform,
+			Code:      "",
+			ImageCode: siteGame.ImageCode,
+			DbName:    siteGame.DbName,
 		}
 
-		gameType := int32(game.Type)
+		gameType := int32(siteGame.Type)
 		if gamesByType[gameType] == nil {
 			gamesByType[gameType] = &v1.GameTypeList{
 				Games: make([]*v1.GameInfo, 0),
@@ -140,9 +121,8 @@ func (s *sGame) UpdateGames(ctx context.Context, req *v1.UpdateGamesReq) (*v1.Up
 			// 更新站点游戏配置
 			_, err := dao.SiteGame.Ctx(ctx).TX(tx).
 				Where(do.SiteGame{
-					SiteId:      int(siteId),
-					GameId:      int(gameUpdate.Id),
-					IsAvailable: 1,
+					SiteId: int(siteId),
+					GameId: int(gameUpdate.Id),
 				}).
 				Data(do.SiteGame{
 					Status: int(gameUpdate.Status),
