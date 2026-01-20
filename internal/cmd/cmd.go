@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"jh_game_service/internal/controller/backend/game"
+	frontendGame "jh_game_service/internal/controller/frontend/game"
 	"os"
 	"time"
 
@@ -84,6 +85,7 @@ var (
 			}...)
 			s := grpcx.Server.New(c)
 			game.Register(s)
+			frontendGame.Register(s)
 
 			fmt.Println("gRPC服务器启动中...")
 

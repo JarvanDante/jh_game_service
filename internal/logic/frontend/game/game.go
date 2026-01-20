@@ -1,0 +1,199 @@
+package game
+
+import (
+	"context"
+	"fmt"
+	"github.com/gogf/gf/v2/frame/g"
+	"google.golang.org/grpc/metadata"
+	v1 "jh_game_service/api/frontend/game/v1"
+	"jh_game_service/internal/dao"
+	"jh_game_service/internal/logic/frontend/game/one"
+	"jh_game_service/internal/middleware"
+	"jh_game_service/internal/model/do"
+	"jh_game_service/internal/model/entity"
+	"jh_game_service/internal/service/frontend"
+	"strings"
+)
+
+type (
+	sGame struct{}
+)
+
+func init() {
+	frontend.RegisterGame(&sGame{})
+}
+
+// RedirectToGame 进入游戏
+func (s *sGame) RedirectToGame(ctx context.Context, req *v1.RedirectToGameReq) (*v1.RedirectToGameRes, error) {
+	if req == nil {
+		return nil, fmt.Errorf("请求参数不能为空")
+	}
+
+	// 1. 获取站点和用户信息
+	siteCode, ok := middleware.GetSiteCodeFromContext(ctx)
+	if !ok {
+		return nil, fmt.Errorf("获取站点信息失败")
+	}
+
+	_, siteId, err := middleware.GetUserInfoFromContext(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("获取用户信息失败")
+	}
+
+	username := middleware.GetUsernameFromContext(ctx)
+	if username == "" {
+		return nil, fmt.Errorf("用户名不能为空")
+	}
+
+	currency := middleware.GetCurrencyFromContext(ctx)
+	if currency == "" {
+		currency = "MMK(K)"
+	}
+
+	domain := middleware.GetDomainFromContext(ctx)
+	if domain == "" {
+		domain = "https://example.com"
+	}
+	if !strings.HasPrefix(domain, "http://") && !strings.HasPrefix(domain, "https://") {
+		domain = "https://" + domain
+	}
+
+	clientIp := middleware.GetClientIPFromContext(ctx)
+
+	// 2. 查询游戏信息
+	var siteGame entity.SiteGame
+	err = dao.SiteGame.Ctx(ctx).
+		Where(do.SiteGame{
+			SiteId: int(siteId),
+			GameId: int(req.GameId),
+		}).
+		Scan(&siteGame)
+	if err != nil {
+		return nil, fmt.Errorf("查询游戏信息失败: %v", err)
+	}
+	if siteGame.Id == 0 {
+		return nil, fmt.Errorf("游戏不存在")
+	}
+
+	// 3. 检查游戏状态
+	if siteGame.Status != 1 {
+		return nil, fmt.Errorf("%s游戏关闭维护", siteGame.Name)
+	}
+
+	// 4. 根据游戏平台获取游戏链接
+	var result map[string]interface{}
+	switch siteGame.Platform {
+	case "ONE":
+		result, err = s.getOneGameUrl(ctx, username, siteCode, req, &siteGame, currency, domain, clientIp)
+	// TODO: 添加其他游戏平台的实现
+	default:
+		return nil, fmt.Errorf("不支持的游戏平台: %s", siteGame.Platform)
+	}
+
+	if err != nil {
+		return nil, fmt.Errorf("获取游戏链接失败: %v", err)
+	}
+
+	// 5. 返回结果
+	gameType, _ := result["type"].(string)
+	gameUrl, _ := result["url"].(string)
+
+	return &v1.RedirectToGameRes{
+		Type: gameType,
+		Url:  gameUrl,
+	}, nil
+}
+
+// getOneGameUrl 获取ONE游戏链接
+func (s *sGame) getOneGameUrl(ctx context.Context, username, siteCode string, req *v1.RedirectToGameReq,
+	siteGame *entity.SiteGame, currency, domain, clientIp string) (map[string]interface{}, error) {
+
+	oneService := one.New()
+
+	// 构建游戏用户名
+	buildUsername, err := oneService.BuildUsername(username, siteCode)
+	if err != nil {
+		return nil, err
+	}
+
+	// 生成TraceID
+	traceId, _ := oneService.GenerateUUIDv4()
+
+	// 构建请求数据
+	data := one.OneGameReq{
+		Username:  buildUsername,
+		TraceId:   traceId,
+		GameCode:  req.Key,
+		Language:  "en",
+		Platform:  s.getPlatformType(req.Mobile),
+		Currency:  currency,
+		LobbyUrl:  domain,
+		IPAddress: clientIp,
+	}
+
+	// 生成签名
+	signature, err := oneService.GetONESignature(data, siteGame.ApiKey)
+	if err != nil {
+		return nil, err
+	}
+
+	// 构建请求头
+	headers := map[string]string{
+		"Content-Type": "application/json",
+		"X-API-Key":    siteGame.ApiId,
+		"X-Signature":  signature,
+	}
+
+	// 构建API URL
+	url := strings.TrimSuffix(siteGame.ApiUrl, "/") + "/game/url"
+
+	// 调用游戏API
+	return oneService.GetGameUrl(ctx, url, headers, data)
+}
+
+// getPlatformType 根据mobile参数返回平台类型
+func (s *sGame) getPlatformType(mobile int32) string {
+	if mobile > 0 {
+		return "H5"
+	}
+	return "WEB"
+}
+
+// getClientIPFromContext 从上下文获取客户端IP
+func (s *sGame) getClientIPFromContext(ctx context.Context) string {
+	// 尝试从gRPC metadata获取
+	if md, ok := metadata.FromIncomingContext(ctx); ok {
+		if ips := md.Get("client_ip"); len(ips) > 0 {
+			return ips[0]
+		}
+		if ips := md.Get("x-real-ip"); len(ips) > 0 {
+			return ips[0]
+		}
+		if ips := md.Get("x-forwarded-for"); len(ips) > 0 {
+			return ips[0]
+		}
+	}
+
+	// 尝试从context.Value获取
+	if ip := ctx.Value("client_ip"); ip != nil {
+		if ipStr, ok := ip.(string); ok {
+			return ipStr
+		}
+	}
+
+	return ""
+}
+
+// checkIPRestriction 检查IP限制
+// TODO: 实现IP限制检查逻辑
+func (s *sGame) checkIPRestriction(ctx context.Context, gameId int32, key string, clientIp string) error {
+	// 1. 通过game_id和key查询GameList,获取vendor
+	// 2. 通过platform_id和vendor查询game_restrict_country表
+	// 3. 如果找到限制配置且country_list不为空
+	// 4. 通过IP获取国家代码
+	// 5. 检查IP所属国家是否在黑名单中
+	// 6. 如果在黑名单中，返回错误
+
+	g.Log().Debugf(ctx, "IP限制检查功能待实现: clientIp=%s", clientIp)
+	return nil
+}

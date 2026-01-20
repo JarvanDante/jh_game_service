@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+package front_game;
+
+option go_package = "jh_game_service/api/frontend/game/v1";
+
+service Game {
+    rpc RedirectToGame(RedirectToGameReq) returns (RedirectToGameRes) {}
+}
+
+message RedirectToGameReq {
+    int32 game_id = 1;             // 游戏ID
+    string key = 2;                // 电子游戏专用
+    int32 mobile = 3;                // 电子游戏专用
+}
+
+message RedirectToGameRes {
+    string type = 1;                   // 类型
+    string url = 2;                    // 游戏跳转链接
+}
