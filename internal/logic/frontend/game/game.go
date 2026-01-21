@@ -89,12 +89,15 @@ func (s *sGame) RedirectToGame(ctx context.Context, req *v1.RedirectToGameReq) (
 	}
 
 	// 4. 根据游戏平台获取游戏链接
-	var result map[string]interface{}
+	var resultUrl map[string]interface{}
+
 	switch siteGame.Platform {
 	case "ONE":
 		oneService := one.New()
-		result, err = oneService.GetGameUrl(ctx, req, siteId, userId, siteGame, siteCode, username, currency, domain, clientIp)
-	// TODO: 添加其他游戏平台的实现
+
+		resultUrl, err = oneService.GetGameUrl(ctx, req, siteId, userId, siteGame, siteCode, username, currency, domain, clientIp)
+
+	//TODO: 添加其他游戏平台的实现
 	default:
 		return nil, fmt.Errorf("不支持的游戏平台: %s", siteGame.Platform)
 	}
@@ -104,8 +107,8 @@ func (s *sGame) RedirectToGame(ctx context.Context, req *v1.RedirectToGameReq) (
 	}
 
 	// 5. 返回结果
-	gameType, _ := result["type"].(string)
-	gameUrl, _ := result["url"].(string)
+	gameType, _ := resultUrl["type"].(string)
+	gameUrl, _ := resultUrl["url"].(string)
 
 	return &v1.RedirectToGameRes{
 		Type: gameType,

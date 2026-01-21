@@ -247,10 +247,9 @@ type AdjustBalanceReq struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	SiteId        int32                  `protobuf:"varint,1,opt,name=site_id,json=siteId,proto3" json:"site_id" dc:"站点ID"`                   // 站点ID
 	UserId        int32                  `protobuf:"varint,2,opt,name=user_id,json=userId,proto3" json:"user_id" dc:"用户ID"`                   // 用户ID
-	Amount        float32                `protobuf:"fixed32,3,opt,name=amount,proto3" json:"amount" dc:"金额（正数为加款，负数为扣款）"`                     // 金额（正数为加款，负数为扣款）
-	Type          int32                  `protobuf:"varint,4,opt,name=type,proto3" json:"type" dc:"类型：0=转出(从中心账户转账到游戏账户) 1=转入(从游戏账户转账到中心账户)"` // 类型：0=转出(从中心账户转账到游戏账户) 1=转入(从游戏账户转账到中心账户)
-	GameName      string                 `protobuf:"bytes,5,opt,name=game_name,json=gameName,proto3" json:"game_name" dc:"游戏名称"`              // 游戏名称
-	GameId        string                 `protobuf:"bytes,6,opt,name=game_id,json=gameId,proto3" json:"game_id" dc:"游戏ID"`                    // 游戏ID
+	Type          int32                  `protobuf:"varint,3,opt,name=type,proto3" json:"type" dc:"类型：0=转出(从中心账户转账到游戏账户) 1=转入(从游戏账户转账到中心账户)"` // 类型：0=转出(从中心账户转账到游戏账户) 1=转入(从游戏账户转账到中心账户)
+	GameName      string                 `protobuf:"bytes,4,opt,name=game_name,json=gameName,proto3" json:"game_name" dc:"游戏名称"`              // 游戏名称
+	GameId        string                 `protobuf:"bytes,5,opt,name=game_id,json=gameId,proto3" json:"game_id" dc:"游戏ID"`                    // 游戏ID
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -295,13 +294,6 @@ func (x *AdjustBalanceReq) GetSiteId() int32 {
 func (x *AdjustBalanceReq) GetUserId() int32 {
 	if x != nil {
 		return x.UserId
-	}
-	return 0
-}
-
-func (x *AdjustBalanceReq) GetAmount() float32 {
-	if x != nil {
-		return x.Amount
 	}
 	return 0
 }
@@ -616,6 +608,112 @@ func (x *CompensateBalanceRes) GetMessage() string {
 	return ""
 }
 
+// 最后一次进入游戏请求
+type GetLastBalanceLogGameReq struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	SiteId        int32                  `protobuf:"varint,1,opt,name=site_id,json=siteId,proto3" json:"site_id" dc:"站点ID"` // 站点ID
+	UserId        int32                  `protobuf:"varint,2,opt,name=user_id,json=userId,proto3" json:"user_id" dc:"用户ID"` // 用户ID
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetLastBalanceLogGameReq) Reset() {
+	*x = GetLastBalanceLogGameReq{}
+	mi := &file_grpc_balance_v1_balance_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetLastBalanceLogGameReq) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetLastBalanceLogGameReq) ProtoMessage() {}
+
+func (x *GetLastBalanceLogGameReq) ProtoReflect() protoreflect.Message {
+	mi := &file_grpc_balance_v1_balance_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetLastBalanceLogGameReq.ProtoReflect.Descriptor instead.
+func (*GetLastBalanceLogGameReq) Descriptor() ([]byte, []int) {
+	return file_grpc_balance_v1_balance_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *GetLastBalanceLogGameReq) GetSiteId() int32 {
+	if x != nil {
+		return x.SiteId
+	}
+	return 0
+}
+
+func (x *GetLastBalanceLogGameReq) GetUserId() int32 {
+	if x != nil {
+		return x.UserId
+	}
+	return 0
+}
+
+// 最后一次进入游戏响应
+type GetLastBalanceLogGameRes struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	GameId        int32                  `protobuf:"varint,1,opt,name=game_id,json=gameId,proto3" json:"game_id" dc:"游戏ID"`   // 游戏ID
+	Amount        float32                `protobuf:"fixed32,2,opt,name=amount,proto3" json:"amount" dc:"游戏ID无刚用户余额，游戏ID有则为0"` // 游戏ID无刚用户余额，游戏ID有则为0
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetLastBalanceLogGameRes) Reset() {
+	*x = GetLastBalanceLogGameRes{}
+	mi := &file_grpc_balance_v1_balance_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetLastBalanceLogGameRes) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetLastBalanceLogGameRes) ProtoMessage() {}
+
+func (x *GetLastBalanceLogGameRes) ProtoReflect() protoreflect.Message {
+	mi := &file_grpc_balance_v1_balance_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetLastBalanceLogGameRes.ProtoReflect.Descriptor instead.
+func (*GetLastBalanceLogGameRes) Descriptor() ([]byte, []int) {
+	return file_grpc_balance_v1_balance_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *GetLastBalanceLogGameRes) GetGameId() int32 {
+	if x != nil {
+		return x.GameId
+	}
+	return 0
+}
+
+func (x *GetLastBalanceLogGameRes) GetAmount() float32 {
+	if x != nil {
+		return x.Amount
+	}
+	return 0
+}
+
 var File_grpc_balance_v1_balance_proto protoreflect.FileDescriptor
 
 const file_grpc_balance_v1_balance_proto_rawDesc = "" +
@@ -633,14 +731,13 @@ const file_grpc_balance_v1_balance_proto_rawDesc = "" +
 	"\x11RefreshBalanceRes\x12\x18\n" +
 	"\abalance\x18\x01 \x01(\tR\abalance\x12%\n" +
 	"\x0ebalance_frozen\x18\x02 \x01(\tR\rbalanceFrozen\x12\x16\n" +
-	"\x06points\x18\x03 \x01(\x03R\x06points\"\xa6\x01\n" +
+	"\x06points\x18\x03 \x01(\x03R\x06points\"\x8e\x01\n" +
 	"\x10AdjustBalanceReq\x12\x17\n" +
 	"\asite_id\x18\x01 \x01(\x05R\x06siteId\x12\x17\n" +
-	"\auser_id\x18\x02 \x01(\x05R\x06userId\x12\x16\n" +
-	"\x06amount\x18\x03 \x01(\x02R\x06amount\x12\x12\n" +
-	"\x04type\x18\x04 \x01(\x05R\x04type\x12\x1b\n" +
-	"\tgame_name\x18\x05 \x01(\tR\bgameName\x12\x17\n" +
-	"\agame_id\x18\x06 \x01(\tR\x06gameId\"{\n" +
+	"\auser_id\x18\x02 \x01(\x05R\x06userId\x12\x12\n" +
+	"\x04type\x18\x03 \x01(\x05R\x04type\x12\x1b\n" +
+	"\tgame_name\x18\x04 \x01(\tR\bgameName\x12\x17\n" +
+	"\agame_id\x18\x05 \x01(\tR\x06gameId\"{\n" +
 	"\x10AdjustBalanceRes\x12\x18\n" +
 	"\asuccess\x18\x01 \x01(\bR\asuccess\x12\x18\n" +
 	"\amessage\x18\x02 \x01(\tR\amessage\x12\x18\n" +
@@ -658,13 +755,20 @@ const file_grpc_balance_v1_balance_proto_rawDesc = "" +
 	"\x06amount\x18\x04 \x01(\x02R\x06amount\"J\n" +
 	"\x14CompensateBalanceRes\x12\x18\n" +
 	"\asuccess\x18\x01 \x01(\bR\asuccess\x12\x18\n" +
-	"\amessage\x18\x02 \x01(\tR\amessage2\xfa\x03\n" +
+	"\amessage\x18\x02 \x01(\tR\amessage\"L\n" +
+	"\x18GetLastBalanceLogGameReq\x12\x17\n" +
+	"\asite_id\x18\x01 \x01(\x05R\x06siteId\x12\x17\n" +
+	"\auser_id\x18\x02 \x01(\x05R\x06userId\"K\n" +
+	"\x18GetLastBalanceLogGameRes\x12\x17\n" +
+	"\agame_id\x18\x01 \x01(\x05R\x06gameId\x12\x16\n" +
+	"\x06amount\x18\x02 \x01(\x02R\x06amount2\xed\x04\n" +
 	"\aBalance\x12_\n" +
 	"\x0fInitBalanceUser\x12$.frontend_balance.InitBalanceUserReq\x1a$.frontend_balance.InitBalanceUserRes\"\x00\x12\\\n" +
 	"\x0eRefreshBalance\x12#.frontend_balance.RefreshBalanceReq\x1a#.frontend_balance.RefreshBalanceRes\"\x00\x12Y\n" +
 	"\rAdjustBalance\x12\".frontend_balance.AdjustBalanceReq\x1a\".frontend_balance.AdjustBalanceRes\"\x00\x12n\n" +
 	"\x14UpdateTransferStatus\x12).frontend_balance.UpdateTransferStatusReq\x1a).frontend_balance.UpdateTransferStatusRes\"\x00\x12e\n" +
-	"\x11CompensateBalance\x12&.frontend_balance.CompensateBalanceReq\x1a&.frontend_balance.CompensateBalanceRes\"\x00B%Z#jh_game_service/api/grpc/balance/v1b\x06proto3"
+	"\x11CompensateBalance\x12&.frontend_balance.CompensateBalanceReq\x1a&.frontend_balance.CompensateBalanceRes\"\x00\x12q\n" +
+	"\x15GetLastBalanceLogGame\x12*.frontend_balance.GetLastBalanceLogGameReq\x1a*.frontend_balance.GetLastBalanceLogGameRes\"\x00B%Z#jh_game_service/api/grpc/balance/v1b\x06proto3"
 
 var (
 	file_grpc_balance_v1_balance_proto_rawDescOnce sync.Once
@@ -678,35 +782,39 @@ func file_grpc_balance_v1_balance_proto_rawDescGZIP() []byte {
 	return file_grpc_balance_v1_balance_proto_rawDescData
 }
 
-var file_grpc_balance_v1_balance_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
+var file_grpc_balance_v1_balance_proto_msgTypes = make([]protoimpl.MessageInfo, 12)
 var file_grpc_balance_v1_balance_proto_goTypes = []any{
-	(*InitBalanceUserReq)(nil),      // 0: frontend_balance.InitBalanceUserReq
-	(*InitBalanceUserRes)(nil),      // 1: frontend_balance.InitBalanceUserRes
-	(*RefreshBalanceReq)(nil),       // 2: frontend_balance.RefreshBalanceReq
-	(*RefreshBalanceRes)(nil),       // 3: frontend_balance.RefreshBalanceRes
-	(*AdjustBalanceReq)(nil),        // 4: frontend_balance.AdjustBalanceReq
-	(*AdjustBalanceRes)(nil),        // 5: frontend_balance.AdjustBalanceRes
-	(*UpdateTransferStatusReq)(nil), // 6: frontend_balance.UpdateTransferStatusReq
-	(*UpdateTransferStatusRes)(nil), // 7: frontend_balance.UpdateTransferStatusRes
-	(*CompensateBalanceReq)(nil),    // 8: frontend_balance.CompensateBalanceReq
-	(*CompensateBalanceRes)(nil),    // 9: frontend_balance.CompensateBalanceRes
+	(*InitBalanceUserReq)(nil),       // 0: frontend_balance.InitBalanceUserReq
+	(*InitBalanceUserRes)(nil),       // 1: frontend_balance.InitBalanceUserRes
+	(*RefreshBalanceReq)(nil),        // 2: frontend_balance.RefreshBalanceReq
+	(*RefreshBalanceRes)(nil),        // 3: frontend_balance.RefreshBalanceRes
+	(*AdjustBalanceReq)(nil),         // 4: frontend_balance.AdjustBalanceReq
+	(*AdjustBalanceRes)(nil),         // 5: frontend_balance.AdjustBalanceRes
+	(*UpdateTransferStatusReq)(nil),  // 6: frontend_balance.UpdateTransferStatusReq
+	(*UpdateTransferStatusRes)(nil),  // 7: frontend_balance.UpdateTransferStatusRes
+	(*CompensateBalanceReq)(nil),     // 8: frontend_balance.CompensateBalanceReq
+	(*CompensateBalanceRes)(nil),     // 9: frontend_balance.CompensateBalanceRes
+	(*GetLastBalanceLogGameReq)(nil), // 10: frontend_balance.GetLastBalanceLogGameReq
+	(*GetLastBalanceLogGameRes)(nil), // 11: frontend_balance.GetLastBalanceLogGameRes
 }
 var file_grpc_balance_v1_balance_proto_depIdxs = []int32{
-	0, // 0: frontend_balance.Balance.InitBalanceUser:input_type -> frontend_balance.InitBalanceUserReq
-	2, // 1: frontend_balance.Balance.RefreshBalance:input_type -> frontend_balance.RefreshBalanceReq
-	4, // 2: frontend_balance.Balance.AdjustBalance:input_type -> frontend_balance.AdjustBalanceReq
-	6, // 3: frontend_balance.Balance.UpdateTransferStatus:input_type -> frontend_balance.UpdateTransferStatusReq
-	8, // 4: frontend_balance.Balance.CompensateBalance:input_type -> frontend_balance.CompensateBalanceReq
-	1, // 5: frontend_balance.Balance.InitBalanceUser:output_type -> frontend_balance.InitBalanceUserRes
-	3, // 6: frontend_balance.Balance.RefreshBalance:output_type -> frontend_balance.RefreshBalanceRes
-	5, // 7: frontend_balance.Balance.AdjustBalance:output_type -> frontend_balance.AdjustBalanceRes
-	7, // 8: frontend_balance.Balance.UpdateTransferStatus:output_type -> frontend_balance.UpdateTransferStatusRes
-	9, // 9: frontend_balance.Balance.CompensateBalance:output_type -> frontend_balance.CompensateBalanceRes
-	5, // [5:10] is the sub-list for method output_type
-	0, // [0:5] is the sub-list for method input_type
-	0, // [0:0] is the sub-list for extension type_name
-	0, // [0:0] is the sub-list for extension extendee
-	0, // [0:0] is the sub-list for field type_name
+	0,  // 0: frontend_balance.Balance.InitBalanceUser:input_type -> frontend_balance.InitBalanceUserReq
+	2,  // 1: frontend_balance.Balance.RefreshBalance:input_type -> frontend_balance.RefreshBalanceReq
+	4,  // 2: frontend_balance.Balance.AdjustBalance:input_type -> frontend_balance.AdjustBalanceReq
+	6,  // 3: frontend_balance.Balance.UpdateTransferStatus:input_type -> frontend_balance.UpdateTransferStatusReq
+	8,  // 4: frontend_balance.Balance.CompensateBalance:input_type -> frontend_balance.CompensateBalanceReq
+	10, // 5: frontend_balance.Balance.GetLastBalanceLogGame:input_type -> frontend_balance.GetLastBalanceLogGameReq
+	1,  // 6: frontend_balance.Balance.InitBalanceUser:output_type -> frontend_balance.InitBalanceUserRes
+	3,  // 7: frontend_balance.Balance.RefreshBalance:output_type -> frontend_balance.RefreshBalanceRes
+	5,  // 8: frontend_balance.Balance.AdjustBalance:output_type -> frontend_balance.AdjustBalanceRes
+	7,  // 9: frontend_balance.Balance.UpdateTransferStatus:output_type -> frontend_balance.UpdateTransferStatusRes
+	9,  // 10: frontend_balance.Balance.CompensateBalance:output_type -> frontend_balance.CompensateBalanceRes
+	11, // 11: frontend_balance.Balance.GetLastBalanceLogGame:output_type -> frontend_balance.GetLastBalanceLogGameRes
+	6,  // [6:12] is the sub-list for method output_type
+	0,  // [0:6] is the sub-list for method input_type
+	0,  // [0:0] is the sub-list for extension type_name
+	0,  // [0:0] is the sub-list for extension extendee
+	0,  // [0:0] is the sub-list for field type_name
 }
 
 func init() { file_grpc_balance_v1_balance_proto_init() }
@@ -720,7 +828,7 @@ func file_grpc_balance_v1_balance_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_grpc_balance_v1_balance_proto_rawDesc), len(file_grpc_balance_v1_balance_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   10,
+			NumMessages:   12,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

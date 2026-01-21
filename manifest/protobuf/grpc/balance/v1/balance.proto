@@ -15,6 +15,8 @@ service Balance {
     rpc UpdateTransferStatus(UpdateTransferStatusReq) returns (UpdateTransferStatusRes) {}
     // 补偿余额（游戏转账失败后调用）
     rpc CompensateBalance(CompensateBalanceReq) returns (CompensateBalanceRes) {}
+    // 最后一次进入游戏
+    rpc GetLastBalanceLogGame(GetLastBalanceLogGameReq) returns (GetLastBalanceLogGameRes) {}
 }
 
 // 初始化用户余额请求
@@ -46,10 +48,9 @@ message RefreshBalanceRes {
 message AdjustBalanceReq {
     int32 site_id = 1;          // 站点ID
     int32 user_id = 2;          // 用户ID
-    float amount = 3;           // 金额（正数为加款，负数为扣款）
-    int32 type = 4;             // 类型：0=转出(从中心账户转账到游戏账户) 1=转入(从游戏账户转账到中心账户)
-    string game_name = 5;       // 游戏名称
-    string game_id = 6;         // 游戏ID
+    int32 type = 3;             // 类型：0=转出(从中心账户转账到游戏账户) 1=转入(从游戏账户转账到中心账户)
+    string game_name = 4;       // 游戏名称
+    string game_id = 5;         // 游戏ID
 }
 
 // 调整用户余额响应
@@ -83,4 +84,15 @@ message CompensateBalanceReq {
 message CompensateBalanceRes {
     bool success = 1;           // 是否成功
     string message = 2;         // 消息
+}
+
+//最后一次进入游戏请求
+message GetLastBalanceLogGameReq{
+    int32 site_id = 1;          // 站点ID
+    int32 user_id = 2;          // 用户ID
+}
+//最后一次进入游戏响应
+message GetLastBalanceLogGameRes{
+    int32 game_id = 1;          // 游戏ID
+    float amount = 2;           // 游戏ID无刚用户余额，游戏ID有则为0
 }

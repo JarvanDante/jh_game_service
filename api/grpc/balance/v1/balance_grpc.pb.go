@@ -20,11 +20,12 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	Balance_InitBalanceUser_FullMethodName      = "/frontend_balance.Balance/InitBalanceUser"
-	Balance_RefreshBalance_FullMethodName       = "/frontend_balance.Balance/RefreshBalance"
-	Balance_AdjustBalance_FullMethodName        = "/frontend_balance.Balance/AdjustBalance"
-	Balance_UpdateTransferStatus_FullMethodName = "/frontend_balance.Balance/UpdateTransferStatus"
-	Balance_CompensateBalance_FullMethodName    = "/frontend_balance.Balance/CompensateBalance"
+	Balance_InitBalanceUser_FullMethodName       = "/frontend_balance.Balance/InitBalanceUser"
+	Balance_RefreshBalance_FullMethodName        = "/frontend_balance.Balance/RefreshBalance"
+	Balance_AdjustBalance_FullMethodName         = "/frontend_balance.Balance/AdjustBalance"
+	Balance_UpdateTransferStatus_FullMethodName  = "/frontend_balance.Balance/UpdateTransferStatus"
+	Balance_CompensateBalance_FullMethodName     = "/frontend_balance.Balance/CompensateBalance"
+	Balance_GetLastBalanceLogGame_FullMethodName = "/frontend_balance.Balance/GetLastBalanceLogGame"
 )
 
 // BalanceClient is the client API for Balance service.
@@ -41,6 +42,8 @@ type BalanceClient interface {
 	UpdateTransferStatus(ctx context.Context, in *UpdateTransferStatusReq, opts ...grpc.CallOption) (*UpdateTransferStatusRes, error)
 	// 补偿余额（游戏转账失败后调用）
 	CompensateBalance(ctx context.Context, in *CompensateBalanceReq, opts ...grpc.CallOption) (*CompensateBalanceRes, error)
+	// 最后一次进入游戏
+	GetLastBalanceLogGame(ctx context.Context, in *GetLastBalanceLogGameReq, opts ...grpc.CallOption) (*GetLastBalanceLogGameRes, error)
 }
 
 type balanceClient struct {
@@ -101,6 +104,16 @@ func (c *balanceClient) CompensateBalance(ctx context.Context, in *CompensateBal
 	return out, nil
 }
 
+func (c *balanceClient) GetLastBalanceLogGame(ctx context.Context, in *GetLastBalanceLogGameReq, opts ...grpc.CallOption) (*GetLastBalanceLogGameRes, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetLastBalanceLogGameRes)
+	err := c.cc.Invoke(ctx, Balance_GetLastBalanceLogGame_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // BalanceServer is the server API for Balance service.
 // All implementations must embed UnimplementedBalanceServer
 // for forward compatibility.
@@ -115,6 +128,8 @@ type BalanceServer interface {
 	UpdateTransferStatus(context.Context, *UpdateTransferStatusReq) (*UpdateTransferStatusRes, error)
 	// 补偿余额（游戏转账失败后调用）
 	CompensateBalance(context.Context, *CompensateBalanceReq) (*CompensateBalanceRes, error)
+	// 最后一次进入游戏
+	GetLastBalanceLogGame(context.Context, *GetLastBalanceLogGameReq) (*GetLastBalanceLogGameRes, error)
 	mustEmbedUnimplementedBalanceServer()
 }
 
@@ -139,6 +154,9 @@ func (UnimplementedBalanceServer) UpdateTransferStatus(context.Context, *UpdateT
 }
 func (UnimplementedBalanceServer) CompensateBalance(context.Context, *CompensateBalanceReq) (*CompensateBalanceRes, error) {
 	return nil, status.Error(codes.Unimplemented, "method CompensateBalance not implemented")
+}
+func (UnimplementedBalanceServer) GetLastBalanceLogGame(context.Context, *GetLastBalanceLogGameReq) (*GetLastBalanceLogGameRes, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetLastBalanceLogGame not implemented")
 }
 func (UnimplementedBalanceServer) mustEmbedUnimplementedBalanceServer() {}
 func (UnimplementedBalanceServer) testEmbeddedByValue()                 {}
@@ -251,6 +269,24 @@ func _Balance_CompensateBalance_Handler(srv interface{}, ctx context.Context, de
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Balance_GetLastBalanceLogGame_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetLastBalanceLogGameReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(BalanceServer).GetLastBalanceLogGame(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Balance_GetLastBalanceLogGame_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(BalanceServer).GetLastBalanceLogGame(ctx, req.(*GetLastBalanceLogGameReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Balance_ServiceDesc is the grpc.ServiceDesc for Balance service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -277,6 +313,10 @@ var Balance_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "CompensateBalance",
 			Handler:    _Balance_CompensateBalance_Handler,
+		},
+		{
+			MethodName: "GetLastBalanceLogGame",
+			Handler:    _Balance_GetLastBalanceLogGame_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
