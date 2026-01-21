@@ -93,7 +93,7 @@ func (s *sGame) RedirectToGame(ctx context.Context, req *v1.RedirectToGameReq) (
 	switch siteGame.Platform {
 	case "ONE":
 		oneService := one.New()
-		result, err = oneService.GetGameUrl(req, siteId, userId, siteGame, siteCode, username, currency, domain, clientIp)
+		result, err = oneService.GetGameUrl(ctx, req, siteId, userId, siteGame, siteCode, username, currency, domain, clientIp)
 	// TODO: 添加其他游戏平台的实现
 	default:
 		return nil, fmt.Errorf("不支持的游戏平台: %s", siteGame.Platform)

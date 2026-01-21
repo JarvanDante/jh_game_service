@@ -245,12 +245,12 @@ func (x *RefreshBalanceRes) GetPoints() int64 {
 // 调整用户余额请求
 type AdjustBalanceReq struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	SiteId        int32                  `protobuf:"varint,1,opt,name=site_id,json=siteId,proto3" json:"site_id" dc:"游戏id"`                 // 游戏id
-	UserId        int32                  `protobuf:"varint,2,opt,name=user_id,json=userId,proto3" json:"user_id" dc:"用户ID"`                 // 用户ID
-	Amount        float32                `protobuf:"fixed32,3,opt,name=amount,proto3" json:"amount" dc:"金额"`                                // 金额
-	Type          int32                  `protobuf:"varint,4,opt,name=type,proto3" json:"type" dc:"类型：0=转出：从中心账户转账到游戏账户 1=转入：从游戏账户转账到中心账户"` // 类型：0=转出：从中心账户转账到游戏账户 1=转入：从游戏账户转账到中心账户
-	GameName      string                 `protobuf:"bytes,5,opt,name=game_name,json=gameName,proto3" json:"game_name" dc:"游戏名称"`            // 游戏名称
-	GameId        string                 `protobuf:"bytes,6,opt,name=game_id,json=gameId,proto3" json:"game_id" dc:"游戏id"`                  // 游戏id
+	SiteId        int32                  `protobuf:"varint,1,opt,name=site_id,json=siteId,proto3" json:"site_id" dc:"站点ID"`                   // 站点ID
+	UserId        int32                  `protobuf:"varint,2,opt,name=user_id,json=userId,proto3" json:"user_id" dc:"用户ID"`                   // 用户ID
+	Amount        float32                `protobuf:"fixed32,3,opt,name=amount,proto3" json:"amount" dc:"金额（正数为加款，负数为扣款）"`                     // 金额（正数为加款，负数为扣款）
+	Type          int32                  `protobuf:"varint,4,opt,name=type,proto3" json:"type" dc:"类型：0=转出(从中心账户转账到游戏账户) 1=转入(从游戏账户转账到中心账户)"` // 类型：0=转出(从中心账户转账到游戏账户) 1=转入(从游戏账户转账到中心账户)
+	GameName      string                 `protobuf:"bytes,5,opt,name=game_name,json=gameName,proto3" json:"game_name" dc:"游戏名称"`              // 游戏名称
+	GameId        string                 `protobuf:"bytes,6,opt,name=game_id,json=gameId,proto3" json:"game_id" dc:"游戏ID"`                    // 游戏ID
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -396,11 +396,231 @@ func (x *AdjustBalanceRes) GetOrderNo() string {
 	return ""
 }
 
+// 更新转账状态请求
+type UpdateTransferStatusReq struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	OrderNo       string                 `protobuf:"bytes,1,opt,name=order_no,json=orderNo,proto3" json:"order_no" dc:"订单号"` // 订单号
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpdateTransferStatusReq) Reset() {
+	*x = UpdateTransferStatusReq{}
+	mi := &file_grpc_balance_v1_balance_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateTransferStatusReq) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateTransferStatusReq) ProtoMessage() {}
+
+func (x *UpdateTransferStatusReq) ProtoReflect() protoreflect.Message {
+	mi := &file_grpc_balance_v1_balance_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateTransferStatusReq.ProtoReflect.Descriptor instead.
+func (*UpdateTransferStatusReq) Descriptor() ([]byte, []int) {
+	return file_grpc_balance_v1_balance_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *UpdateTransferStatusReq) GetOrderNo() string {
+	if x != nil {
+		return x.OrderNo
+	}
+	return ""
+}
+
+// 更新转账状态响应
+type UpdateTransferStatusRes struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Success       bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success" dc:"是否成功"` // 是否成功
+	Message       string                 `protobuf:"bytes,2,opt,name=message,proto3" json:"message" dc:"消息"`    // 消息
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpdateTransferStatusRes) Reset() {
+	*x = UpdateTransferStatusRes{}
+	mi := &file_grpc_balance_v1_balance_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateTransferStatusRes) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateTransferStatusRes) ProtoMessage() {}
+
+func (x *UpdateTransferStatusRes) ProtoReflect() protoreflect.Message {
+	mi := &file_grpc_balance_v1_balance_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateTransferStatusRes.ProtoReflect.Descriptor instead.
+func (*UpdateTransferStatusRes) Descriptor() ([]byte, []int) {
+	return file_grpc_balance_v1_balance_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *UpdateTransferStatusRes) GetSuccess() bool {
+	if x != nil {
+		return x.Success
+	}
+	return false
+}
+
+func (x *UpdateTransferStatusRes) GetMessage() string {
+	if x != nil {
+		return x.Message
+	}
+	return ""
+}
+
+// 补偿余额请求
+type CompensateBalanceReq struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	SiteId        int32                  `protobuf:"varint,1,opt,name=site_id,json=siteId,proto3" json:"site_id" dc:"站点ID"`  // 站点ID
+	UserId        int32                  `protobuf:"varint,2,opt,name=user_id,json=userId,proto3" json:"user_id" dc:"用户ID"`  // 用户ID
+	OrderNo       string                 `protobuf:"bytes,3,opt,name=order_no,json=orderNo,proto3" json:"order_no" dc:"订单号"` // 订单号
+	Amount        float32                `protobuf:"fixed32,4,opt,name=amount,proto3" json:"amount" dc:"需要补偿的金额（负数）"`        // 需要补偿的金额（负数）
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CompensateBalanceReq) Reset() {
+	*x = CompensateBalanceReq{}
+	mi := &file_grpc_balance_v1_balance_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CompensateBalanceReq) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CompensateBalanceReq) ProtoMessage() {}
+
+func (x *CompensateBalanceReq) ProtoReflect() protoreflect.Message {
+	mi := &file_grpc_balance_v1_balance_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CompensateBalanceReq.ProtoReflect.Descriptor instead.
+func (*CompensateBalanceReq) Descriptor() ([]byte, []int) {
+	return file_grpc_balance_v1_balance_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *CompensateBalanceReq) GetSiteId() int32 {
+	if x != nil {
+		return x.SiteId
+	}
+	return 0
+}
+
+func (x *CompensateBalanceReq) GetUserId() int32 {
+	if x != nil {
+		return x.UserId
+	}
+	return 0
+}
+
+func (x *CompensateBalanceReq) GetOrderNo() string {
+	if x != nil {
+		return x.OrderNo
+	}
+	return ""
+}
+
+func (x *CompensateBalanceReq) GetAmount() float32 {
+	if x != nil {
+		return x.Amount
+	}
+	return 0
+}
+
+// 补偿余额响应
+type CompensateBalanceRes struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Success       bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success" dc:"是否成功"` // 是否成功
+	Message       string                 `protobuf:"bytes,2,opt,name=message,proto3" json:"message" dc:"消息"`    // 消息
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CompensateBalanceRes) Reset() {
+	*x = CompensateBalanceRes{}
+	mi := &file_grpc_balance_v1_balance_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CompensateBalanceRes) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CompensateBalanceRes) ProtoMessage() {}
+
+func (x *CompensateBalanceRes) ProtoReflect() protoreflect.Message {
+	mi := &file_grpc_balance_v1_balance_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CompensateBalanceRes.ProtoReflect.Descriptor instead.
+func (*CompensateBalanceRes) Descriptor() ([]byte, []int) {
+	return file_grpc_balance_v1_balance_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *CompensateBalanceRes) GetSuccess() bool {
+	if x != nil {
+		return x.Success
+	}
+	return false
+}
+
+func (x *CompensateBalanceRes) GetMessage() string {
+	if x != nil {
+		return x.Message
+	}
+	return ""
+}
+
 var File_grpc_balance_v1_balance_proto protoreflect.FileDescriptor
 
 const file_grpc_balance_v1_balance_proto_rawDesc = "" +
 	"\n" +
-	"\x1dgrpc/balance/v1/balance.proto\x12\fgrpc_balance\"~\n" +
+	"\x1dgrpc/balance/v1/balance.proto\x12\x10frontend_balance\"~\n" +
 	"\x12InitBalanceUserReq\x12\x17\n" +
 	"\asite_id\x18\x01 \x01(\x05R\x06siteId\x12\x17\n" +
 	"\auser_id\x18\x02 \x01(\x05R\x06userId\x12\x1a\n" +
@@ -425,11 +645,26 @@ const file_grpc_balance_v1_balance_proto_rawDesc = "" +
 	"\asuccess\x18\x01 \x01(\bR\asuccess\x12\x18\n" +
 	"\amessage\x18\x02 \x01(\tR\amessage\x12\x18\n" +
 	"\abalance\x18\x03 \x01(\tR\abalance\x12\x19\n" +
-	"\border_no\x18\x04 \x01(\tR\aorderNo2\x8b\x02\n" +
-	"\aBalance\x12W\n" +
-	"\x0fInitBalanceUser\x12 .grpc_balance.InitBalanceUserReq\x1a .grpc_balance.InitBalanceUserRes\"\x00\x12T\n" +
-	"\x0eRefreshBalance\x12\x1f.grpc_balance.RefreshBalanceReq\x1a\x1f.grpc_balance.RefreshBalanceRes\"\x00\x12Q\n" +
-	"\rAdjustBalance\x12\x1e.grpc_balance.AdjustBalanceReq\x1a\x1e.grpc_balance.AdjustBalanceRes\"\x00B%Z#jh_game_service/api/grpc/balance/v1b\x06proto3"
+	"\border_no\x18\x04 \x01(\tR\aorderNo\"4\n" +
+	"\x17UpdateTransferStatusReq\x12\x19\n" +
+	"\border_no\x18\x01 \x01(\tR\aorderNo\"M\n" +
+	"\x17UpdateTransferStatusRes\x12\x18\n" +
+	"\asuccess\x18\x01 \x01(\bR\asuccess\x12\x18\n" +
+	"\amessage\x18\x02 \x01(\tR\amessage\"{\n" +
+	"\x14CompensateBalanceReq\x12\x17\n" +
+	"\asite_id\x18\x01 \x01(\x05R\x06siteId\x12\x17\n" +
+	"\auser_id\x18\x02 \x01(\x05R\x06userId\x12\x19\n" +
+	"\border_no\x18\x03 \x01(\tR\aorderNo\x12\x16\n" +
+	"\x06amount\x18\x04 \x01(\x02R\x06amount\"J\n" +
+	"\x14CompensateBalanceRes\x12\x18\n" +
+	"\asuccess\x18\x01 \x01(\bR\asuccess\x12\x18\n" +
+	"\amessage\x18\x02 \x01(\tR\amessage2\xfa\x03\n" +
+	"\aBalance\x12_\n" +
+	"\x0fInitBalanceUser\x12$.frontend_balance.InitBalanceUserReq\x1a$.frontend_balance.InitBalanceUserRes\"\x00\x12\\\n" +
+	"\x0eRefreshBalance\x12#.frontend_balance.RefreshBalanceReq\x1a#.frontend_balance.RefreshBalanceRes\"\x00\x12Y\n" +
+	"\rAdjustBalance\x12\".frontend_balance.AdjustBalanceReq\x1a\".frontend_balance.AdjustBalanceRes\"\x00\x12n\n" +
+	"\x14UpdateTransferStatus\x12).frontend_balance.UpdateTransferStatusReq\x1a).frontend_balance.UpdateTransferStatusRes\"\x00\x12e\n" +
+	"\x11CompensateBalance\x12&.frontend_balance.CompensateBalanceReq\x1a&.frontend_balance.CompensateBalanceRes\"\x00B%Z#jh_game_service/api/grpc/balance/v1b\x06proto3"
 
 var (
 	file_grpc_balance_v1_balance_proto_rawDescOnce sync.Once
@@ -443,24 +678,32 @@ func file_grpc_balance_v1_balance_proto_rawDescGZIP() []byte {
 	return file_grpc_balance_v1_balance_proto_rawDescData
 }
 
-var file_grpc_balance_v1_balance_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
+var file_grpc_balance_v1_balance_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
 var file_grpc_balance_v1_balance_proto_goTypes = []any{
-	(*InitBalanceUserReq)(nil), // 0: grpc_balance.InitBalanceUserReq
-	(*InitBalanceUserRes)(nil), // 1: grpc_balance.InitBalanceUserRes
-	(*RefreshBalanceReq)(nil),  // 2: grpc_balance.RefreshBalanceReq
-	(*RefreshBalanceRes)(nil),  // 3: grpc_balance.RefreshBalanceRes
-	(*AdjustBalanceReq)(nil),   // 4: grpc_balance.AdjustBalanceReq
-	(*AdjustBalanceRes)(nil),   // 5: grpc_balance.AdjustBalanceRes
+	(*InitBalanceUserReq)(nil),      // 0: frontend_balance.InitBalanceUserReq
+	(*InitBalanceUserRes)(nil),      // 1: frontend_balance.InitBalanceUserRes
+	(*RefreshBalanceReq)(nil),       // 2: frontend_balance.RefreshBalanceReq
+	(*RefreshBalanceRes)(nil),       // 3: frontend_balance.RefreshBalanceRes
+	(*AdjustBalanceReq)(nil),        // 4: frontend_balance.AdjustBalanceReq
+	(*AdjustBalanceRes)(nil),        // 5: frontend_balance.AdjustBalanceRes
+	(*UpdateTransferStatusReq)(nil), // 6: frontend_balance.UpdateTransferStatusReq
+	(*UpdateTransferStatusRes)(nil), // 7: frontend_balance.UpdateTransferStatusRes
+	(*CompensateBalanceReq)(nil),    // 8: frontend_balance.CompensateBalanceReq
+	(*CompensateBalanceRes)(nil),    // 9: frontend_balance.CompensateBalanceRes
 }
 var file_grpc_balance_v1_balance_proto_depIdxs = []int32{
-	0, // 0: grpc_balance.Balance.InitBalanceUser:input_type -> grpc_balance.InitBalanceUserReq
-	2, // 1: grpc_balance.Balance.RefreshBalance:input_type -> grpc_balance.RefreshBalanceReq
-	4, // 2: grpc_balance.Balance.AdjustBalance:input_type -> grpc_balance.AdjustBalanceReq
-	1, // 3: grpc_balance.Balance.InitBalanceUser:output_type -> grpc_balance.InitBalanceUserRes
-	3, // 4: grpc_balance.Balance.RefreshBalance:output_type -> grpc_balance.RefreshBalanceRes
-	5, // 5: grpc_balance.Balance.AdjustBalance:output_type -> grpc_balance.AdjustBalanceRes
-	3, // [3:6] is the sub-list for method output_type
-	0, // [0:3] is the sub-list for method input_type
+	0, // 0: frontend_balance.Balance.InitBalanceUser:input_type -> frontend_balance.InitBalanceUserReq
+	2, // 1: frontend_balance.Balance.RefreshBalance:input_type -> frontend_balance.RefreshBalanceReq
+	4, // 2: frontend_balance.Balance.AdjustBalance:input_type -> frontend_balance.AdjustBalanceReq
+	6, // 3: frontend_balance.Balance.UpdateTransferStatus:input_type -> frontend_balance.UpdateTransferStatusReq
+	8, // 4: frontend_balance.Balance.CompensateBalance:input_type -> frontend_balance.CompensateBalanceReq
+	1, // 5: frontend_balance.Balance.InitBalanceUser:output_type -> frontend_balance.InitBalanceUserRes
+	3, // 6: frontend_balance.Balance.RefreshBalance:output_type -> frontend_balance.RefreshBalanceRes
+	5, // 7: frontend_balance.Balance.AdjustBalance:output_type -> frontend_balance.AdjustBalanceRes
+	7, // 8: frontend_balance.Balance.UpdateTransferStatus:output_type -> frontend_balance.UpdateTransferStatusRes
+	9, // 9: frontend_balance.Balance.CompensateBalance:output_type -> frontend_balance.CompensateBalanceRes
+	5, // [5:10] is the sub-list for method output_type
+	0, // [0:5] is the sub-list for method input_type
 	0, // [0:0] is the sub-list for extension type_name
 	0, // [0:0] is the sub-list for extension extendee
 	0, // [0:0] is the sub-list for field type_name
@@ -477,7 +720,7 @@ func file_grpc_balance_v1_balance_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_grpc_balance_v1_balance_proto_rawDesc), len(file_grpc_balance_v1_balance_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   6,
+			NumMessages:   10,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

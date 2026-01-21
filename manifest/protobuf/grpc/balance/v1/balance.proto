@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package grpc_balance;
+package frontend_balance;
 
 option go_package = "jh_game_service/api/grpc/balance/v1";
 
@@ -11,6 +11,10 @@ service Balance {
     rpc RefreshBalance(RefreshBalanceReq) returns (RefreshBalanceRes) {}
     // 调整用户余额（加款/扣款）
     rpc AdjustBalance(AdjustBalanceReq) returns (AdjustBalanceRes) {}
+    // 更新转账状态（游戏转账成功后调用）
+    rpc UpdateTransferStatus(UpdateTransferStatusReq) returns (UpdateTransferStatusRes) {}
+    // 补偿余额（游戏转账失败后调用）
+    rpc CompensateBalance(CompensateBalanceReq) returns (CompensateBalanceRes) {}
 }
 
 // 初始化用户余额请求
@@ -40,13 +44,12 @@ message RefreshBalanceRes {
 
 // 调整用户余额请求
 message AdjustBalanceReq {
-    int32 site_id = 1;        // 游戏id
+    int32 site_id = 1;          // 站点ID
     int32 user_id = 2;          // 用户ID
-    float amount = 3;          // 金额
-    int32 type = 4;             // 类型：0=转出：从中心账户转账到游戏账户 1=转入：从游戏账户转账到中心账户
-    string game_name = 5;        // 游戏名称
-    string game_id = 6;        // 游戏id
-
+    float amount = 3;           // 金额（正数为加款，负数为扣款）
+    int32 type = 4;             // 类型：0=转出(从中心账户转账到游戏账户) 1=转入(从游戏账户转账到中心账户)
+    string game_name = 5;       // 游戏名称
+    string game_id = 6;         // 游戏ID
 }
 
 // 调整用户余额响应
@@ -55,4 +58,29 @@ message AdjustBalanceRes {
     string message = 2;         // 消息
     string balance = 3;         // 调整后的余额
     string order_no = 4;        // 订单号
+}
+
+// 更新转账状态请求
+message UpdateTransferStatusReq {
+    string order_no = 1;        // 订单号
+}
+
+// 更新转账状态响应
+message UpdateTransferStatusRes {
+    bool success = 1;           // 是否成功
+    string message = 2;         // 消息
+}
+
+// 补偿余额请求
+message CompensateBalanceReq {
+    int32 site_id = 1;          // 站点ID
+    int32 user_id = 2;          // 用户ID
+    string order_no = 3;        // 订单号
+    float amount = 4;           // 需要补偿的金额（负数）
+}
+
+// 补偿余额响应
+message CompensateBalanceRes {
+    bool success = 1;           // 是否成功
+    string message = 2;         // 消息
 }

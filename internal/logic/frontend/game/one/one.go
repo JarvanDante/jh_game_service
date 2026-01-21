@@ -8,12 +8,16 @@ import (
 	"encoding/json"
 	"fmt"
 	v1 "jh_game_service/api/frontend/game/v1"
+	balanceV1 "jh_game_service/api/grpc/balance/v1"
 	"jh_game_service/internal/model/entity"
 	"jh_game_service/internal/util"
 	"math/rand"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/gogf/gf/v2/frame/g"
+	"google.golang.org/grpc"
 )
 
 type (
@@ -42,7 +46,7 @@ type oneToGameReq struct {
 	TraceId        string  `json:"traceId"`
 	TransferAmount float64 `json:"transferAmount"`
 	Currency       string  `json:"currency"`
-	referenceId    string  `json:"referenceId"`
+	ReferenceId    string  `json:"referenceId"`
 }
 
 //GetGameUrl
@@ -59,7 +63,7 @@ type oneToGameReq struct {
  * @return error
  * @author : Carson
  */
-func (s *sOne) GetGameUrl(req *v1.RedirectToGameReq, siteId int, userId uint, siteGame entity.SiteGame, siteCode string, username string, currency string, domain string, clientIp string) (map[string]interface{}, error) {
+func (s *sOne) GetGameUrl(ctx context.Context, req *v1.RedirectToGameReq, siteId int, userId uint, siteGame entity.SiteGame, siteCode string, username string, currency string, domain string, clientIp string) (map[string]interface{}, error) {
 
 	// 构建游戏用户名
 	buildUsername, err := s.buildUsername(username, siteCode)
@@ -100,27 +104,74 @@ func (s *sOne) GetGameUrl(req *v1.RedirectToGameReq, siteId int, userId uint, si
 
 	// 转入游戏
 	amount := 180.00
-	orderNo := fmt.Sprintf("GAME_%d_%d_%s", siteId, userId, traceId)
 
-	// TODO: 调用balance服务的AdjustBalance方法进行扣款
-	// 参数：
-	// - user_id: userId
-	// - amount: -amount (负数表示扣款)
-	// - type: 4 (游戏转出)
-	// - remark: fmt.Sprintf("转入%s游戏", siteGame.Name)
-	// - order_no: orderNo
-	// - game_id: siteGame.GameId
+	// 生成UUID作为订单号（三方API要求UUID格式）
+	orderNo, _ := s.generateUUIDv4()
+
+	// 调用balance服务的AdjustBalance方法进行扣款
+	g.Log().Infof(ctx, "准备调用balance服务扣款: siteId=%d, userId=%d, amount=%.2f, gameName=%s",
+		siteId, userId, amount, siteGame.Name)
+
+	balanceClient := s.getBalanceClient()
+
+	// 设置超时时间为10秒
+	callCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+
+	g.Log().Infof(ctx, "开始调用balance服务AdjustBalance方法")
+
+	adjustRes, err := balanceClient.AdjustBalance(callCtx, &balanceV1.AdjustBalanceReq{
+		SiteId:   int32(siteId),
+		UserId:   int32(userId),
+		Amount:   float32(amount),
+		Type:     0, // 0=转出：从中心账户转账到游戏账户
+		GameName: siteGame.Name,
+		GameId:   strconv.Itoa(siteGame.GameId),
+	})
+
+	if err != nil {
+		g.Log().Errorf(ctx, "调用balance服务失败: %v", err)
+	} else {
+		g.Log().Infof(ctx, "调用balance服务成功: success=%v, message=%s", adjustRes.Success, adjustRes.Message)
+	}
+
+	g.Log().Infof(ctx, "balance服务调用完成: err=%v", err)
+
+	if err != nil {
+		return nil, fmt.Errorf("调用balance服务失败: %v", err)
+	}
+
+	if !adjustRes.Success {
+		return nil, fmt.Errorf("扣款失败: %s", adjustRes.Message)
+	}
 
 	// 调用三方游戏API进行转账
-	err = s.transferToOne(siteGame, buildUsername, traceId, amount, currency, orderNo)
+	err = s.transferToOne(ctx, siteGame, buildUsername, traceId, amount, currency, orderNo)
 	if err != nil {
-		// 失败：调用balance服务的CompensateBalance方法补偿余额
-		// TODO: 调用 CompensateBalance(user_id, order_no, amount)
+		// 失败：补偿余额
+		compensateRes, compensateErr := balanceClient.CompensateBalance(ctx, &balanceV1.CompensateBalanceReq{
+			SiteId:  int32(siteId),
+			UserId:  int32(userId),
+			OrderNo: adjustRes.OrderNo,
+			Amount:  float32(amount), // 传入正数，由type参数判断
+		})
+		if compensateErr != nil {
+			g.Log().Errorf(ctx, "补偿余额失败: %v", compensateErr)
+		} else if !compensateRes.Success {
+			g.Log().Errorf(ctx, "补偿余额失败: %s", compensateRes.Message)
+		}
 		return nil, err
 	}
 
-	// 成功：调用balance服务的UpdateTransferStatus方法更新状态
-	// TODO: 调用 UpdateTransferStatus(order_no, status=2)
+	// 成功：更新转账状态
+	updateRes, updateErr := balanceClient.UpdateTransferStatus(ctx, &balanceV1.UpdateTransferStatusReq{
+		OrderNo: adjustRes.OrderNo,
+	})
+	if updateErr != nil {
+		g.Log().Errorf(ctx, "更新转账状态失败: %v", updateErr)
+	} else if !updateRes.Success {
+		g.Log().Errorf(ctx, "更新转账状态失败: %s", updateRes.Message)
+	}
 
 	// 进入游戏
 	res, err := util.CurlPostHeader(url, headers, data)
@@ -169,7 +220,7 @@ func (s *sOne) AutoTransferBalance(ctx context.Context, username string, siteGam
 	return nil
 }
 
-func (s *sOne) transferToOne(siteGame entity.SiteGame, buildUsername string, traceId string, amount float64, currency string, orderNo string) error {
+func (s *sOne) transferToOne(ctx context.Context, siteGame entity.SiteGame, buildUsername string, traceId string, amount float64, currency string, orderNo string) error {
 
 	// 构建请求数据
 	data := oneToGameReq{
@@ -177,7 +228,7 @@ func (s *sOne) transferToOne(siteGame entity.SiteGame, buildUsername string, tra
 		TraceId:        traceId,
 		TransferAmount: amount,
 		Currency:       currency,
-		referenceId:    orderNo,
+		ReferenceId:    orderNo,
 	}
 
 	// 生成签名
@@ -196,10 +247,13 @@ func (s *sOne) transferToOne(siteGame entity.SiteGame, buildUsername string, tra
 	// 构建API URL
 	url := strings.TrimSuffix(siteGame.ApiUrl, "/") + "/cash/deposit"
 
+	g.Log().Infof(ctx, "转入请求参数: %v,%v,%v", url, headers, data)
 	res, err := util.CurlPostHeader(url, headers, data)
 	if err != nil {
 		return fmt.Errorf("游戏API请求失败: %v", err)
 	}
+
+	g.Log().Infof(ctx, "转入请求结果: %v", res)
 
 	if res["status"] == "SC_INVALID_OPERATOR" {
 		return fmt.Errorf("未经授权的访问")
@@ -304,4 +358,21 @@ func (s *sOne) getONESignature(data any, secretKey string) (string, error) {
 
 	// PHP hash_hmac 默认输出 hex string
 	return hex.EncodeToString(h.Sum(nil)), nil
+}
+
+// getBalanceClient 获取balance服务的gRPC客户端
+func (s *sOne) getBalanceClient() balanceV1.BalanceClient {
+	g.Log().Info(context.Background(), "正在连接balance服务: mydocker-jh_balance_service-1:8003")
+
+	// 直接使用容器名和端口，不阻塞连接
+	conn, err := grpc.Dial("mydocker-jh_balance_service-1:8003",
+		grpc.WithInsecure())
+	if err != nil {
+		g.Log().Errorf(context.Background(), "连接balance服务失败: %v", err)
+		panic(fmt.Sprintf("无法连接到balance服务: %v", err))
+	}
+
+	g.Log().Infof(context.Background(), "balance服务连接创建成功")
+
+	return balanceV1.NewBalanceClient(conn)
 }
