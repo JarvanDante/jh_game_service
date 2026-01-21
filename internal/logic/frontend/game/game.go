@@ -23,7 +23,15 @@ func init() {
 	frontend.RegisterGame(&sGame{})
 }
 
-// RedirectToGame 进入游戏
+//RedirectToGame
+/**
+ * @desc：进入游戏
+ * @param ctx
+ * @param req
+ * @return *v1.RedirectToGameRes
+ * @return error
+ * @author : Carson
+ */
 func (s *sGame) RedirectToGame(ctx context.Context, req *v1.RedirectToGameReq) (*v1.RedirectToGameRes, error) {
 	if req == nil {
 		return nil, fmt.Errorf("请求参数不能为空")
@@ -35,7 +43,7 @@ func (s *sGame) RedirectToGame(ctx context.Context, req *v1.RedirectToGameReq) (
 		return nil, fmt.Errorf("获取站点信息失败")
 	}
 
-	_, siteId, err := middleware.GetUserInfoFromContext(ctx)
+	userId, siteId, err := middleware.GetUserInfoFromContext(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("获取用户信息失败")
 	}
@@ -84,7 +92,8 @@ func (s *sGame) RedirectToGame(ctx context.Context, req *v1.RedirectToGameReq) (
 	var result map[string]interface{}
 	switch siteGame.Platform {
 	case "ONE":
-		result, err = s.getOneGameUrl(ctx, username, siteCode, req, &siteGame, currency, domain, clientIp)
+		oneService := one.New()
+		result, err = oneService.GetGameUrl(req, siteId, userId, siteGame, siteCode, username, currency, domain, clientIp)
 	// TODO: 添加其他游戏平台的实现
 	default:
 		return nil, fmt.Errorf("不支持的游戏平台: %s", siteGame.Platform)
@@ -104,62 +113,13 @@ func (s *sGame) RedirectToGame(ctx context.Context, req *v1.RedirectToGameReq) (
 	}, nil
 }
 
-// getOneGameUrl 获取ONE游戏链接
-func (s *sGame) getOneGameUrl(ctx context.Context, username, siteCode string, req *v1.RedirectToGameReq,
-	siteGame *entity.SiteGame, currency, domain, clientIp string) (map[string]interface{}, error) {
-
-	oneService := one.New()
-
-	// 构建游戏用户名
-	buildUsername, err := oneService.BuildUsername(username, siteCode)
-	if err != nil {
-		return nil, err
-	}
-
-	// 生成TraceID
-	traceId, _ := oneService.GenerateUUIDv4()
-
-	// 构建请求数据
-	data := one.OneGameReq{
-		Username:  buildUsername,
-		TraceId:   traceId,
-		GameCode:  req.Key,
-		Language:  "en",
-		Platform:  s.getPlatformType(req.Mobile),
-		Currency:  currency,
-		LobbyUrl:  domain,
-		IPAddress: clientIp,
-	}
-
-	// 生成签名
-	signature, err := oneService.GetONESignature(data, siteGame.ApiKey)
-	if err != nil {
-		return nil, err
-	}
-
-	// 构建请求头
-	headers := map[string]string{
-		"Content-Type": "application/json",
-		"X-API-Key":    siteGame.ApiId,
-		"X-Signature":  signature,
-	}
-
-	// 构建API URL
-	url := strings.TrimSuffix(siteGame.ApiUrl, "/") + "/game/url"
-
-	// 调用游戏API
-	return oneService.GetGameUrl(ctx, url, headers, data)
-}
-
-// getPlatformType 根据mobile参数返回平台类型
-func (s *sGame) getPlatformType(mobile int32) string {
-	if mobile > 0 {
-		return "H5"
-	}
-	return "WEB"
-}
-
-// getClientIPFromContext 从上下文获取客户端IP
+//getClientIPFromContext
+/**
+ * @desc：从上下文获取客户端IP
+ * @param ctx
+ * @return string
+ * @author : Carson
+ */
 func (s *sGame) getClientIPFromContext(ctx context.Context) string {
 	// 尝试从gRPC metadata获取
 	if md, ok := metadata.FromIncomingContext(ctx); ok {
