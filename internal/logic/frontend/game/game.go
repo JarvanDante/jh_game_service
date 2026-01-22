@@ -7,7 +7,8 @@ import (
 	"google.golang.org/grpc/metadata"
 	v1 "jh_game_service/api/frontend/game/v1"
 	"jh_game_service/internal/dao"
-	"jh_game_service/internal/logic/frontend/game/one"
+	"jh_game_service/internal/logic/frontend/game/platform"
+	_ "jh_game_service/internal/logic/frontend/game/platform/one" // 自动注册ONE平台
 	"jh_game_service/internal/middleware"
 	"jh_game_service/internal/model/do"
 	"jh_game_service/internal/model/entity"
@@ -88,25 +89,30 @@ func (s *sGame) RedirectToGame(ctx context.Context, req *v1.RedirectToGameReq) (
 		return nil, fmt.Errorf("%s游戏关闭维护", siteGame.Name)
 	}
 
-	// 4. 根据游戏平台获取游戏链接
-	var resultUrl map[string]interface{}
-
-	switch siteGame.Platform {
-	case "ONE":
-		oneService := one.New()
-
-		resultUrl, err = oneService.GetGameUrl(ctx, req, siteId, userId, siteGame, siteCode, username, currency, domain, clientIp)
-
-	//TODO: 添加其他游戏平台的实现
-	default:
-		return nil, fmt.Errorf("不支持的游戏平台: %s", siteGame.Platform)
+	// 4. 通过工厂创建游戏平台实例
+	gamePlatform, err := platform.GetFactory().Create(siteGame.Platform)
+	if err != nil {
+		return nil, err
 	}
+
+	// 5. 调用平台的GetGameUrl方法
+	resultUrl, err := gamePlatform.GetGameUrl(ctx, &platform.GameParams{
+		SiteId:   siteId,
+		UserId:   userId,
+		Username: username,
+		SiteCode: siteCode,
+		Currency: currency,
+		Domain:   domain,
+		ClientIP: clientIp,
+		SiteGame: siteGame,
+		Request:  req,
+	})
 
 	if err != nil {
 		return nil, fmt.Errorf("获取游戏链接失败: %v", err)
 	}
 
-	// 5. 返回结果
+	// 6. 返回结果
 	gameType, _ := resultUrl["type"].(string)
 	gameUrl, _ := resultUrl["url"].(string)
 

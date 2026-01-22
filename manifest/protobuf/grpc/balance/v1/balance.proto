@@ -48,9 +48,10 @@ message RefreshBalanceRes {
 message AdjustBalanceReq {
     int32 site_id = 1;          // 站点ID
     int32 user_id = 2;          // 用户ID
-    int32 type = 3;             // 类型：0=转出(从中心账户转账到游戏账户) 1=转入(从游戏账户转账到中心账户)
-    string game_name = 4;       // 游戏名称
-    string game_id = 5;         // 游戏ID
+    float amount = 3;           // 金额
+    int32 type = 4;             // 类型：0=转出(从中心账户转账到游戏账户) 1=转入(从游戏账户转账到中心账户)
+    string game_name = 5;       // 游戏名称
+    string game_id = 6;         // 游戏ID
 }
 
 // 调整用户余额响应
