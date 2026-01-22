@@ -43,7 +43,7 @@ func (p *OnePlatform) GetGameUrl(ctx context.Context, params *platform.GameParam
 	traceId, _ := p.generateUUID()
 
 	// 3. 转入游戏（扣款）
-	amount := 20.00
+	amount := 10.00
 	orderNo, _ := p.generateUUID()
 
 	// 测试-查询余额
@@ -64,7 +64,7 @@ func (p *OnePlatform) GetGameUrl(ctx context.Context, params *platform.GameParam
 		g.Log().Infof(ctx, "用户游戏余额== [%f]", userGameBalance)
 	}
 
-	err := p.TransferIn(ctx, &platform.TransferParams{
+	err := p.TransferOut(ctx, &platform.TransferParams{
 		SiteId:   params.SiteId,
 		UserId:   params.UserId,
 		Username: params.Username,
@@ -75,8 +75,22 @@ func (p *OnePlatform) GetGameUrl(ctx context.Context, params *platform.GameParam
 		SiteGame: params.SiteGame,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("转入游戏失败: %v", err)
+		return nil, fmt.Errorf("转出游戏失败: %v", err)
 	}
+
+	//err := p.TransferIn(ctx, &platform.TransferParams{
+	//	SiteId:   params.SiteId,
+	//	UserId:   params.UserId,
+	//	Username: params.Username,
+	//	SiteCode: params.SiteCode,
+	//	Amount:   amount,
+	//	Currency: params.Currency,
+	//	OrderNo:  orderNo,
+	//	SiteGame: params.SiteGame,
+	//})
+	//if err != nil {
+	//	return nil, fmt.Errorf("转入游戏失败: %v", err)
+	//}
 
 	// 4. 构建请求数据
 	data := map[string]interface{}{
@@ -314,11 +328,94 @@ func (p *OnePlatform) TransferIn(ctx context.Context, params *platform.TransferP
 	return nil
 }
 
-// TransferOut 转出游戏
+// TransferOut 转出游戏（从游戏转回中心账户）
 func (p *OnePlatform) TransferOut(ctx context.Context, params *platform.TransferParams) error {
-	// TODO: 实现转出逻辑
-	g.Log().Warning(ctx, "ONE平台转出功能待实现")
-	return fmt.Errorf("功能待实现")
+	// 1. 调用balance服务创建pending订单（Type=1，不扣用户余额）
+	g.Log().Info(ctx, "正在连接balance服务: jh_balance_service")
+
+	balanceClient, conn, err := p.getBalanceClient(ctx)
+	if err != nil {
+		return fmt.Errorf("连接balance服务失败: %v", err)
+	}
+	defer conn.Close()
+
+	g.Log().Infof(ctx, "balance服务连接成功，准备调用AdjustBalance: siteId=%d, userId=%d, amount=%.2f, type=1(转出)",
+		params.SiteId, params.UserId, params.Amount)
+
+	adjustRes, err := balanceClient.AdjustBalance(ctx, &balanceV1.AdjustBalanceReq{
+		SiteId:   int32(params.SiteId),
+		UserId:   int32(params.UserId),
+		Amount:   float32(params.Amount),
+		Type:     1, // 1=转入：从游戏账户转账到中心账户
+		GameName: params.SiteGame.Name,
+		GameId:   strconv.Itoa(params.SiteGame.GameId),
+	})
+
+	g.Log().Infof(ctx, "balance服务调用完成: err=%v", err)
+
+	if err != nil {
+		return fmt.Errorf("调用balance服务失败: %v", err)
+	}
+
+	if !adjustRes.Success {
+		return fmt.Errorf("创建转出订单失败: %s", adjustRes.Message)
+	}
+
+	g.Log().Infof(ctx, "创建转出订单成功，订单号: %s", adjustRes.OrderNo)
+
+	// 2. 调用三方游戏API转出
+	buildUsername := p.buildUsername(params.Username, params.SiteCode)
+	traceId, _ := p.generateUUID()
+
+	data := map[string]interface{}{
+		"username":       buildUsername,
+		"traceId":        traceId,
+		"transferAmount": params.Amount,
+		"currency":       params.Currency,
+		"referenceId":    params.OrderNo,
+	}
+
+	signature, err := p.getSignature(data, params.SiteGame.ApiKey)
+	if err != nil {
+		// 失败：标记订单失败（转出失败不需要补偿余额）
+		p.markTransferFailed(ctx, balanceClient, adjustRes.OrderNo)
+		return err
+	}
+
+	headers := map[string]string{
+		"Content-Type": "application/json",
+		"X-API-Key":    params.SiteGame.ApiId,
+		"X-Signature":  signature,
+	}
+
+	// 注意：转出使用 /cash/withdraw 接口
+	url := strings.TrimSuffix(params.SiteGame.ApiUrl, "/") + "/cash/withdraw"
+	res, err := util.CurlPostHeader(url, headers, data)
+	if err != nil {
+		// 失败：标记订单失败
+		p.markTransferFailed(ctx, balanceClient, adjustRes.OrderNo)
+		return fmt.Errorf("游戏API请求失败: %v", err)
+	}
+
+	// 3. 检查响应
+	status, _ := res["status"].(string)
+	if status != "SC_OK" {
+		// 失败：标记订单失败
+		p.markTransferFailed(ctx, balanceClient, adjustRes.OrderNo)
+		return fmt.Errorf("转出失败: %s", status)
+	}
+
+	// 4. 成功：更新转账状态（会增加用户余额）
+	_, err = balanceClient.UpdateTransferStatus(ctx, &balanceV1.UpdateTransferStatusReq{
+		OrderNo: adjustRes.OrderNo,
+	})
+	if err != nil {
+		g.Log().Errorf(ctx, "更新转账状态失败: %v", err)
+	}
+
+	g.Log().Infof(ctx, "转出成功，已增加用户余额")
+
+	return nil
 }
 
 // PullBetRecords 拉取注单
@@ -409,5 +506,20 @@ func (p *OnePlatform) compensateBalance(ctx context.Context, client balanceV1.Ba
 	})
 	if err != nil {
 		g.Log().Errorf(ctx, "补偿余额失败: %v", err)
+	}
+}
+
+// markTransferFailed 标记转账失败（用于转出失败，不需要补偿余额）
+func (p *OnePlatform) markTransferFailed(ctx context.Context, client balanceV1.BalanceClient, orderNo string) {
+	// TODO: 需要在balance服务添加一个标记失败的方法
+	// 暂时使用CompensateBalance，传入0金额
+	_, err := client.CompensateBalance(ctx, &balanceV1.CompensateBalanceReq{
+		SiteId:  0,
+		UserId:  0,
+		OrderNo: orderNo,
+		Amount:  0, // 0金额表示只标记失败，不补偿
+	})
+	if err != nil {
+		g.Log().Errorf(ctx, "标记转账失败: %v", err)
 	}
 }
