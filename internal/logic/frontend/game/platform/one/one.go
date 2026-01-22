@@ -43,7 +43,7 @@ func (p *OnePlatform) GetGameUrl(ctx context.Context, params *platform.GameParam
 	traceId, _ := p.generateUUID()
 
 	// 3. 转入游戏（扣款）
-	amount := 10.00
+	amount := 30.00
 	orderNo, _ := p.generateUUID()
 
 	// 测试-查询余额
@@ -64,21 +64,7 @@ func (p *OnePlatform) GetGameUrl(ctx context.Context, params *platform.GameParam
 		g.Log().Infof(ctx, "用户游戏余额== [%f]", userGameBalance)
 	}
 
-	err := p.TransferOut(ctx, &platform.TransferParams{
-		SiteId:   params.SiteId,
-		UserId:   params.UserId,
-		Username: params.Username,
-		SiteCode: params.SiteCode,
-		Amount:   amount,
-		Currency: params.Currency,
-		OrderNo:  orderNo,
-		SiteGame: params.SiteGame,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("转出游戏失败: %v", err)
-	}
-
-	//err := p.TransferIn(ctx, &platform.TransferParams{
+	//err := p.TransferOut(ctx, &platform.TransferParams{
 	//	SiteId:   params.SiteId,
 	//	UserId:   params.UserId,
 	//	Username: params.Username,
@@ -89,8 +75,22 @@ func (p *OnePlatform) GetGameUrl(ctx context.Context, params *platform.GameParam
 	//	SiteGame: params.SiteGame,
 	//})
 	//if err != nil {
-	//	return nil, fmt.Errorf("转入游戏失败: %v", err)
+	//	return nil, fmt.Errorf("转出游戏失败: %v", err)
 	//}
+
+	err := p.TransferIn(ctx, &platform.TransferParams{
+		SiteId:   params.SiteId,
+		UserId:   params.UserId,
+		Username: params.Username,
+		SiteCode: params.SiteCode,
+		Amount:   amount,
+		Currency: params.Currency,
+		OrderNo:  orderNo,
+		SiteGame: params.SiteGame,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("转入游戏失败: %v", err)
+	}
 
 	// 4. 构建请求数据
 	data := map[string]interface{}{

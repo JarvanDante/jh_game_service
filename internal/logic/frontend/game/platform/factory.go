@@ -5,6 +5,14 @@ import (
 	"sync"
 )
 
+/*
+	现在你的游戏服务使用的是新的接口+工厂模式架构，更容易扩展和维护。如果以后要添加其他游戏平台（如AG、PP等），只需要：
+
+	在platform/目录下创建新的文件夹（如ag/、pp/）
+	实现GamePlatform接口
+	在init()函数中注册到工厂
+	无需修改其他代码
+*/
 // PlatformFactory 游戏平台工厂
 type PlatformFactory struct {
 	platforms map[string]func() GamePlatform
