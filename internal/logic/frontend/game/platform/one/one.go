@@ -34,7 +34,15 @@ func init() {
 	})
 }
 
-// GetGameUrl 获取游戏链接
+//GetGameUrl
+/**
+ * @desc：获取游戏链接
+ * @param ctx
+ * @param params
+ * @return map[string]interface{}
+ * @return error
+ * @author : Carson
+ */
 func (p *OnePlatform) GetGameUrl(ctx context.Context, params *platform.GameParams) (map[string]interface{}, error) {
 	// 1. 构建游戏用户名
 	buildUsername := p.buildUsername(params.Username, params.SiteCode)
@@ -42,54 +50,100 @@ func (p *OnePlatform) GetGameUrl(ctx context.Context, params *platform.GameParam
 	// 2. 生成TraceID
 	traceId, _ := p.generateUUID()
 
-	// 3. 转入游戏（扣款）
-	amount := 30.00
-	orderNo, _ := p.generateUUID()
-
-	// 测试-查询余额
-	userGameBalance, balanceErr := p.GetBalance(ctx, &platform.GameParams{
-		SiteId:   params.SiteId,
-		UserId:   params.UserId,
-		Username: params.Username,
-		SiteCode: params.SiteCode,
-		Currency: params.Currency,
-		SiteGame: params.SiteGame,
-		Request:  params.Request,
-		Domain:   params.Domain,
-		ClientIP: params.ClientIP,
-	})
-	if balanceErr != nil {
-		g.Log().Errorf(ctx, "查询余额失败: %v", balanceErr)
-	} else {
-		g.Log().Infof(ctx, "用户游戏余额== [%f]", userGameBalance)
+	// 3. 获取最后一次游戏记录和用户余额
+	balanceClient, conn, err := p.getBalanceClient(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("连接balance服务失败: %v", err)
 	}
+	defer conn.Close()
 
-	//err := p.TransferOut(ctx, &platform.TransferParams{
-	//	SiteId:   params.SiteId,
-	//	UserId:   params.UserId,
-	//	Username: params.Username,
-	//	SiteCode: params.SiteCode,
-	//	Amount:   amount,
-	//	Currency: params.Currency,
-	//	OrderNo:  orderNo,
-	//	SiteGame: params.SiteGame,
-	//})
-	//if err != nil {
-	//	return nil, fmt.Errorf("转出游戏失败: %v", err)
-	//}
-
-	err := p.TransferIn(ctx, &platform.TransferParams{
-		SiteId:   params.SiteId,
-		UserId:   params.UserId,
-		Username: params.Username,
-		SiteCode: params.SiteCode,
-		Amount:   amount,
-		Currency: params.Currency,
-		OrderNo:  orderNo,
-		SiteGame: params.SiteGame,
+	lastGameRes, err := balanceClient.GetLastBalanceLogGame(ctx, &balanceV1.GetLastBalanceLogGameReq{
+		SiteId: int32(params.SiteId),
+		UserId: int32(params.UserId),
 	})
 	if err != nil {
-		return nil, fmt.Errorf("转入游戏失败: %v", err)
+		return nil, fmt.Errorf("获取最后游戏记录失败: %v", err)
+	}
+
+	lastGameId := int(lastGameRes.GameId)
+	userBalance := float64(lastGameRes.Amount)
+	currentGameId := params.SiteGame.GameId
+
+	g.Log().Infof(ctx, "最后游戏ID: %d, 当前游戏ID: %d, 用户余额: %.2f", lastGameId, currentGameId, userBalance)
+
+	// 4. 判断是否需要转账
+	var needTransfer bool
+	var amount float64
+
+	if lastGameId == 0 {
+		// 情况1：用户第一次进入游戏，取用户中心钱包余额全部转入当前游戏
+		g.Log().Infof(ctx, "用户第一次进入游戏，余额: %.2f", userBalance)
+		if userBalance > 0 {
+			needTransfer = true
+			amount = userBalance
+		}
+	} else if lastGameId == currentGameId {
+		// 情况2：进入的是同一个游戏，不需要转账
+		g.Log().Infof(ctx, "进入同一个游戏，无需转账")
+		needTransfer = false
+	} else {
+		// 情况3：进入不同游戏，需要先从旧游戏转出，再转入新游戏
+		g.Log().Infof(ctx, "切换游戏: %d -> %d", lastGameId, currentGameId)
+
+		// 3.1 查询旧游戏余额
+		oldGameBalance, balanceErr := p.GetBalance(ctx, params)
+		if balanceErr != nil {
+			g.Log().Errorf(ctx, "查询旧游戏余额失败: %v", balanceErr)
+		} else {
+			g.Log().Infof(ctx, "旧游戏余额: %.2f", oldGameBalance)
+
+			// 3.2 如果旧游戏有余额，先转出到中心钱包
+			if oldGameBalance > 0 {
+				orderNo, _ := p.generateUUID()
+				transferErr := p.TransferOut(ctx, &platform.TransferParams{
+					SiteId:   params.SiteId,
+					UserId:   params.UserId,
+					Username: params.Username,
+					SiteCode: params.SiteCode,
+					Amount:   oldGameBalance,
+					Currency: params.Currency,
+					OrderNo:  orderNo,
+					SiteGame: params.SiteGame,
+				})
+				if transferErr != nil {
+					return nil, fmt.Errorf("从旧游戏转出失败: %v", transferErr)
+				}
+				g.Log().Infof(ctx, "从旧游戏转出成功: %.2f", oldGameBalance)
+
+				// 更新用户余额
+				userBalance += oldGameBalance
+			}
+		}
+
+		// 3.3 将中心钱包余额全部转入新游戏
+		if userBalance > 0 {
+			needTransfer = true
+			amount = userBalance
+		}
+	}
+
+	// 5. 执行转账
+	if needTransfer && amount > 0 {
+		orderNo, _ := p.generateUUID()
+		err = p.TransferIn(ctx, &platform.TransferParams{
+			SiteId:   params.SiteId,
+			UserId:   params.UserId,
+			Username: params.Username,
+			SiteCode: params.SiteCode,
+			Amount:   amount,
+			Currency: params.Currency,
+			OrderNo:  orderNo,
+			SiteGame: params.SiteGame,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("转入游戏失败: %v", err)
+		}
+		g.Log().Infof(ctx, "转入游戏成功: %.2f", amount)
 	}
 
 	// 4. 构建请求数据
@@ -124,9 +178,12 @@ func (p *OnePlatform) GetGameUrl(ctx context.Context, params *platform.GameParam
 		return nil, fmt.Errorf("游戏API请求失败: %v", err)
 	}
 
+	g.Log().Infof(ctx, "游戏API响应: %v", res)
+
 	// 8. 解析响应
 	dataValue, exists := res["data"]
 	if !exists {
+		g.Log().Errorf(ctx, "游戏API返回格式错误，完整响应: %v", res)
 		return nil, fmt.Errorf("游戏API返回格式错误，缺少data字段")
 	}
 
@@ -146,7 +203,15 @@ func (p *OnePlatform) GetGameUrl(ctx context.Context, params *platform.GameParam
 	}, nil
 }
 
-// GetBalance 查询游戏余额
+//GetBalance
+/**
+ * @desc：查询游戏余额
+ * @param ctx
+ * @param params
+ * @return float64
+ * @return error
+ * @author : Carson
+ */
 func (p *OnePlatform) GetBalance(ctx context.Context, params *platform.GameParams) (float64, error) {
 	// 1. 构建游戏用户名
 	buildUsername := p.buildUsername(params.Username, params.SiteCode)
@@ -241,7 +306,14 @@ func (p *OnePlatform) GetBalance(ctx context.Context, params *platform.GameParam
 	}
 }
 
-// TransferIn 转入游戏
+//TransferIn
+/**
+ * @desc：转入游戏
+ * @param ctx
+ * @param params
+ * @return error
+ * @author : Carson
+ */
 func (p *OnePlatform) TransferIn(ctx context.Context, params *platform.TransferParams) error {
 	// 1. 调用balance服务扣款
 	g.Log().Info(ctx, "正在连接balance服务: jh_balance_service")
@@ -328,7 +400,14 @@ func (p *OnePlatform) TransferIn(ctx context.Context, params *platform.TransferP
 	return nil
 }
 
-// TransferOut 转出游戏（从游戏转回中心账户）
+//TransferOut
+/**
+ * @desc：转出游戏（从游戏转回中心账户）
+ * @param ctx
+ * @param params
+ * @return error
+ * @author : Carson
+ */
 func (p *OnePlatform) TransferOut(ctx context.Context, params *platform.TransferParams) error {
 	// 1. 调用balance服务创建pending订单（Type=1，不扣用户余额）
 	g.Log().Info(ctx, "正在连接balance服务: jh_balance_service")
