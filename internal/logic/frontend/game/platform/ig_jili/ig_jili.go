@@ -190,54 +190,20 @@ func (p *IGJiliPlatform) GetGameUrl(ctx context.Context, params *platform.GamePa
 	g.Log().Infof(ctx, "游戏API响应: %v", res)
 
 	// 8. 解析响应
-	bodyValue, exists := res["body"]
-	if !exists {
-		g.Log().Errorf(ctx, "游戏API返回格式错误，完整响应: %v", res)
-		return nil, fmt.Errorf("游戏API返回格式错误，缺少body字段")
+	errorCode, message, dataMap, err := p.parseAPIResponse(ctx, res)
+	if err != nil {
+		return nil, fmt.Errorf("解析API响应失败: %v", err)
 	}
 
-	// body可能是字节数组或字符串，需要解析成JSON
-	var bodyBytes []byte
-	switch v := bodyValue.(type) {
-	case []byte:
-		bodyBytes = v
-	case string:
-		bodyBytes = []byte(v)
-	case []interface{}:
-		// 字节数组形式 [123, 34, ...]
-		bodyBytes = make([]byte, len(v))
-		for i, b := range v {
-			if num, ok := b.(float64); ok {
-				bodyBytes[i] = byte(num)
-			}
-		}
-	default:
-		return nil, fmt.Errorf("游戏API返回格式错误，body字段类型不正确: %T", bodyValue)
-	}
+	g.Log().Infof(ctx, "API返回: ErrorCode=%d, Message=%s", errorCode, message)
 
-	// 解析JSON
-	var dataMap map[string]interface{}
-	if err := json.Unmarshal(bodyBytes, &dataMap); err != nil {
-		g.Log().Errorf(ctx, "解析游戏API响应失败: %v, body: %s", err, string(bodyBytes))
-		return nil, fmt.Errorf("解析游戏API响应失败: %v", err)
-	}
-
-	g.Log().Infof(ctx, "解析后的响应: %v", dataMap)
-
-	// 检查错误码
-	errorCode := 0
-	if ec, ok := dataMap["ErrorCode"].(float64); ok {
-		errorCode = int(ec)
-	}
-
-	if errorCode != 0 {
-		message := dataMap["Message"]
-		return nil, fmt.Errorf("获取游戏链接失败。错误代码: %d, 错误消息: %v", errorCode, message)
+	if err := p.handleAPIError(ctx, errorCode, message); err != nil {
+		return nil, fmt.Errorf("获取游戏链接失败: %v", err)
 	}
 
 	gameUrl, ok := dataMap["Data"].(string)
 	if !ok || gameUrl == "" {
-		return nil, fmt.Errorf("游戏API返回格式错误，无法获取游戏链接")
+		return nil, fmt.Errorf("无法获取游戏链接")
 	}
 
 	return map[string]interface{}{
@@ -248,7 +214,7 @@ func (p *IGJiliPlatform) GetGameUrl(ctx context.Context, params *platform.GamePa
 
 //GetBalance
 /**
- * @desc：查询游戏余额
+ * @desc：查询游戏余额（自动处理注册）
  * @param ctx
  * @param params
  * @return float64
@@ -257,96 +223,18 @@ func (p *IGJiliPlatform) GetGameUrl(ctx context.Context, params *platform.GamePa
  */
 func (p *IGJiliPlatform) GetBalance(ctx context.Context, params *platform.GameParams) (float64, error) {
 	buildUsername := p.buildUsername(params.Username, params.SiteCode)
-	//要注册-查询余额前
-	keyRegister, err := p.generateKeyRegister(buildUsername, params)
-	if err != nil {
-		return 0, err
-	}
-	// 3. 构建请求数据
-	dataRegister := map[string]string{
-		"Account": buildUsername,
-		"AgentId": params.SiteGame.ApiId,
-		"Key":     keyRegister,
+
+	// 1. 确保用户已注册（如果未注册会自动注册）
+	if err := p.ensureMemberRegistered(ctx, buildUsername, params); err != nil {
+		return 0, fmt.Errorf("注册会员失败: %v", err)
 	}
 
-	// 7. 调用API
-	urlRegister := strings.TrimSuffix(params.SiteGame.ApiUrl, "/") + "/CreateMember"
-
-	resRegister, err := util.SendRequest(urlRegister, dataRegister)
-	if err != nil {
-		return 0, fmt.Errorf("游戏API请求失败: %v", err)
-	}
-
-	g.Log().Infof(ctx, "游戏API响应: %v", resRegister)
-
-	if resRegister["http_code"] != 200 {
-		g.Log().Errorf(ctx, "网络请求失败，请稍后再试。HTTP代码:%s", resRegister["http_code"])
-		return 0, fmt.Errorf("网络请求失败，请稍后再试。HTTP代码:%s", resRegister["http_code"])
-	}
-
-	// 8. 解析响应
-	bodyValue, exists := resRegister["body"]
-	if !exists {
-		g.Log().Errorf(ctx, "游戏API返回格式错误，缺少body字段")
-		return 0, fmt.Errorf("游戏API返回格式错误，缺少body字段")
-	}
-
-	// body可能是字节数组或字符串，需要解析成JSON
-	var bodyBytes []byte
-	switch v := bodyValue.(type) {
-	case []byte:
-		bodyBytes = v
-	case string:
-		bodyBytes = []byte(v)
-	case []interface{}:
-		// 字节数组形式 [123, 34, ...]
-		bodyBytes = make([]byte, len(v))
-		for i, b := range v {
-			if num, ok := b.(float64); ok {
-				bodyBytes[i] = byte(num)
-			}
-		}
-	default:
-		return 0, fmt.Errorf("游戏API返回格式错误，body字段类型不正确: %T", bodyValue)
-	}
-
-	// 解析JSON
-	var dataMap map[string]interface{}
-	if err := json.Unmarshal(bodyBytes, &dataMap); err != nil {
-		g.Log().Errorf(ctx, "解析游戏API响应失败: %v, body: %s", err, string(bodyBytes))
-		return 0, fmt.Errorf("解析游戏API响应失败: %v", err)
-	}
-
-	// 解析错误码
-	errorCode := 0
-	if ec, ok := dataMap["ErrorCode"].(float64); ok {
-		errorCode = int(ec)
-	}
-	message := ""
-	if msg, ok := dataMap["Message"].(string); ok {
-		message = msg
-	}
-
-	g.Log().Infof(ctx, "注册会员API返回: ErrorCode=%d, Message=%s", errorCode, message)
-
-	// 错误码101表示会员已存在，视为成功
-	if errorCode == 101 {
-		g.Log().Infof(ctx, "会员已存在，视为注册成功: %s", buildUsername)
-	} else if errorCode != 0 {
-		g.Log().Errorf(ctx, "创建会员失败。错误代码:%d, 消息:%s", errorCode, message)
-		return 0, fmt.Errorf("创建会员失败。错误代码:%d, 消息:%s", errorCode, message)
-	} else {
-		g.Log().Infof(ctx, "创建IG_JILI玩家账号成功: %s", buildUsername)
-	}
-
-	//=======获取余额============
-
-	//要注册-查询余额前
+	// 2. 查询余额
 	keyBalance, err := p.generateKeyBalance(buildUsername, params)
 	if err != nil {
 		return 0, err
 	}
-	// 3. 构建请求数据
+
 	dataBalance := map[string]string{
 		"Accounts": buildUsername,
 		"AgentId":  params.SiteGame.ApiId,
@@ -363,62 +251,19 @@ func (p *IGJiliPlatform) GetBalance(ctx context.Context, params *platform.GamePa
 
 	g.Log().Infof(ctx, "游戏API响应Balance: %v", resBalance)
 
-	if resBalance["http_code"] != 200 {
-		g.Log().Errorf(ctx, "网络请求失败，请稍后再试。HTTP代码:%s", resBalance["http_code"])
-		return 0, fmt.Errorf("网络请求失败，请稍后再试。HTTP代码:%s", resBalance["http_code"])
-	}
-
-	// 8. 解析响应
-	bodyValueBalance, exists := resBalance["body"]
-	if !exists {
-		g.Log().Errorf(ctx, "游戏API返回格式错误，缺少body字段")
-		return 0, fmt.Errorf("游戏API返回格式错误，缺少body字段")
-	}
-
-	// body可能是字节数组或字符串，需要解析成JSON
-	var bodyBytesBalance []byte
-	switch v := bodyValueBalance.(type) {
-	case []byte:
-		bodyBytesBalance = v
-	case string:
-		bodyBytesBalance = []byte(v)
-	case []interface{}:
-		// 字节数组形式 [123, 34, ...]
-		bodyBytesBalance = make([]byte, len(v))
-		for i, b := range v {
-			if num, ok := b.(float64); ok {
-				bodyBytesBalance[i] = byte(num)
-			}
-		}
-	default:
-		return 0, fmt.Errorf("游戏API返回格式错误，body字段类型不正确: %T", bodyValue)
-	}
-
-	// 解析JSON
-	var dataMapBalance map[string]interface{}
-	if err := json.Unmarshal(bodyBytesBalance, &dataMapBalance); err != nil {
-		g.Log().Errorf(ctx, "解析游戏API响应失败: %v, body: %s", err, string(bodyBytesBalance))
-		return 0, fmt.Errorf("解析游戏API响应失败: %v", err)
-	}
-
-	// 解析错误码
-	errorCodeBalance := 0
-	if ec, ok := dataMapBalance["ErrorCode"].(float64); ok {
-		errorCodeBalance = int(ec)
-	}
-	messageBalance := ""
-	if msg, ok := dataMapBalance["Message"].(string); ok {
-		messageBalance = msg
+	// 解析响应
+	errorCodeBalance, messageBalance, dataMapBalance, err := p.parseAPIResponse(ctx, resBalance)
+	if err != nil {
+		return 0, fmt.Errorf("解析余额响应失败: %v", err)
 	}
 
 	g.Log().Infof(ctx, "查询余额API返回: ErrorCode=%d, Message=%s", errorCodeBalance, messageBalance)
 
-	if errorCodeBalance != 0 {
-		g.Log().Errorf(ctx, "查询余额失败。错误代码:%d, 消息:%s", errorCodeBalance, messageBalance)
-		return 0, fmt.Errorf("查询余额失败。错误代码:%d, 消息:%s", errorCodeBalance, messageBalance)
+	if err := p.handleAPIError(ctx, errorCodeBalance, messageBalance); err != nil {
+		return 0, fmt.Errorf("查询余额失败: %v", err)
 	}
 
-	g.Log().Infof(ctx, "查询IG_JILI玩家余额成功: %s", buildUsername)
+	g.Log().Infof(ctx, "查询余额成功: %s", buildUsername)
 
 	balance, err := p.GetJsonBalance(dataMapBalance)
 	if err != nil {
@@ -1099,4 +944,130 @@ func (p *IGJiliPlatform) GetJsonBalance(responseData map[string]any) (float64, e
 func FormatAmount4(amount float64) string {
 	amount = math.Floor(amount*10000) / 10000
 	return fmt.Sprintf("%.4f", amount)
+}
+
+// ========== 辅助方法：减少重复代码 ==========
+
+// parseBodyBytes 解析响应body为字节数组
+func (p *IGJiliPlatform) parseBodyBytes(bodyValue interface{}) ([]byte, error) {
+	switch v := bodyValue.(type) {
+	case []byte:
+		return v, nil
+	case string:
+		return []byte(v), nil
+	case []interface{}:
+		bodyBytes := make([]byte, len(v))
+		for i, b := range v {
+			if num, ok := b.(float64); ok {
+				bodyBytes[i] = byte(num)
+			}
+		}
+		return bodyBytes, nil
+	default:
+		return nil, fmt.Errorf("body字段类型不正确: %T", bodyValue)
+	}
+}
+
+// parseAPIResponse 解析API响应，返回错误码、消息和数据
+func (p *IGJiliPlatform) parseAPIResponse(ctx context.Context, res map[string]interface{}) (errorCode int, message string, dataMap map[string]interface{}, err error) {
+	// 检查HTTP状态码
+	if httpCode, ok := res["http_code"].(int); ok && httpCode != 200 {
+		return 0, "", nil, fmt.Errorf("HTTP错误: %d", httpCode)
+	}
+
+	// 解析body
+	bodyValue, exists := res["body"]
+	if !exists {
+		return 0, "", nil, fmt.Errorf("缺少body字段")
+	}
+
+	bodyBytes, err := p.parseBodyBytes(bodyValue)
+	if err != nil {
+		return 0, "", nil, err
+	}
+
+	// 解析JSON
+	if err := json.Unmarshal(bodyBytes, &dataMap); err != nil {
+		g.Log().Errorf(ctx, "解析JSON失败: %v, body: %s", err, string(bodyBytes))
+		return 0, "", nil, fmt.Errorf("解析JSON失败: %v", err)
+	}
+
+	// 解析错误码和消息
+	if ec, ok := dataMap["ErrorCode"].(float64); ok {
+		errorCode = int(ec)
+	}
+	if msg, ok := dataMap["Message"].(string); ok {
+		message = msg
+	}
+
+	return errorCode, message, dataMap, nil
+}
+
+// handleAPIError 处理API错误，返回是否应该继续
+func (p *IGJiliPlatform) handleAPIError(ctx context.Context, errorCode int, message string, allowedCodes ...int) error {
+	if errorCode == 0 {
+		return nil // 成功
+	}
+
+	// 检查是否是允许的错误码
+	for _, code := range allowedCodes {
+		if errorCode == code {
+			g.Log().Infof(ctx, "错误码%d视为成功: %s", errorCode, message)
+			return nil
+		}
+	}
+
+	return fmt.Errorf("错误代码:%d, 消息:%s", errorCode, message)
+}
+
+//ensureMemberRegistered
+/**
+ * @desc：用API返回的错误码101（会员已存在）来避免重复注册
+ * @param ctx
+ * @param buildUsername
+ * @param params
+ * @return error
+ * @author : Carson
+ */
+func (p *IGJiliPlatform) ensureMemberRegistered(ctx context.Context, buildUsername string, params *platform.GameParams) error {
+	// 生成注册Key
+	keyRegister, err := p.generateKeyRegister(buildUsername, params)
+	if err != nil {
+		return err
+	}
+
+	// 构建注册请求
+	dataRegister := map[string]string{
+		"Account": buildUsername,
+		"AgentId": params.SiteGame.ApiId,
+		"Key":     keyRegister,
+	}
+
+	// 调用注册API
+	urlRegister := strings.TrimSuffix(params.SiteGame.ApiUrl, "/") + "/CreateMember"
+	resRegister, err := util.SendRequest(urlRegister, dataRegister)
+	if err != nil {
+		return fmt.Errorf("注册API请求失败: %v", err)
+	}
+
+	// 解析响应
+	errorCode, message, _, err := p.parseAPIResponse(ctx, resRegister)
+	if err != nil {
+		return fmt.Errorf("解析注册响应失败: %v", err)
+	}
+
+	g.Log().Infof(ctx, "注册API返回: ErrorCode=%d, Message=%s", errorCode, message)
+
+	// 错误码0=注册成功，101=会员已存在（也视为成功）
+	if err := p.handleAPIError(ctx, errorCode, message, 101); err != nil {
+		return fmt.Errorf("注册失败: %v", err)
+	}
+
+	if errorCode == 101 {
+		g.Log().Debugf(ctx, "会员已存在，跳过注册: %s", buildUsername)
+	} else {
+		g.Log().Infof(ctx, "会员注册成功: %s", buildUsername)
+	}
+
+	return nil
 }
