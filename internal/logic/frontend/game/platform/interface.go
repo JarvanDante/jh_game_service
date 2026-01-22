@@ -6,6 +6,9 @@ import (
 	"jh_game_service/internal/model/entity"
 )
 
+// GetGameConfigFunc 获取游戏配置的函数类型（用于依赖注入，避免循环导入）
+var GetGameConfigFunc func(ctx context.Context, siteId int, gameId int) (*entity.SiteGame, error)
+
 // GamePlatform 游戏平台接口
 // 所有游戏平台都需要实现这个接口
 type GamePlatform interface {

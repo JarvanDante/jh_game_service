@@ -85,13 +85,6 @@ func (p *IGJiliPlatform) GetGameUrl(ctx context.Context, params *platform.GamePa
 	fmt.Println(needTransfer, amount)
 
 	if lastGameId == 0 {
-		// 3.1 查询旧游戏余额
-		oldGameBalance, balanceErr := p.GetBalance(ctx, params)
-		if balanceErr != nil {
-			g.Log().Errorf(ctx, "查询旧游戏余额失败: %v", balanceErr)
-		} else {
-			g.Log().Infof(ctx, "旧游戏余额: %.2f", oldGameBalance)
-		}
 		// 情况1：用户第一次进入游戏，取用户中心钱包余额全部转入当前游戏
 		g.Log().Infof(ctx, "用户第一次进入游戏，余额: %.2f", userBalance)
 		if userBalance > 0 {
@@ -106,24 +99,48 @@ func (p *IGJiliPlatform) GetGameUrl(ctx context.Context, params *platform.GamePa
 		// 情况3：进入不同游戏，需要先从旧游戏转出，再转入新游戏
 		g.Log().Infof(ctx, "切换游戏: %d -> %d", lastGameId, currentGameId)
 
-		// 3.1 查询旧游戏余额
-		oldGameBalance, balanceErr := p.GetBalance(ctx, params)
+		// 3.1 查询旧游戏配置
+		oldGameConfig, err := platform.GetGameConfigFunc(ctx, params.SiteId, lastGameId)
+		if err != nil {
+			return nil, fmt.Errorf("查询旧游戏配置失败: %v", err)
+		}
+		g.Log().Infof(ctx, "旧游戏配置: GameId=%d, Platform=%s, Name=%s", oldGameConfig.GameId, oldGameConfig.Platform, oldGameConfig.Name)
+
+		// 3.2 使用工厂创建旧游戏平台实例
+		oldPlatform, err := platform.GetFactory().Create(oldGameConfig.Platform)
+		if err != nil {
+			return nil, fmt.Errorf("创建旧游戏平台实例失败: %v", err)
+		}
+		g.Log().Infof(ctx, "成功创建旧游戏平台实例: %s", oldGameConfig.Platform)
+
+		// 3.3 构建旧游戏参数
+		oldParams := &platform.GameParams{
+			SiteId:   params.SiteId,
+			UserId:   params.UserId,
+			Username: params.Username,
+			SiteCode: params.SiteCode,
+			Currency: params.Currency,
+			SiteGame: *oldGameConfig,
+		}
+		g.Log().Infof(ctx, "旧游戏参数: GameId=%d, ApiUrl=%s", oldParams.SiteGame.GameId, oldParams.SiteGame.ApiUrl)
+
+		// 3.4 查询旧游戏余额
+		oldGameBalance, balanceErr := oldPlatform.GetBalance(ctx, oldParams)
 		if balanceErr != nil {
 			g.Log().Errorf(ctx, "查询旧游戏余额失败: %v", balanceErr)
 		} else {
 			g.Log().Infof(ctx, "旧游戏余额: %.2f", oldGameBalance)
 
-			//==========
-			// 3.2 如果旧游戏有余额，先转出到中心钱包
+			// 3.5 如果旧游戏有余额，先转出到中心钱包
 			if oldGameBalance > 0 {
-				transferErr := p.TransferOut(ctx, &platform.TransferParams{
+				transferErr := oldPlatform.TransferOut(ctx, &platform.TransferParams{
 					SiteId:   params.SiteId,
 					UserId:   params.UserId,
 					Username: params.Username,
 					SiteCode: params.SiteCode,
 					Amount:   oldGameBalance,
 					Currency: params.Currency,
-					SiteGame: params.SiteGame,
+					SiteGame: *oldGameConfig, // 使用旧游戏配置
 				})
 				if transferErr != nil {
 					return nil, fmt.Errorf("从旧游戏转出失败: %v", transferErr)
@@ -131,14 +148,23 @@ func (p *IGJiliPlatform) GetGameUrl(ctx context.Context, params *platform.GamePa
 
 				g.Log().Infof(ctx, "从旧游戏转出成功: %.2f", oldGameBalance)
 
-				// 更新用户余额
-				userBalance += oldGameBalance
+				// 重新查询中心钱包余额
+				lastGameRes2, err := balanceClient.GetLastBalanceLogGame(ctx, &balanceV1.GetLastBalanceLogGameReq{
+					SiteId: int32(params.SiteId),
+					UserId: int32(params.UserId),
+				})
+				if err == nil {
+					userBalance = float64(lastGameRes2.Amount)
+					g.Log().Infof(ctx, "转出后中心钱包余额: %.2f", userBalance)
+				} else {
+					// 如果查询失败，使用计算值
+					userBalance += oldGameBalance
+					g.Log().Warning(ctx, "查询中心钱包余额失败，使用计算值: %.2f", userBalance)
+				}
 			}
-
-			//==========
 		}
 
-		// 3.3 将中心钱包余额全部转入新游戏
+		// 3.6 将中心钱包余额全部转入新游戏
 		if userBalance > 0 {
 			needTransfer = true
 			amount = userBalance
@@ -283,6 +309,20 @@ func (p *IGJiliPlatform) GetBalance(ctx context.Context, params *platform.GamePa
  * @author : Carson
  */
 func (p *IGJiliPlatform) TransferIn(ctx context.Context, params *platform.TransferParams) error {
+	// 0. 确保用户已注册
+	buildUsername := p.buildUsername(params.Username, params.SiteCode)
+	gameParams := &platform.GameParams{
+		SiteId:   params.SiteId,
+		UserId:   params.UserId,
+		Username: params.Username,
+		SiteCode: params.SiteCode,
+		Currency: params.Currency,
+		SiteGame: params.SiteGame,
+	}
+	if err := p.ensureMemberRegistered(ctx, buildUsername, gameParams); err != nil {
+		return fmt.Errorf("注册会员失败: %v", err)
+	}
+
 	// 1. 调用balance服务扣款
 	g.Log().Info(ctx, "正在连接balance服务: jh_balance_service")
 
@@ -317,7 +357,6 @@ func (p *IGJiliPlatform) TransferIn(ctx context.Context, params *platform.Transf
 	g.Log().Infof(ctx, "扣款成功，订单号: %s", adjustRes.OrderNo)
 
 	// 2. 调用三方游戏API转账
-	buildUsername := p.buildUsername(params.Username, params.SiteCode)
 	transactionId, _ := GenerateUUIDv4()
 	params.OrderNo = transactionId
 	keyTransferIn, _ := p.generateKeyTransferIn(buildUsername, params)
@@ -608,6 +647,16 @@ func (p *IGJiliPlatform) TransferOut(ctx context.Context, params *platform.Trans
 	if gconv.Int(resDataMap["Status"]) != 1 {
 		return fmt.Errorf("输出失败")
 	}
+
+	// 更新转账状态（增加用户余额）
+	_, err = balanceClient.UpdateTransferStatus(ctx, &balanceV1.UpdateTransferStatusReq{
+		OrderNo: adjustRes.OrderNo,
+	})
+	if err != nil {
+		g.Log().Errorf(ctx, "更新转账状态失败: %v", err)
+		return fmt.Errorf("更新转账状态失败: %v", err)
+	}
+
 	g.Log().Infof(ctx, "转出成功，已增加用户余额")
 
 	return nil

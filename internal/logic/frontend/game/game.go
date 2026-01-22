@@ -23,6 +23,8 @@ type (
 
 func init() {
 	frontend.RegisterGame(&sGame{})
+	// 注入获取游戏配置的函数，避免循环导入
+	platform.GetGameConfigFunc = GetGameConfigById
 }
 
 //RedirectToGame
