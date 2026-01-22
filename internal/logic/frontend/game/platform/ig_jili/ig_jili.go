@@ -387,6 +387,8 @@ func (p *IGJiliPlatform) TransferIn(ctx context.Context, params *platform.Transf
 
 	if res["http_code"] != 200 {
 		g.Log().Errorf(ctx, "网络请求失败，请稍后再试。HTTP代码:%s", res["http_code"])
+		// 转账失败，需要补偿余额
+		p.compensateBalance(ctx, balanceClient, params.SiteId, params.UserId, adjustRes.OrderNo, params.Amount)
 		return fmt.Errorf("网络请求失败，请稍后再试。HTTP代码:%s", res["http_code"])
 	}
 
@@ -394,6 +396,8 @@ func (p *IGJiliPlatform) TransferIn(ctx context.Context, params *platform.Transf
 	bodyValue, exists := res["body"]
 	if !exists {
 		g.Log().Errorf(ctx, "游戏API返回格式错误，缺少body字段")
+		// 转账失败，需要补偿余额
+		p.compensateBalance(ctx, balanceClient, params.SiteId, params.UserId, adjustRes.OrderNo, params.Amount)
 		return fmt.Errorf("游戏API返回格式错误，缺少body字段")
 	}
 
@@ -413,6 +417,8 @@ func (p *IGJiliPlatform) TransferIn(ctx context.Context, params *platform.Transf
 			}
 		}
 	default:
+		// 转账失败，需要补偿余额
+		p.compensateBalance(ctx, balanceClient, params.SiteId, params.UserId, adjustRes.OrderNo, params.Amount)
 		return fmt.Errorf("游戏API返回格式错误，body字段类型不正确: %T", bodyValue)
 	}
 
@@ -556,6 +562,8 @@ func (p *IGJiliPlatform) TransferOut(ctx context.Context, params *platform.Trans
 
 	res, err := util.SendRequest(url, data)
 	if err != nil {
+		// 转出失败，标记订单失败
+		p.markTransferFailed(ctx, balanceClient, adjustRes.OrderNo)
 		return fmt.Errorf("游戏API请求失败: %v", err)
 	}
 
@@ -563,6 +571,8 @@ func (p *IGJiliPlatform) TransferOut(ctx context.Context, params *platform.Trans
 
 	if res["http_code"] != 200 {
 		g.Log().Errorf(ctx, "网络请求失败，请稍后再试。HTTP代码:%s", res["http_code"])
+		// 转出失败，标记订单失败
+		p.markTransferFailed(ctx, balanceClient, adjustRes.OrderNo)
 		return fmt.Errorf("网络请求失败，请稍后再试。HTTP代码:%s", res["http_code"])
 	}
 
@@ -570,6 +580,8 @@ func (p *IGJiliPlatform) TransferOut(ctx context.Context, params *platform.Trans
 	bodyValue, exists := res["body"]
 	if !exists {
 		g.Log().Errorf(ctx, "游戏API返回格式错误，缺少body字段")
+		// 转出失败，标记订单失败
+		p.markTransferFailed(ctx, balanceClient, adjustRes.OrderNo)
 		return fmt.Errorf("游戏API返回格式错误，缺少body字段")
 	}
 
@@ -589,6 +601,8 @@ func (p *IGJiliPlatform) TransferOut(ctx context.Context, params *platform.Trans
 			}
 		}
 	default:
+		// 转出失败，标记订单失败
+		p.markTransferFailed(ctx, balanceClient, adjustRes.OrderNo)
 		return fmt.Errorf("游戏API返回格式错误，body字段类型不正确: %T", bodyValue)
 	}
 
@@ -641,10 +655,14 @@ func (p *IGJiliPlatform) TransferOut(ctx context.Context, params *platform.Trans
 
 	resDataMap, ok := resData.(map[string]interface{})
 	if !ok {
+		// 转出失败，标记订单失败
+		p.markTransferFailed(ctx, balanceClient, adjustRes.OrderNo)
 		return fmt.Errorf("resData 类型错误，不是对象")
 	}
 
 	if gconv.Int(resDataMap["Status"]) != 1 {
+		// 转出失败，标记订单失败
+		p.markTransferFailed(ctx, balanceClient, adjustRes.OrderNo)
 		return fmt.Errorf("输出失败")
 	}
 
