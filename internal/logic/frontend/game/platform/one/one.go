@@ -43,8 +43,26 @@ func (p *OnePlatform) GetGameUrl(ctx context.Context, params *platform.GameParam
 	traceId, _ := p.generateUUID()
 
 	// 3. 转入游戏（扣款）
-	amount := 180.00
+	amount := 20.00
 	orderNo, _ := p.generateUUID()
+
+	// 测试-查询余额
+	userGameBalance, balanceErr := p.GetBalance(ctx, &platform.GameParams{
+		SiteId:   params.SiteId,
+		UserId:   params.UserId,
+		Username: params.Username,
+		SiteCode: params.SiteCode,
+		Currency: params.Currency,
+		SiteGame: params.SiteGame,
+		Request:  params.Request,
+		Domain:   params.Domain,
+		ClientIP: params.ClientIP,
+	})
+	if balanceErr != nil {
+		g.Log().Errorf(ctx, "查询余额失败: %v", balanceErr)
+	} else {
+		g.Log().Infof(ctx, "用户游戏余额== [%f]", userGameBalance)
+	}
 
 	err := p.TransferIn(ctx, &platform.TransferParams{
 		SiteId:   params.SiteId,
@@ -116,9 +134,97 @@ func (p *OnePlatform) GetGameUrl(ctx context.Context, params *platform.GameParam
 
 // GetBalance 查询游戏余额
 func (p *OnePlatform) GetBalance(ctx context.Context, params *platform.GameParams) (float64, error) {
-	// TODO: 实现查询余额逻辑
-	g.Log().Warning(ctx, "ONE平台查询余额功能待实现")
-	return 0, fmt.Errorf("功能待实现")
+	// 1. 构建游戏用户名
+	buildUsername := p.buildUsername(params.Username, params.SiteCode)
+
+	// 2. 生成TraceID
+	traceId, _ := p.generateUUID()
+
+	// 3. 构建请求数据
+	data := map[string]interface{}{
+		"username": buildUsername,
+		"traceId":  traceId,
+		"currency": params.Currency,
+	}
+
+	// 4. 生成签名
+	signature, err := p.getSignature(data, params.SiteGame.ApiKey)
+	if err != nil {
+		return 0, err
+	}
+
+	// 5. 构建请求头
+	headers := map[string]string{
+		"Content-Type": "application/json",
+		"X-API-Key":    params.SiteGame.ApiId,
+		"X-Signature":  signature,
+	}
+
+	// 6. 调用API
+	url := strings.TrimSuffix(params.SiteGame.ApiUrl, "/") + "/cash/balance"
+
+	g.Log().Infof(ctx, "查询余额请求: url=%s, username=%s", url, buildUsername)
+	res, err := util.CurlPostHeader(url, headers, data)
+	if err != nil {
+		return 0, fmt.Errorf("游戏API请求失败: %v", err)
+	}
+
+	g.Log().Infof(ctx, "查询余额响应: %v", res)
+
+	// 7. 检查响应状态
+	status, _ := res["status"].(string)
+	switch status {
+	case "SC_OK":
+		// 解析余额
+		dataValue, exists := res["data"]
+		if !exists {
+			return 0, fmt.Errorf("游戏API返回格式错误，缺少data字段")
+		}
+
+		dataMap, ok := dataValue.(map[string]interface{})
+		if !ok {
+			return 0, fmt.Errorf("游戏API返回格式错误，data字段类型不正确")
+		}
+
+		amountAny, ok := dataMap["amount"]
+		if !ok {
+			return 0, fmt.Errorf("缺少字段 data.amount")
+		}
+
+		// 处理不同的数字类型
+		var amount float64
+		switch v := amountAny.(type) {
+		case float64:
+			amount = v
+		case float32:
+			amount = float64(v)
+		case int:
+			amount = float64(v)
+		case int64:
+			amount = float64(v)
+		default:
+			return 0, fmt.Errorf("data.amount 类型不正确: %T", amountAny)
+		}
+
+		return amount, nil
+
+	case "SC_INVALID_OPERATOR":
+		return 0, fmt.Errorf("未经授权的访问")
+	case "SC_INVALID_SIGNATURE":
+		return 0, fmt.Errorf("验证失败")
+	case "SC_WRONG_CURRENCY":
+		return 0, fmt.Errorf("不支持该货币")
+	case "SC_INVALID_REQUEST":
+		return 0, fmt.Errorf("请求无效")
+	case "SC_UNKNOWN_ERROR":
+		return 0, fmt.Errorf("未知错误")
+	case "SC_DUPLICATE_REQUEST":
+		return 0, fmt.Errorf("请求重复")
+	case "SC_WALLET_NOT_SUPPORTED":
+		return 0, fmt.Errorf("钱包类型不支持")
+	default:
+		return 0, fmt.Errorf("查询余额失败: %s", status)
+	}
 }
 
 // TransferIn 转入游戏
