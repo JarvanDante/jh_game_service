@@ -1,7 +1,9 @@
 package platform
 
 import (
+	"context"
 	"fmt"
+	"github.com/gogf/gf/v2/frame/g"
 	"sync"
 )
 
@@ -49,6 +51,10 @@ func (f *PlatformFactory) Create(platformName string) (GamePlatform, error) {
 	defer f.mu.RUnlock()
 
 	creator, exists := f.platforms[platformName]
+	ctx := context.Background()
+	for k := range f.platforms {
+		g.Log().Infof(ctx, "key: %s", k)
+	}
 	if !exists {
 		return nil, fmt.Errorf("不支持的游戏平台: %s", platformName)
 	}

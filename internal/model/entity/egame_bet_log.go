@@ -14,7 +14,7 @@ type EgameBetLog struct {
 	SiteId       int         `json:"siteId"       orm:"site_id"       description:"站点ID"`
 	UserId       int64       `json:"userId"       orm:"user_id"       description:"用户ID"`
 	Username     string      `json:"username"     orm:"username"      description:"用户名快照"`
-	PlatformCode string      `json:"platformCode" orm:"platform_code" description:"游戏平台代码 egame/jili/pg"`
+	PlatformCode string      `json:"platformCode" orm:"platform_code" description:"游戏平台代码 egame/ig_jili/pg"`
 	GameCode     string      `json:"gameCode"     orm:"game_code"     description:"游戏代码"`
 	GameName     string      `json:"gameName"     orm:"game_name"     description:"游戏名称"`
 	GameType     string      `json:"gameType"     orm:"game_type"     description:"游戏类型"`

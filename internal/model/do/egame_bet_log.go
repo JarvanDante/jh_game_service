@@ -16,7 +16,7 @@ type EgameBetLog struct {
 	SiteId       any         // 站点ID
 	UserId       any         // 用户ID
 	Username     any         // 用户名快照
-	PlatformCode any         // 游戏平台代码 egame/jili/pg
+	PlatformCode any         // 游戏平台代码 egame/ig_jili/pg
 	GameCode     any         // 游戏代码
 	GameName     any         // 游戏名称
 	GameType     any         // 游戏类型

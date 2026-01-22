@@ -25,7 +25,7 @@ type EgameBetLogColumns struct {
 	SiteId       string // 站点ID
 	UserId       string // 用户ID
 	Username     string // 用户名快照
-	PlatformCode string // 游戏平台代码 egame/jili/pg
+	PlatformCode string // 游戏平台代码 egame/ig_jili/pg
 	GameCode     string // 游戏代码
 	GameName     string // 游戏名称
 	GameType     string // 游戏类型

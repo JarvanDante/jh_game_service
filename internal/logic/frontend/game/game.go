@@ -8,7 +8,8 @@ import (
 	v1 "jh_game_service/api/frontend/game/v1"
 	"jh_game_service/internal/dao"
 	"jh_game_service/internal/logic/frontend/game/platform"
-	_ "jh_game_service/internal/logic/frontend/game/platform/one" // 自动注册ONE平台
+	_ "jh_game_service/internal/logic/frontend/game/platform/ig_jili" // 自动注册IG_JILI平台
+	_ "jh_game_service/internal/logic/frontend/game/platform/one"     // 自动注册ONE平台
 	"jh_game_service/internal/middleware"
 	"jh_game_service/internal/model/do"
 	"jh_game_service/internal/model/entity"

@@ -8,7 +8,7 @@ CREATE TABLE `egame_bet_log`
     `username`      VARCHAR(64)    NOT NULL COMMENT '用户名快照',
 
     -- 游戏信息
-    `platform_code` VARCHAR(32)    NOT NULL COMMENT '游戏平台代码 egame/jili/pg',
+    `platform_code` VARCHAR(32)    NOT NULL COMMENT '游戏平台代码 egame/ig_jili/pg',
     `game_code`     VARCHAR(64)    NOT NULL COMMENT '游戏代码',
     `game_name`     VARCHAR(128)   NOT NULL COMMENT '游戏名称',
     `game_type`     VARCHAR(32)    NOT NULL COMMENT '游戏类型',
