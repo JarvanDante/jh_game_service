@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/gogf/gf/v2/frame/g"
+	"github.com/gogf/gf/v2/util/gconv"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	balanceV1 "jh_game_service/api/grpc/balance/v1"
@@ -110,54 +111,54 @@ func (p *IGJiliPlatform) GetGameUrl(ctx context.Context, params *platform.GamePa
 		} else {
 			g.Log().Infof(ctx, "旧游戏余额: %.2f", oldGameBalance)
 
-			//// 3.2 如果旧游戏有余额，先转出到中心钱包
-			//if oldGameBalance > 0 {
-			//	orderNo, _ := p.generateUUID()
-			//	transferErr := p.TransferOut(ctx, &platform.TransferParams{
-			//		SiteId:   params.SiteId,
-			//		UserId:   params.UserId,
-			//		Username: params.Username,
-			//		SiteCode: params.SiteCode,
-			//		Amount:   oldGameBalance,
-			//		Currency: params.Currency,
-			//		OrderNo:  orderNo,
-			//		SiteGame: params.SiteGame,
-			//	})
-			//	if transferErr != nil {
-			//		return nil, fmt.Errorf("从旧游戏转出失败: %v", transferErr)
-			//	}
-			//	g.Log().Infof(ctx, "从旧游戏转出成功: %.2f", oldGameBalance)
-			//
-			//	// 更新用户余额
-			//	userBalance += oldGameBalance
-			//}
+			//==========
+			// 3.2 如果旧游戏有余额，先转出到中心钱包
+			if oldGameBalance > 0 {
+				transferErr := p.TransferOut(ctx, &platform.TransferParams{
+					SiteId:   params.SiteId,
+					UserId:   params.UserId,
+					Username: params.Username,
+					SiteCode: params.SiteCode,
+					Amount:   oldGameBalance,
+					Currency: params.Currency,
+					SiteGame: params.SiteGame,
+				})
+				if transferErr != nil {
+					return nil, fmt.Errorf("从旧游戏转出失败: %v", transferErr)
+				}
+
+				g.Log().Infof(ctx, "从旧游戏转出成功: %.2f", oldGameBalance)
+
+				// 更新用户余额
+				userBalance += oldGameBalance
+			}
+
+			//==========
 		}
 
-		//// 3.3 将中心钱包余额全部转入新游戏
-		//if userBalance > 0 {
-		//	needTransfer = true
-		//	amount = userBalance
-		//}
+		// 3.3 将中心钱包余额全部转入新游戏
+		if userBalance > 0 {
+			needTransfer = true
+			amount = userBalance
+		}
 	}
 
-	////5. 执行转账
-	//if needTransfer && amount > 0 {
-	//	orderNo, _ := p.generateUUID()
-	//	err = p.TransferIn(ctx, &platform.TransferParams{
-	//		SiteId:   params.SiteId,
-	//		UserId:   params.UserId,
-	//		Username: params.Username,
-	//		SiteCode: params.SiteCode,
-	//		Amount:   amount,
-	//		Currency: params.Currency,
-	//		OrderNo:  orderNo,
-	//		SiteGame: params.SiteGame,
-	//	})
-	//	if err != nil {
-	//		return nil, fmt.Errorf("转入游戏失败: %v", err)
-	//	}
-	//	g.Log().Infof(ctx, "转入游戏成功: %.2f", amount)
-	//}
+	//5. 执行转账
+	if needTransfer && amount > 0 {
+		err = p.TransferIn(ctx, &platform.TransferParams{
+			SiteId:   params.SiteId,
+			UserId:   params.UserId,
+			Username: params.Username,
+			SiteCode: params.SiteCode,
+			Amount:   amount,
+			Currency: params.Currency,
+			SiteGame: params.SiteGame,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("转入游戏失败: %v", err)
+		}
+		g.Log().Infof(ctx, "转入游戏成功: %.2f", amount)
+	}
 
 	//----------
 
@@ -343,7 +344,7 @@ func (p *IGJiliPlatform) GetBalance(ctx context.Context, params *platform.GamePa
 		return 0, fmt.Errorf("游戏API余额请求失败: %v", err)
 	}
 
-	g.Log().Infof(ctx, "游戏API响应: %v", resBalance)
+	g.Log().Infof(ctx, "游戏API响应Balance: %v", resBalance)
 
 	if resBalance["http_code"] != 200 {
 		g.Log().Errorf(ctx, "网络请求失败，请稍后再试。HTTP代码:%s", resBalance["http_code"])
@@ -397,96 +398,6 @@ func (p *IGJiliPlatform) GetBalance(ctx context.Context, params *platform.GamePa
 	fmt.Println("balance =", balance)
 
 	return balance, nil
-	//
-	//// 2. 生成TraceID
-	//traceId, _ := p.generateUUID()
-	//
-	//// 3. 构建请求数据
-	//data := map[string]interface{}{
-	//	"username": buildUsername,
-	//	"traceId":  traceId,
-	//	"currency": params.Currency,
-	//}
-	//
-	//// 4. 生成签名
-	//signature, err := p.getSignature(data, params.SiteGame.ApiKey)
-	//if err != nil {
-	//	return 0, err
-	//}
-	//
-	//// 5. 构建请求头
-	//headers := map[string]string{
-	//	"Content-Type": "application/json",
-	//	"X-API-Key":    params.SiteGame.ApiId,
-	//	"X-Signature":  signature,
-	//}
-	//
-	//// 6. 调用API
-	//url := strings.TrimSuffix(params.SiteGame.ApiUrl, "/") + "/cash/balance"
-	//
-	//g.Log().Infof(ctx, "查询余额请求: url=%s, username=%s", url, buildUsername)
-	//res, err := util.CurlPostHeader(url, headers, data)
-	//if err != nil {
-	//	return 0, fmt.Errorf("游戏API请求失败: %v", err)
-	//}
-	//
-	//g.Log().Infof(ctx, "查询余额响应: %v", res)
-	//
-	//// 7. 检查响应状态
-	//status, _ := res["status"].(string)
-	//switch status {
-	//case "SC_OK":
-	//	// 解析余额
-	//	dataValue, exists := res["data"]
-	//	if !exists {
-	//		return 0, fmt.Errorf("游戏API返回格式错误，缺少data字段")
-	//	}
-	//
-	//	dataMap, ok := dataValue.(map[string]interface{})
-	//	if !ok {
-	//		return 0, fmt.Errorf("游戏API返回格式错误，data字段类型不正确")
-	//	}
-	//
-	//	amountAny, ok := dataMap["amount"]
-	//	if !ok {
-	//		return 0, fmt.Errorf("缺少字段 data.amount")
-	//	}
-	//
-	//	// 处理不同的数字类型
-	//	var amount float64
-	//	switch v := amountAny.(type) {
-	//	case float64:
-	//		amount = v
-	//	case float32:
-	//		amount = float64(v)
-	//	case int:
-	//		amount = float64(v)
-	//	case int64:
-	//		amount = float64(v)
-	//	default:
-	//		return 0, fmt.Errorf("data.amount 类型不正确: %T", amountAny)
-	//	}
-	//
-	//	return amount, nil
-	//
-	//case "SC_INVALID_OPERATOR":
-	//	return 0, fmt.Errorf("未经授权的访问")
-	//case "SC_INVALID_SIGNATURE":
-	//	return 0, fmt.Errorf("验证失败")
-	//case "SC_WRONG_CURRENCY":
-	//	return 0, fmt.Errorf("不支持该货币")
-	//case "SC_INVALID_REQUEST":
-	//	return 0, fmt.Errorf("请求无效")
-	//case "SC_UNKNOWN_ERROR":
-	//	return 0, fmt.Errorf("未知错误")
-	//case "SC_DUPLICATE_REQUEST":
-	//	return 0, fmt.Errorf("请求重复")
-	//case "SC_WALLET_NOT_SUPPORTED":
-	//	return 0, fmt.Errorf("钱包类型不支持")
-	//default:
-	//	return 0, fmt.Errorf("查询余额失败: %s", status)
-	//}
-	return 0, nil
 }
 
 //TransferIn
@@ -498,89 +409,126 @@ func (p *IGJiliPlatform) GetBalance(ctx context.Context, params *platform.GamePa
  * @author : Carson
  */
 func (p *IGJiliPlatform) TransferIn(ctx context.Context, params *platform.TransferParams) error {
-	//// 1. 调用balance服务扣款
-	//g.Log().Info(ctx, "正在连接balance服务: jh_balance_service")
-	//
-	//balanceClient, conn, err := p.getBalanceClient(ctx)
-	//if err != nil {
-	//	return fmt.Errorf("连接balance服务失败: %v", err)
-	//}
-	//defer conn.Close()
-	//
-	//g.Log().Infof(ctx, "balance服务连接成功，准备调用AdjustBalance: siteId=%d, userId=%d, amount=%.2f",
-	//	params.SiteId, params.UserId, params.Amount)
-	//
-	//adjustRes, err := balanceClient.AdjustBalance(ctx, &balanceV1.AdjustBalanceReq{
-	//	SiteId:   int32(params.SiteId),
-	//	UserId:   int32(params.UserId),
-	//	Amount:   float32(params.Amount),
-	//	Type:     0, // 0=转出：从中心账户转账到游戏账户
-	//	GameName: params.SiteGame.Name,
-	//	GameId:   strconv.Itoa(params.SiteGame.GameId),
-	//})
-	//
-	//g.Log().Infof(ctx, "balance服务调用完成: err=%v", err)
-	//
-	//if err != nil {
-	//	return fmt.Errorf("调用balance服务失败: %v", err)
-	//}
-	//
-	//if !adjustRes.Success {
-	//	return fmt.Errorf("扣款失败: %s", adjustRes.Message)
-	//}
-	//
-	//g.Log().Infof(ctx, "扣款成功，订单号: %s", adjustRes.OrderNo)
-	//
-	//// 2. 调用三方游戏API转账
-	//buildUsername := p.buildUsername(params.Username, params.SiteCode)
-	//traceId, _ := p.generateUUID()
-	//
-	//data := map[string]interface{}{
-	//	"username":       buildUsername,
-	//	"traceId":        traceId,
-	//	"transferAmount": params.Amount,
-	//	"currency":       params.Currency,
-	//	"referenceId":    params.OrderNo,
-	//}
-	//
-	//signature, err := p.getSignature(data, params.SiteGame.ApiKey)
-	//if err != nil {
-	//	// 失败：补偿余额
-	//	p.compensateBalance(ctx, balanceClient, params.SiteId, params.UserId, adjustRes.OrderNo, params.Amount)
-	//	return err
-	//}
-	//
-	//headers := map[string]string{
-	//	"Content-Type": "application/json",
-	//	"X-API-Key":    params.SiteGame.ApiId,
-	//	"X-Signature":  signature,
-	//}
-	//
-	//url := strings.TrimSuffix(params.SiteGame.ApiUrl, "/") + "/cash/deposit"
-	//res, err := util.CurlPostHeader(url, headers, data)
-	//if err != nil {
-	//	// 失败：补偿余额
-	//	p.compensateBalance(ctx, balanceClient, params.SiteId, params.UserId, adjustRes.OrderNo, params.Amount)
-	//	return fmt.Errorf("游戏API请求失败: %v", err)
-	//}
-	//
-	//// 3. 检查响应
-	//status, _ := res["status"].(string)
-	//if status != "SC_OK" {
-	//	// 失败：补偿余额
-	//	p.compensateBalance(ctx, balanceClient, params.SiteId, params.UserId, adjustRes.OrderNo, params.Amount)
-	//	return fmt.Errorf("转账失败: %s", status)
-	//}
-	//
-	//// 4. 成功：更新转账状态
-	//_, err = balanceClient.UpdateTransferStatus(ctx, &balanceV1.UpdateTransferStatusReq{
-	//	OrderNo: adjustRes.OrderNo,
-	//})
-	//if err != nil {
-	//	g.Log().Errorf(ctx, "更新转账状态失败: %v", err)
-	//}
-	//
-	//return nil
+	// 1. 调用balance服务扣款
+	g.Log().Info(ctx, "正在连接balance服务: jh_balance_service")
+
+	balanceClient, conn, err := p.getBalanceClient(ctx)
+	if err != nil {
+		return fmt.Errorf("连接balance服务失败: %v", err)
+	}
+	defer conn.Close()
+
+	g.Log().Infof(ctx, "balance服务连接成功，准备调用AdjustBalance: siteId=%d, userId=%d, amount=%.2f",
+		params.SiteId, params.UserId, params.Amount)
+
+	adjustRes, err := balanceClient.AdjustBalance(ctx, &balanceV1.AdjustBalanceReq{
+		SiteId:   int32(params.SiteId),
+		UserId:   int32(params.UserId),
+		Amount:   float32(params.Amount),
+		Type:     0, // 0=转出：从中心账户转账到游戏账户
+		GameName: params.SiteGame.Name,
+		GameId:   strconv.Itoa(params.SiteGame.GameId),
+	})
+
+	g.Log().Infof(ctx, "balance服务调用完成: err=%v", err)
+
+	if err != nil {
+		return fmt.Errorf("调用balance服务失败: %v", err)
+	}
+
+	if !adjustRes.Success {
+		return fmt.Errorf("扣款失败: %s", adjustRes.Message)
+	}
+
+	g.Log().Infof(ctx, "扣款成功，订单号: %s", adjustRes.OrderNo)
+
+	// 2. 调用三方游戏API转账
+	buildUsername := p.buildUsername(params.Username, params.SiteCode)
+	keyTransferIn, _ := p.generateKeyTransferIn(buildUsername, params)
+
+	data := map[string]string{
+		"Account":       buildUsername,
+		"TransactionId": params.OrderNo,
+		"Amount":        gconv.String(params.Amount),
+		"TransferType":  "2", //2=平台→游戏厅
+		"AgentId":       params.SiteGame.ApiId,
+		"Key":           keyTransferIn,
+	}
+
+	// 注意：转出使用 /ExchangeTransferByAgentId 接口
+	url := strings.TrimSuffix(params.SiteGame.ApiUrl, "/") + "/ExchangeTransferByAgentId"
+
+	res, err := util.SendRequest(url, data)
+	if err != nil {
+		return fmt.Errorf("游戏API请求失败: %v", err)
+	}
+
+	g.Log().Infof(ctx, "游戏API响应In: %v", res)
+
+	if res["http_code"] != 200 {
+		g.Log().Errorf(ctx, "网络请求失败，请稍后再试。HTTP代码:%s", res["http_code"])
+		return fmt.Errorf("网络请求失败，请稍后再试。HTTP代码:%s", res["http_code"])
+	}
+
+	// 8. 解析响应
+	bodyValue, exists := res["body"]
+	if !exists {
+		g.Log().Errorf(ctx, "游戏API返回格式错误，缺少body字段")
+		return fmt.Errorf("游戏API返回格式错误，缺少body字段")
+	}
+
+	// body可能是字节数组或字符串，需要解析成JSON
+	var bodyBytes []byte
+	switch v := bodyValue.(type) {
+	case []byte:
+		bodyBytes = v
+	case string:
+		bodyBytes = []byte(v)
+	case []interface{}:
+		// 字节数组形式 [123, 34, ...]
+		bodyBytes = make([]byte, len(v))
+		for i, b := range v {
+			if num, ok := b.(float64); ok {
+				bodyBytes[i] = byte(num)
+			}
+		}
+	default:
+		return fmt.Errorf("游戏API返回格式错误，body字段类型不正确: %T", bodyValue)
+	}
+
+	// 解析JSON
+	var dataMap map[string]interface{}
+	if err := json.Unmarshal(bodyBytes, &dataMap); err != nil {
+		g.Log().Errorf(ctx, "解析游戏API响应失败: %v, body: %s", err, string(bodyBytes))
+		return fmt.Errorf("解析游戏API响应失败: %v", err)
+	}
+
+	errorCode := dataMap["ErrorCode"]
+	if errorCode == 102 {
+		g.Log().Errorf(ctx, "重复的交易订单")
+	} else if errorCode == 105 {
+		g.Log().Errorf(ctx, "订单已存在")
+	} else if dataMap["ErrorCode"] != 0 {
+		g.Log().Errorf(ctx, "游戏输出失败。错误代码:%d", dataMap["ErrorCode"])
+		return fmt.Errorf("游戏输出失败。错误代码:%d", dataMap["ErrorCode"])
+	}
+
+	resData := dataMap["Data"]
+
+	if errorCode == 102 || errorCode == 105 {
+		return nil
+	}
+
+	resDataMap, ok := resData.(map[string]interface{})
+	if !ok {
+		return fmt.Errorf("resData 类型错误，不是对象")
+	}
+
+	if gconv.Int(resDataMap["Status"]) != 1 {
+		return fmt.Errorf("输入失败")
+	}
+	g.Log().Infof(ctx, "转入成功，已增加用户余额")
+
 	return nil
 }
 
@@ -593,92 +541,127 @@ func (p *IGJiliPlatform) TransferIn(ctx context.Context, params *platform.Transf
  * @author : Carson
  */
 func (p *IGJiliPlatform) TransferOut(ctx context.Context, params *platform.TransferParams) error {
-	//// 1. 调用balance服务创建pending订单（Type=1，不扣用户余额）
-	//g.Log().Info(ctx, "正在连接balance服务: jh_balance_service")
-	//
-	//balanceClient, conn, err := p.getBalanceClient(ctx)
-	//if err != nil {
-	//	return fmt.Errorf("连接balance服务失败: %v", err)
-	//}
-	//defer conn.Close()
-	//
-	//g.Log().Infof(ctx, "balance服务连接成功，准备调用AdjustBalance: siteId=%d, userId=%d, amount=%.2f, type=1(转出)",
-	//	params.SiteId, params.UserId, params.Amount)
-	//
-	//adjustRes, err := balanceClient.AdjustBalance(ctx, &balanceV1.AdjustBalanceReq{
-	//	SiteId:   int32(params.SiteId),
-	//	UserId:   int32(params.UserId),
-	//	Amount:   float32(params.Amount),
-	//	Type:     1, // 1=转入：从游戏账户转账到中心账户
-	//	GameName: params.SiteGame.Name,
-	//	GameId:   strconv.Itoa(params.SiteGame.GameId),
-	//})
-	//
-	//g.Log().Infof(ctx, "balance服务调用完成: err=%v", err)
-	//
-	//if err != nil {
-	//	return fmt.Errorf("调用balance服务失败: %v", err)
-	//}
-	//
-	//if !adjustRes.Success {
-	//	return fmt.Errorf("创建转出订单失败: %s", adjustRes.Message)
-	//}
-	//
-	//g.Log().Infof(ctx, "创建转出订单成功，订单号: %s", adjustRes.OrderNo)
-	//
-	//// 2. 调用三方游戏API转出
-	//buildUsername := p.buildUsername(params.Username, params.SiteCode)
-	//traceId, _ := p.generateUUID()
-	//
-	//data := map[string]interface{}{
-	//	"username":       buildUsername,
-	//	"traceId":        traceId,
-	//	"transferAmount": params.Amount,
-	//	"currency":       params.Currency,
-	//	"referenceId":    params.OrderNo,
-	//}
-	//
-	//signature, err := p.getSignature(data, params.SiteGame.ApiKey)
-	//if err != nil {
-	//	// 失败：标记订单失败（转出失败不需要补偿余额）
-	//	p.markTransferFailed(ctx, balanceClient, adjustRes.OrderNo)
-	//	return err
-	//}
-	//
-	//headers := map[string]string{
-	//	"Content-Type": "application/json",
-	//	"X-API-Key":    params.SiteGame.ApiId,
-	//	"X-Signature":  signature,
-	//}
-	//
-	//// 注意：转出使用 /cash/withdraw 接口
-	//url := strings.TrimSuffix(params.SiteGame.ApiUrl, "/") + "/cash/withdraw"
-	//res, err := util.CurlPostHeader(url, headers, data)
-	//if err != nil {
-	//	// 失败：标记订单失败
-	//	p.markTransferFailed(ctx, balanceClient, adjustRes.OrderNo)
-	//	return fmt.Errorf("游戏API请求失败: %v", err)
-	//}
-	//
-	//// 3. 检查响应
-	//status, _ := res["status"].(string)
-	//if status != "SC_OK" {
-	//	// 失败：标记订单失败
-	//	p.markTransferFailed(ctx, balanceClient, adjustRes.OrderNo)
-	//	return fmt.Errorf("转出失败: %s", status)
-	//}
-	//
-	//// 4. 成功：更新转账状态（会增加用户余额）
-	//_, err = balanceClient.UpdateTransferStatus(ctx, &balanceV1.UpdateTransferStatusReq{
-	//	OrderNo: adjustRes.OrderNo,
-	//})
-	//if err != nil {
-	//	g.Log().Errorf(ctx, "更新转账状态失败: %v", err)
-	//}
-	//
-	//g.Log().Infof(ctx, "转出成功，已增加用户余额")
-	//
-	//return nil
+	// 1. 调用balance服务创建pending订单（Type=1，不扣用户余额）
+	g.Log().Info(ctx, "正在连接balance服务: jh_balance_service")
+
+	balanceClient, conn, err := p.getBalanceClient(ctx)
+	if err != nil {
+		return fmt.Errorf("连接balance服务失败: %v", err)
+	}
+	defer conn.Close()
+
+	g.Log().Infof(ctx, "balance服务连接成功，准备调用AdjustBalance: siteId=%d, userId=%d, amount=%.2f, type=1(转出)",
+		params.SiteId, params.UserId, params.Amount)
+
+	adjustRes, err := balanceClient.AdjustBalance(ctx, &balanceV1.AdjustBalanceReq{
+		SiteId:   int32(params.SiteId),
+		UserId:   int32(params.UserId),
+		Amount:   float32(params.Amount),
+		Type:     1, // 1=转入：从游戏账户转账到中心账户
+		GameName: params.SiteGame.Name,
+		GameId:   strconv.Itoa(params.SiteGame.GameId),
+	})
+
+	g.Log().Infof(ctx, "balance服务调用完成: err=%v", err)
+
+	if err != nil {
+		return fmt.Errorf("调用balance服务失败: %v", err)
+	}
+
+	if !adjustRes.Success {
+		return fmt.Errorf("创建转出订单失败: %s", adjustRes.Message)
+	}
+
+	g.Log().Infof(ctx, "创建转出订单成功，订单号: %s", adjustRes.OrderNo)
+
+	// 2. 调用三方游戏API转出
+
+	buildUsername := p.buildUsername(params.Username, params.SiteCode)
+	keyTransferOut, _ := p.generateKeyTransferOut(buildUsername, params)
+
+	data := map[string]string{
+		"Account":       buildUsername,
+		"TransactionId": params.OrderNo,
+		"Amount":        gconv.String(params.Amount),
+		"TransferType":  "1", //1=游戏厅→平台（全额转出）
+		"AgentId":       params.SiteGame.ApiId,
+		"Key":           keyTransferOut,
+	}
+
+	// 注意：转出使用 /ExchangeTransferByAgentId 接口
+	url := strings.TrimSuffix(params.SiteGame.ApiUrl, "/") + "/ExchangeTransferByAgentId"
+
+	res, err := util.SendRequest(url, data)
+	if err != nil {
+		return fmt.Errorf("游戏API请求失败: %v", err)
+	}
+
+	g.Log().Infof(ctx, "游戏API响应Out: %v", res)
+
+	if res["http_code"] != 200 {
+		g.Log().Errorf(ctx, "网络请求失败，请稍后再试。HTTP代码:%s", res["http_code"])
+		return fmt.Errorf("网络请求失败，请稍后再试。HTTP代码:%s", res["http_code"])
+	}
+
+	// 8. 解析响应
+	bodyValue, exists := res["body"]
+	if !exists {
+		g.Log().Errorf(ctx, "游戏API返回格式错误，缺少body字段")
+		return fmt.Errorf("游戏API返回格式错误，缺少body字段")
+	}
+
+	// body可能是字节数组或字符串，需要解析成JSON
+	var bodyBytes []byte
+	switch v := bodyValue.(type) {
+	case []byte:
+		bodyBytes = v
+	case string:
+		bodyBytes = []byte(v)
+	case []interface{}:
+		// 字节数组形式 [123, 34, ...]
+		bodyBytes = make([]byte, len(v))
+		for i, b := range v {
+			if num, ok := b.(float64); ok {
+				bodyBytes[i] = byte(num)
+			}
+		}
+	default:
+		return fmt.Errorf("游戏API返回格式错误，body字段类型不正确: %T", bodyValue)
+	}
+
+	// 解析JSON
+	var dataMap map[string]interface{}
+	if err := json.Unmarshal(bodyBytes, &dataMap); err != nil {
+		g.Log().Errorf(ctx, "解析游戏API响应失败: %v, body: %s", err, string(bodyBytes))
+		return fmt.Errorf("解析游戏API响应失败: %v", err)
+	}
+
+	errorCode := dataMap["ErrorCode"]
+	if errorCode == 102 {
+		g.Log().Errorf(ctx, "重复的交易订单")
+	} else if errorCode == 105 {
+		g.Log().Errorf(ctx, "订单已存在")
+	} else if dataMap["ErrorCode"] != 0 {
+		g.Log().Errorf(ctx, "游戏输出失败。错误代码:%d", dataMap["ErrorCode"])
+		return fmt.Errorf("游戏输出失败。错误代码:%d", dataMap["ErrorCode"])
+	}
+
+	resData := dataMap["Data"]
+
+	if errorCode == 102 || errorCode == 105 {
+		return nil
+	}
+
+	resDataMap, ok := resData.(map[string]interface{})
+	if !ok {
+		return fmt.Errorf("resData 类型错误，不是对象")
+	}
+
+	if gconv.Int(resDataMap["Status"]) != 1 {
+		return fmt.Errorf("输出失败")
+	}
+	g.Log().Infof(ctx, "转出成功，已增加用户余额")
+
 	return nil
 }
 
@@ -742,6 +725,44 @@ func (p *IGJiliPlatform) generateKey(account string, params *platform.GameParams
 func (p *IGJiliPlatform) generateKeyRegister(account string, params *platform.GameParams) (string, error) {
 
 	paramsString := "Account=" + account + "&AgentId=" + params.SiteGame.ApiId
+
+	key := CalculateKeyWithParams(paramsString, params.SiteGame.ApiId, params.SiteGame.ApiKey)
+
+	return key, nil
+}
+
+//generateKeyTransferOut
+/**
+ * @desc：生成 Key(转出)
+ * @param account
+ * @param params
+ * @return string
+ * @return error
+ * @author : Carson
+ */
+func (p *IGJiliPlatform) generateKeyTransferOut(account string, params *platform.TransferParams) (string, error) {
+	transferType := 1 //2=游戏厅→平台
+
+	paramsString := "Account=" + account + "&TransactionId=" + params.OrderNo + "&Amount=" + gconv.String(params.Amount) + "&TransferType=" + gconv.String(transferType) + "&AgentId=" + params.SiteGame.ApiId
+
+	key := CalculateKeyWithParams(paramsString, params.SiteGame.ApiId, params.SiteGame.ApiKey)
+
+	return key, nil
+}
+
+//generateKeyTransferIn
+/**
+ * @desc：生成 Key(转入)
+ * @param account
+ * @param params
+ * @return string
+ * @return error
+ * @author : Carson
+ */
+func (p *IGJiliPlatform) generateKeyTransferIn(account string, params *platform.TransferParams) (string, error) {
+	transferType := 2 //2=平台→游戏厅
+
+	paramsString := "Account=" + account + "&TransactionId=" + params.OrderNo + "&Amount=" + gconv.String(params.Amount) + "&TransferType=" + gconv.String(transferType) + "&AgentId=" + params.SiteGame.ApiId
 
 	key := CalculateKeyWithParams(paramsString, params.SiteGame.ApiId, params.SiteGame.ApiKey)
 
