@@ -64,6 +64,24 @@ var (
 			}
 			fmt.Println("Game服务数据库配置管理器初始化成功")
 
+			// 初始化ClickHouse连接
+			fmt.Println("初始化ClickHouse连接...")
+			chHost := g.Cfg().MustGet(ctx, "clickhouse.host").String()
+			chPort := g.Cfg().MustGet(ctx, "clickhouse.port").Int()
+			chDatabase := g.Cfg().MustGet(ctx, "clickhouse.database").String()
+			chUsername := g.Cfg().MustGet(ctx, "clickhouse.username").String()
+			chPassword := g.Cfg().MustGet(ctx, "clickhouse.password").String()
+
+			chManager := registry.GetClickHouseManager()
+			if err := chManager.Init(chHost, chPort, chDatabase, chUsername, chPassword); err != nil {
+				fmt.Printf("ClickHouse连接初始化失败: %v\n", err)
+				g.Log().Errorf(ctx, "ClickHouse连接初始化失败: %v", err)
+				// 不中断服务，继续运行
+			} else {
+				fmt.Println("ClickHouse连接初始化成功")
+				defer chManager.Close()
+			}
+
 			// 确保在退出时停止数据库配置管理器
 			defer dbManager.Stop()
 
