@@ -62,6 +62,7 @@ type TransferParams struct {
 // PullRecordsParams 拉单参数
 type PullRecordsParams struct {
 	SiteId    int             // 站点ID
+	SiteCode  string          // 站点代码
 	StartTime string          // 开始时间
 	EndTime   string          // 结束时间
 	Page      int             // 页码

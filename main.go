@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -9,6 +10,7 @@ import (
 	_ "jh_game_service/internal/logic"
 
 	"github.com/gogf/gf/v2/frame/g"
+	"github.com/gogf/gf/v2/os/gcmd"
 	"github.com/gogf/gf/v2/os/gctx"
 
 	"jh_game_service/internal/cmd"
@@ -29,5 +31,19 @@ func main() {
 	time.Local = loc
 	fmt.Printf("时区设置: %s\n", timezone)
 
-	cmd.Main.Run(ctx)
+	// 创建根命令
+	command := &gcmd.Command{
+		Name:  "jh_game_service",
+		Brief: "JH Game Service",
+		Func: func(ctx context.Context, parser *gcmd.Parser) error {
+			// 默认执行main命令（启动服务）
+			return cmd.Main.Func(ctx, parser)
+		},
+	}
+
+	// 添加子命令
+	command.AddCommand(&cmd.Main, &cmd.PullBetRecords)
+
+	// 运行命令
+	command.Run(ctx)
 }

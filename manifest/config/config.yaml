@@ -93,3 +93,10 @@ clickhouse:
   database: "default" # 数据库名称
   username: "default" # 用户名
   password: "123456" # 密码
+
+# 注单拉取定时任务配置
+betRecordsPuller:
+  enabled: true # 是否启用定时任务
+  interval: 5 # 拉取间隔（分钟）
+  pullMinutes: 10 # 每次拉取最近N分钟的数据
+  apiDelay: 1 # API延时（分钟），拉取时间需要减去此延时

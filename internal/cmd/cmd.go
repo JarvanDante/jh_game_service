@@ -85,6 +85,10 @@ var (
 			// 确保在退出时停止数据库配置管理器
 			defer dbManager.Stop()
 
+			// 注单拉取使用K8s CronJob方式执行：
+			// ./jh_game_service pull ONE
+			// ./jh_game_service pull IG_JILI
+
 			// 创建数据库拦截器
 			dbInterceptor := middleware.NewDBInterceptor()
 

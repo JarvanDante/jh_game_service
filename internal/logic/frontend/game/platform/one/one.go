@@ -17,6 +17,7 @@ import (
 	"math/rand"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // OnePlatform ONE游戏平台实现
@@ -538,9 +539,253 @@ func (p *OnePlatform) TransferOut(ctx context.Context, params *platform.Transfer
 
 // PullBetRecords 拉取注单
 func (p *OnePlatform) PullBetRecords(ctx context.Context, params *platform.PullRecordsParams) ([]platform.BetRecord, error) {
-	// TODO: 实现拉单逻辑
-	g.Log().Warning(ctx, "ONE平台拉单功能待实现")
-	return nil, fmt.Errorf("功能待实现")
+	// 1. 构建请求参数
+	traceId, _ := p.generateUUID()
+
+	// 时间转换为毫秒时间戳（使用 GMT+8 时区）
+	loc, _ := time.LoadLocation("Asia/Shanghai")
+	fromTime, err := time.ParseInLocation("2006-01-02 15:04:05", params.StartTime, loc)
+	if err != nil {
+		return nil, fmt.Errorf("开始时间格式错误: %v", err)
+	}
+	toTime, err := time.ParseInLocation("2006-01-02 15:04:05", params.EndTime, loc)
+	if err != nil {
+		return nil, fmt.Errorf("结束时间格式错误: %v", err)
+	}
+
+	fromTimeMs := fromTime.UnixMilli()
+	toTimeMs := toTime.UnixMilli()
+
+	g.Log().Infof(ctx, "拉单时间范围(GMT+8): %s ~ %s (毫秒: %d ~ %d)",
+		params.StartTime, params.EndTime, fromTimeMs, toTimeMs)
+
+	// 2. 第一次请求获取总数
+	data := map[string]interface{}{
+		"traceId":  traceId,
+		"fromTime": fromTimeMs,
+		"toTime":   toTimeMs,
+		"pageNo":   1,
+	}
+
+	signature, err := p.getSignature(data, params.SiteGame.ApiKey)
+	if err != nil {
+		return nil, fmt.Errorf("生成签名失败: %v", err)
+	}
+
+	headers := map[string]string{
+		"Content-Type": "application/json",
+		"X-API-Key":    params.SiteGame.ApiId,
+		"X-Signature":  signature,
+	}
+
+	url := strings.TrimSuffix(params.SiteGame.ApiUrl, "/") + "/transaction/list"
+	res, err := util.CurlPostHeader(url, headers, data)
+	if err != nil {
+		return nil, fmt.Errorf("请求API失败: %v", err)
+	}
+
+	// 格式化打印响应
+	resJson, _ := json.MarshalIndent(res, "", "  ")
+	g.Log().Infof(ctx, "ONE平台注单API响应:\n%s", string(resJson))
+
+	// 3. 检查响应
+	status, ok := res["status"].(string)
+	if !ok || status != "SC_OK" {
+		g.Log().Warningf(ctx, "ONE平台拉单失败: status=%v", status)
+		return nil, nil
+	}
+
+	// 4. 解析响应数据
+	dataMap, ok := res["data"].(map[string]interface{})
+	if !ok {
+		return nil, fmt.Errorf("响应数据格式错误")
+	}
+
+	totalItems, _ := dataMap["totalItems"].(float64)
+	if totalItems == 0 {
+		g.Log().Infof(ctx, "ONE平台暂无注单数据: %s ~ %s", params.StartTime, params.EndTime)
+		return nil, nil
+	}
+
+	g.Log().Infof(ctx, "ONE平台拉单: 时间范围=%s ~ %s, 总记录数=%.0f", params.StartTime, params.EndTime, totalItems)
+
+	// 5. 解析表头（headers是map，不是数组）
+	headers_data, _ := dataMap["headers"].(map[string]interface{})
+	headerMap := make(map[string]int)
+	for headerName, idx := range headers_data {
+		if index, ok := idx.(float64); ok {
+			headerMap[headerName] = int(index)
+		}
+	}
+
+	g.Log().Infof(ctx, "ONE平台headers映射: %+v", headerMap)
+
+	// 6. 分页拉取所有数据
+	pageSize := 2000
+	pageCount := int((totalItems + float64(pageSize) - 1) / float64(pageSize))
+	allRecords := make([]platform.BetRecord, 0)
+
+	for pageNo := 1; pageNo <= pageCount; pageNo++ {
+		pageData := map[string]interface{}{
+			"traceId":  traceId,
+			"fromTime": fromTimeMs,
+			"toTime":   toTimeMs,
+			"pageNo":   pageNo,
+		}
+
+		pageSignature, _ := p.getSignature(pageData, params.SiteGame.ApiKey)
+		pageHeaders := map[string]string{
+			"Content-Type": "application/json",
+			"X-API-Key":    params.SiteGame.ApiId,
+			"X-Signature":  pageSignature,
+		}
+
+		pageRes, err := util.CurlPostHeader(url, pageHeaders, pageData)
+		if err != nil {
+			g.Log().Errorf(ctx, "ONE平台拉单第%d页失败: %v", pageNo, err)
+			continue
+		}
+
+		pageDataMap, ok := pageRes["data"].(map[string]interface{})
+		if !ok {
+			continue
+		}
+
+		transactions, ok := pageDataMap["transactions"].([]interface{})
+		if !ok || len(transactions) == 0 {
+			g.Log().Infof(ctx, "ONE平台第%d页无数据", pageNo)
+			continue
+		}
+
+		// 7. 解析注单数据
+		for _, trans := range transactions {
+			transArray, ok := trans.([]interface{})
+			if !ok {
+				continue
+			}
+
+			record := p.parseTransaction(transArray, headerMap)
+			if record != nil {
+				allRecords = append(allRecords, *record)
+			}
+		}
+
+		g.Log().Infof(ctx, "ONE平台拉单第%d/%d页完成，本页记录数=%d", pageNo, pageCount, len(transactions))
+	}
+
+	g.Log().Infof(ctx, "ONE平台拉单完成: 总记录数=%d", len(allRecords))
+
+	// 批量入库到MySQL
+	if len(allRecords) > 0 {
+		if err := p.saveBetRecordsToMySQL(ctx, params, allRecords); err != nil {
+			g.Log().Errorf(ctx, "批量入库失败: %v", err)
+			return allRecords, err
+		}
+	}
+
+	return allRecords, nil
+}
+
+// parseTransaction 解析注单数据
+func (p *OnePlatform) parseTransaction(transArray []interface{}, headerMap map[string]int) *platform.BetRecord {
+	// 只打印第一条用于调试
+	if len(transArray) > 0 {
+		g.Log().Infof(context.Background(), "解析注单: arrayLen=%d, headerMap=%+v, firstData=%v",
+			len(transArray), headerMap, transArray)
+	}
+
+	getValue := func(key string) string {
+		idx, ok := headerMap[key]
+		if !ok {
+			g.Log().Warningf(context.Background(), "字段 %s 在headerMap中不存在", key)
+			return ""
+		}
+		if idx >= len(transArray) {
+			g.Log().Warningf(context.Background(), "字段 %s 索引越界: idx=%d, arrayLen=%d", key, idx, len(transArray))
+			return ""
+		}
+		if transArray[idx] == nil {
+			return ""
+		}
+		return fmt.Sprintf("%v", transArray[idx])
+	}
+
+	getFloat := func(key string) float64 {
+		val := getValue(key)
+		if val == "" {
+			return 0
+		}
+		f, _ := strconv.ParseFloat(val, 64)
+		return f
+	}
+
+	getInt := func(key string) int {
+		val := getValue(key)
+		if val == "" {
+			return 0
+		}
+		i, _ := strconv.Atoi(val)
+		return i
+	}
+
+	getTimeFromMs := func(key string) string {
+		idx, ok := headerMap[key]
+		if !ok {
+			return ""
+		}
+		if idx >= len(transArray) || transArray[idx] == nil {
+			return ""
+		}
+
+		// 直接从interface{}转换，避免科学计数法问题
+		var ms int64
+		switch v := transArray[idx].(type) {
+		case float64:
+			ms = int64(v)
+		case int64:
+			ms = v
+		case int:
+			ms = int64(v)
+		default:
+			// 尝试字符串解析
+			val := fmt.Sprintf("%v", v)
+			f, err := strconv.ParseFloat(val, 64)
+			if err != nil {
+				return ""
+			}
+			ms = int64(f)
+		}
+
+		// 转换为时间（GMT+8）
+		loc, _ := time.LoadLocation("Asia/Shanghai")
+		t := time.Unix(ms/1000, (ms%1000)*1000000).In(loc)
+		return t.Format("2006-01-02 15:04:05")
+	}
+
+	// 构建注单记录
+	betTime := getTimeFromMs("vendorBetTime")
+	settleTime := getTimeFromMs("vendorSettleTime")
+
+	g.Log().Infof(context.Background(), "解析注单: transactionId=%s, username=%s, betTime=%s, settleTime=%s",
+		getValue("externalTransactionId"), getValue("username"), betTime, settleTime)
+
+	record := &platform.BetRecord{
+		OrderNo:     getValue("externalTransactionId"), // 使用externalTransactionId而不是transactionId
+		Username:    getValue("username"),
+		GameName:    getValue("gameCode"), // 使用gameCode而不是gameName
+		BetAmount:   getFloat("betAmount"),
+		WinAmount:   getFloat("winAmount"),
+		ValidAmount: getFloat("effectiveTurnover"), // 使用effectiveTurnover而不是validBetAmount
+		BetTime:     betTime,
+		SettleTime:  settleTime,
+		Status:      getInt("status"),
+	}
+
+	// 将原始数据转为JSON
+	rawData, _ := json.Marshal(transArray)
+	record.RawData = string(rawData)
+
+	return record
 }
 
 // SupplementBetRecords 补单
@@ -647,4 +892,67 @@ func (p *OnePlatform) markTransferFailed(ctx context.Context, client balanceV1.B
 	if err != nil {
 		g.Log().Errorf(ctx, "标记转账失败: %v", err)
 	}
+}
+
+// saveBetRecordsToMySQL 批量保存注单到MySQL
+func (p *OnePlatform) saveBetRecordsToMySQL(ctx context.Context, params *platform.PullRecordsParams, records []platform.BetRecord) error {
+	if len(records) == 0 {
+		return nil
+	}
+
+	// 使用动态数据库配置
+	groupName := fmt.Sprintf("site_%s", params.SiteCode)
+	db := g.DB(groupName)
+	if db == nil {
+		return fmt.Errorf("数据库连接不存在: %s", groupName)
+	}
+
+	// 批量插入注单（统一使用bet_records表）
+	insertData := make([]g.Map, 0, len(records))
+	loc, _ := time.LoadLocation("Asia/Shanghai")
+
+	for _, record := range records {
+
+		// 解析时间
+		betTime, _ := time.ParseInLocation("2006-01-02 15:04:05", record.BetTime, loc)
+		settleTime, _ := time.ParseInLocation("2006-01-02 15:04:05", record.SettleTime, loc)
+
+		// 计算净输赢
+		netAmount := record.WinAmount - record.BetAmount
+
+		insertData = append(insertData, g.Map{
+			"site_id":        params.SiteId,
+			"site_code":      params.SiteCode,
+			"user_id":        0, // game服务没有user表，暂时设为0
+			"username":       record.Username,
+			"platform":       params.SiteGame.Platform,
+			"currency":       "PHP",
+			"game_id":        params.SiteGame.GameId,
+			"game_name":      record.GameName,
+			"order_no":       record.OrderNo,
+			"bet_amount":     record.BetAmount,
+			"win_amount":     record.WinAmount,
+			"valid_amount":   record.ValidAmount,
+			"net_amount":     netAmount,
+			"bet_time":       betTime,
+			"settle_time":    settleTime,
+			"status":         record.Status,
+			"raw_data":       record.RawData,
+			"ch_sync_status": 0,
+		})
+	}
+
+	if len(insertData) == 0 {
+		g.Log().Warning(ctx, "没有有效的注单数据可插入")
+		return nil
+	}
+
+	// 批量插入到bet_records表（使用REPLACE INTO处理重复数据）
+	_, err := db.Model("bet_records").Data(insertData).Replace()
+	if err != nil {
+		return fmt.Errorf("批量插入注单失败: %v", err)
+	}
+
+	g.Log().Infof(ctx, "批量入库MySQL成功: 站点=%s, 插入/更新 %d 条", params.SiteCode, len(insertData))
+	return nil
 }
