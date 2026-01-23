@@ -947,12 +947,12 @@ func (p *OnePlatform) saveBetRecordsToMySQL(ctx context.Context, params *platfor
 		return nil
 	}
 
-	// 批量插入到bet_records表（使用REPLACE INTO处理重复数据）
-	_, err := db.Model("bet_records").Data(insertData).Replace()
+	// 批量插入到bet_records表（使用INSERT IGNORE忽略重复数据，不影响自增ID）
+	_, err := db.Model("bet_records").Data(insertData).InsertIgnore()
 	if err != nil {
 		return fmt.Errorf("批量插入注单失败: %v", err)
 	}
 
-	g.Log().Infof(ctx, "批量入库MySQL成功: 站点=%s, 插入/更新 %d 条", params.SiteCode, len(insertData))
+	g.Log().Infof(ctx, "批量入库MySQL成功: 站点=%s, 插入 %d 条", params.SiteCode, len(insertData))
 	return nil
 }
