@@ -130,9 +130,10 @@ func (m *DBConfigManager) loadAllSiteConfigs() error {
 		}
 	}
 
-	if updatedCount > 0 {
-		g.Log().Infof(m.ctx, "Game服务更新了 %d 个站点配置，当前共 %d 个站点", updatedCount, len(m.siteConfigs))
-	}
+	// 删除定时任务的日志输出
+	// if updatedCount > 0 {
+	// 	g.Log().Infof(m.ctx, "Game服务更新了 %d 个站点配置，当前共 %d 个站点", updatedCount, len(m.siteConfigs))
+	// }
 	return nil
 }
 
@@ -193,10 +194,13 @@ func (m *DBConfigManager) updateSiteConfig(key string, value []byte) (bool, erro
 			g.Log().Errorf(m.ctx, "注册Game数据库配置组失败: site=%s, error=%v", siteCode, err)
 			return false, err
 		}
-		g.Log().Infof(m.ctx, "Game服务站点配置已更新（含DB连接池）: site=%s, version=%d", siteCode, config.Meta.Version)
-	} else {
-		g.Log().Debugf(m.ctx, "Game服务站点配置已更新（仅业务配置）: site=%s, version=%d", siteCode, config.Meta.Version)
+		// 删除定时任务的日志输出
+		// g.Log().Infof(m.ctx, "Game服务站点配置已更新（含DB连接池）: site=%s, version=%d", siteCode, config.Meta.Version)
 	}
+	// 删除定时任务的日志输出
+	// else {
+	// 	g.Log().Debugf(m.ctx, "Game服务站点配置已更新（仅业务配置）: site=%s, version=%d", siteCode, config.Meta.Version)
+	// }
 
 	// 同步游戏配置到site_game表（在数据库连接池注册之后）
 	if err := m.syncGameConfig(siteCode, &config); err != nil {
@@ -240,7 +244,8 @@ func (m *DBConfigManager) createGameDBConnection(siteCode string, config *SiteCo
 				g.Log().Errorf(m.ctx, "数据库连接测试失败: %s, error: %v", groupName, err)
 				return fmt.Errorf("数据库连接测试失败: %v", err)
 			}
-			g.Log().Debugf(m.ctx, "数据库连接池注册成功: %s", groupName)
+			// 删除定时任务的日志输出
+			// g.Log().Debugf(m.ctx, "数据库连接池注册成功: %s", groupName)
 		}
 	} else {
 		g.Log().Errorf(m.ctx, "配置注册失败: %s", groupName)
@@ -297,7 +302,8 @@ func (m *DBConfigManager) syncGameConfig(siteCode string, config *SiteConfig) er
 
 	// 检查数据库配置是否存在
 	if gdb.GetConfig(groupName) == nil {
-		g.Log().Debugf(m.ctx, "站点数据库配置不存在，跳过游戏配置同步: %s", groupName)
+		// 删除定时任务的日志输出
+		// g.Log().Debugf(m.ctx, "站点数据库配置不存在，跳过游戏配置同步: %s", groupName)
 		return nil
 	}
 
@@ -317,7 +323,8 @@ func (m *DBConfigManager) syncGameConfig(siteCode string, config *SiteConfig) er
 
 		// 2. 如果没有游戏配置，直接返回
 		if len(config.Game) == 0 {
-			g.Log().Infof(ctx, "站点 %s 没有游戏配置，已清空site_game表", siteCode)
+			// 删除定时任务的日志输出
+			// g.Log().Infof(ctx, "站点 %s 没有游戏配置，已清空site_game表", siteCode)
 			return nil
 		}
 
@@ -347,7 +354,8 @@ func (m *DBConfigManager) syncGameConfig(siteCode string, config *SiteConfig) er
 			return fmt.Errorf("插入游戏配置失败: %v", err)
 		}
 
-		g.Log().Infof(ctx, "站点 %s 同步了 %d 个游戏配置到site_game表", siteCode, len(config.Game))
+		// 删除定时任务的日志输出
+		// g.Log().Infof(ctx, "站点 %s 同步了 %d 个游戏配置到site_game表", siteCode, len(config.Game))
 		return nil
 	})
 }
