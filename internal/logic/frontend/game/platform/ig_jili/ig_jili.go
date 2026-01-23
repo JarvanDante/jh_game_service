@@ -942,10 +942,17 @@ func (p *IGJiliPlatform) compensateBalance(ctx context.Context, client balanceV1
 	}
 }
 
-// markTransferFailed 标记转账失败（用于转出失败，不需要补偿余额）
+//markTransferFailed
+/**
+ * @desc：标记转账失败（用于转出失败，不需要补偿余额）
+ * @param ctx
+ * @param client
+ * @param orderNo
+ * @author : Carson
+ */
 func (p *IGJiliPlatform) markTransferFailed(ctx context.Context, client balanceV1.BalanceClient, orderNo string) {
-	// TODO: 需要在balance服务添加一个标记失败的方法
-	// 暂时使用CompensateBalance，传入0金额
+	/// 传入0值，balance服务会自动从订单中获取siteId、userId和amount
+	// 转出失败时只标记订单失败，不会修改用户余额
 	_, err := client.CompensateBalance(ctx, &balanceV1.CompensateBalanceReq{
 		SiteId:  0,
 		UserId:  0,
