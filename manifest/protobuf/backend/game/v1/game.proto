@@ -8,6 +8,7 @@ service Game {
     rpc GetGames(GetGamesReq) returns (GetGamesRes) {}
     rpc UpdateGames(UpdateGamesReq) returns (UpdateGamesRes) {}
     rpc GetGameRecords(GetGameRecordsReq) returns (GetGameRecordsRes) {}
+    rpc SupplementBetRecords(SupplementBetRecordsReq) returns (SupplementBetRecordsRes) {}
 }
 
 message GetGamesReq {
@@ -96,4 +97,19 @@ message GameRecord {
     string remark = 18;                    // 备注
     string created_at = 19;                // 创建时间
     string updated_at = 20;                // 更新时间
+}
+
+// 补单请求
+message SupplementBetRecordsReq {
+    string platform = 1;                   // 游戏平台（ONE、IG_JILI等）
+    string start_time = 2;                 // 开始时间，格式: 2006-01-02 15:04:05
+    string end_time = 3;                   // 结束时间，格式: 2006-01-02 15:04:05
+    repeated string site_codes = 4;        // 站点代码列表（可选，为空则所有站点）
+}
+
+// 补单响应
+message SupplementBetRecordsRes {
+    bool success = 1;                      // 是否成功
+    string message = 2;                    // 消息
+    int32 total_records = 3;               // 总记录数
 }

@@ -5,12 +5,15 @@ import (
 	"fmt"
 	v1 "jh_game_service/api/backend/game/v1"
 	"jh_game_service/internal/dao"
+	"jh_game_service/internal/logic/frontend/game/platform"
 	"jh_game_service/internal/model/do"
 	"jh_game_service/internal/model/entity"
+	"jh_game_service/internal/registry"
 	"jh_game_service/internal/service/backend"
 	"jh_game_service/internal/tracing"
 
 	"github.com/gogf/gf/v2/database/gdb"
+	"github.com/gogf/gf/v2/frame/g"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -327,5 +330,119 @@ func (s *sGame) GetGameRecords(ctx context.Context, req *v1.GetGameRecordsReq) (
 		LastPage:           lastPage,
 		TotalAmount:        fmt.Sprintf("%.2f", totalAmount),
 		AllGameTotalAmount: fmt.Sprintf("%.2f", allGameTotalAmount),
+	}, nil
+}
+
+// SupplementBetRecords 补单
+func (s *sGame) SupplementBetRecords(ctx context.Context, req *v1.SupplementBetRecordsReq) (*v1.SupplementBetRecordsRes, error) {
+	if req == nil {
+		return nil, fmt.Errorf("请求参数不能为空")
+	}
+
+	ctx, span := tracing.StartSpan(ctx, "game.SupplementBetRecords", trace.WithAttributes(
+		attribute.String("method", "SupplementBetRecords"),
+		attribute.String("platform", req.Platform),
+		attribute.String("start_time", req.StartTime),
+		attribute.String("end_time", req.EndTime),
+	))
+	defer span.End()
+
+	// 参数验证
+	if req.Platform == "" {
+		return &v1.SupplementBetRecordsRes{
+			Success: false,
+			Message: "游戏平台不能为空",
+		}, nil
+	}
+	if req.StartTime == "" || req.EndTime == "" {
+		return &v1.SupplementBetRecordsRes{
+			Success: false,
+			Message: "开始时间和结束时间不能为空",
+		}, nil
+	}
+
+	// 获取所有站点配置
+	dbManager := registry.GetDBConfigManager()
+	siteCodes := dbManager.GetAllSiteCodes()
+
+	totalRecords := 0
+	successSites := 0
+	failedSites := 0
+
+	// 遍历所有站点
+	for _, siteCode := range siteCodes {
+		// 获取站点配置
+		siteConfig, err := dbManager.GetSiteConfig(siteCode)
+		if err != nil {
+			g.Log().Errorf(ctx, "获取站点配置失败: 站点=%s, 错误=%v", siteCode, err)
+			failedSites++
+			continue
+		}
+
+		siteId := siteConfig.Base.SiteID
+
+		// 查找该站点是否有指定平台的游戏
+		var targetGame *registry.GameConfig
+		for i := range siteConfig.Game {
+			if siteConfig.Game[i].Platform == req.Platform {
+				targetGame = &siteConfig.Game[i]
+				break
+			}
+		}
+
+		if targetGame == nil {
+			continue // 该站点没有此平台的游戏，跳过
+		}
+
+		g.Log().Infof(ctx, "开始补单: 站点=%s, 平台=%s, 游戏=%s", siteCode, req.Platform, targetGame.Name)
+
+		// 创建游戏平台实例
+		gamePlatform, err := platform.GetFactory().Create(req.Platform)
+		if err != nil {
+			g.Log().Errorf(ctx, "创建游戏平台实例失败: 站点=%s, 错误=%v", siteCode, err)
+			failedSites++
+			continue
+		}
+
+		// 构建拉单参数
+		params := &platform.PullRecordsParams{
+			SiteId:   siteId,
+			SiteCode: siteCode,
+			SiteGame: entity.SiteGame{
+				GameId:   targetGame.GameId,
+				Type:     targetGame.Type,
+				Name:     targetGame.Name,
+				Platform: targetGame.Platform,
+				DbName:   targetGame.DbName,
+				ApiId:    targetGame.ApiId,
+				ApiKey:   targetGame.ApiKey,
+				ApiUrl:   targetGame.ApiUrl,
+			},
+			StartTime: req.StartTime,
+			EndTime:   req.EndTime,
+		}
+
+		// 调用拉单方法
+		records, err := gamePlatform.PullBetRecords(ctx, params)
+		if err != nil {
+			g.Log().Errorf(ctx, "拉取注单失败: 站点=%s, 错误=%v", siteCode, err)
+			failedSites++
+			continue
+		}
+
+		recordCount := len(records)
+		totalRecords += recordCount
+		successSites++
+
+		g.Log().Infof(ctx, "补单成功: 站点=%s, 记录数=%d", siteCode, recordCount)
+	}
+
+	message := fmt.Sprintf("补单完成: 平台=%s, 成功站点=%d, 失败站点=%d, 总记录数=%d",
+		req.Platform, successSites, failedSites, totalRecords)
+
+	return &v1.SupplementBetRecordsRes{
+		Success:      successSites > 0,
+		Message:      message,
+		TotalRecords: int32(totalRecords),
 	}, nil
 }

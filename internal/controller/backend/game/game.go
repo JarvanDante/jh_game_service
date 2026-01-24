@@ -31,3 +31,8 @@ func (*Controller) UpdateGames(ctx context.Context, req *v1.UpdateGamesReq) (res
 func (*Controller) GetGameRecords(ctx context.Context, req *v1.GetGameRecordsReq) (res *v1.GetGameRecordsRes, err error) {
 	return backend.Game().GetGameRecords(ctx, req)
 }
+
+// SupplementBetRecords 补单
+func (*Controller) SupplementBetRecords(ctx context.Context, req *v1.SupplementBetRecordsReq) (res *v1.SupplementBetRecordsRes, err error) {
+	return backend.Game().SupplementBetRecords(ctx, req)
+}
