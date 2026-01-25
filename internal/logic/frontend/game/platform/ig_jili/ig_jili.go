@@ -683,8 +683,14 @@ func (p *IGJiliPlatform) TransferOut(ctx context.Context, params *platform.Trans
 // PullBetRecords 拉取注单
 func (p *IGJiliPlatform) PullBetRecords(ctx context.Context, params *platform.PullRecordsParams) ([]platform.BetRecord, error) {
 	// TODO: 实现拉单逻辑
-	g.Log().Warning(ctx, "ONE平台拉单功能待实现")
+	g.Log().Warning(ctx, "IG_JILI平台拉单功能待实现")
 	return nil, fmt.Errorf("功能待实现")
+}
+
+// GetGameSource 获取游戏列表并同步到数据库（暂不实现）
+func (p *IGJiliPlatform) GetGameSource(ctx context.Context, params *platform.GetGameSourceParams) error {
+	g.Log().Warning(ctx, "IG_JILI平台游戏资源同步功能暂不实现")
+	return fmt.Errorf("IG_JILI平台暂不支持游戏资源同步")
 }
 
 // ========== 辅助方法 ==========

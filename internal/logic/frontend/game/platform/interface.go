@@ -110,6 +110,10 @@ type PullRecordsParams struct {
 
 // GetGameSourceParams 游戏资源参数
 type GetGameSourceParams struct {
+	SiteId   int             // 站点ID
+	SiteCode string          // 站点代码
+	GameId   int             // 游戏ID
+	SiteGame entity.SiteGame // 游戏配置
 }
 
 // BetRecord 注单记录

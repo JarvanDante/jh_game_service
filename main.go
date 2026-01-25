@@ -42,7 +42,7 @@ func main() {
 	}
 
 	// 添加子命令
-	command.AddCommand(&cmd.Main, &cmd.PullBetRecords)
+	command.AddCommand(&cmd.Main, &cmd.PullBetRecords, &cmd.SyncGameSource)
 
 	// 运行命令
 	command.Run(ctx)

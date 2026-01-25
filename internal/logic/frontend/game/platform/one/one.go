@@ -887,7 +887,289 @@ func (p *OnePlatform) markTransferFailed(ctx context.Context, client balanceV1.B
 	}
 }
 
-// saveBetRecordsToMySQL 批量保存注单到MySQL
+//GetGameSource
+/**
+ * @desc：获取游戏列表并同步到数据库
+ * @param ctx
+ * @param params
+ * @return error
+ * @author : Carson
+ */
+func (p *OnePlatform) GetGameSource(ctx context.Context, params *platform.GetGameSourceParams) error {
+	g.Log().Info(ctx, "开始同步ONE平台游戏列表...")
+
+	// 1. 获取所有运营商（vendors）
+	vendors, err := p.getVendors(ctx, params)
+	if err != nil {
+		return fmt.Errorf("获取运营商列表失败: %v", err)
+	}
+
+	g.Log().Infof(ctx, "获取到 %d 个运营商", len(vendors))
+
+	// 2. 遍历每个运营商，获取游戏列表
+	allGames := make([]map[string]interface{}, 0)
+	for _, vendor := range vendors {
+		vendorCode := vendor["code"].(string)
+		g.Log().Infof(ctx, "正在获取运营商 %s 的游戏列表...", vendorCode)
+
+		games, err := p.getGamesByVendor(ctx, params, vendorCode)
+		if err != nil {
+			g.Log().Errorf(ctx, "获取运营商 %s 游戏列表失败: %v", vendorCode, err)
+			continue
+		}
+
+		allGames = append(allGames, games...)
+		g.Log().Infof(ctx, "运营商 %s 获取到 %d 个游戏", vendorCode, len(games))
+	}
+
+	g.Log().Infof(ctx, "总共获取到 %d 个游戏", len(allGames))
+
+	// 3. 同步到数据库
+	if len(allGames) > 0 {
+		err = p.syncGamesToDatabase(ctx, params, allGames)
+		if err != nil {
+			return fmt.Errorf("同步游戏到数据库失败: %v", err)
+		}
+	}
+
+	g.Log().Info(ctx, "ONE平台游戏列表同步完成")
+	return nil
+}
+
+// getVendors 获取所有运营商
+func (p *OnePlatform) getVendors(ctx context.Context, params *platform.GetGameSourceParams) ([]map[string]interface{}, error) {
+	traceId, _ := p.generateUUID()
+
+	data := map[string]interface{}{
+		"traceId": traceId,
+	}
+
+	signature, err := p.getSignature(data, params.SiteGame.ApiKey)
+	if err != nil {
+		return nil, err
+	}
+
+	headers := map[string]string{
+		"Content-Type": "application/json",
+		"X-API-Key":    params.SiteGame.ApiId,
+		"X-Signature":  signature,
+	}
+
+	url := strings.TrimSuffix(params.SiteGame.ApiUrl, "/") + "/game/vendors"
+	res, err := util.CurlPostHeader(url, headers, data)
+	if err != nil {
+		return nil, fmt.Errorf("请求API失败: %v", err)
+	}
+
+	status, _ := res["status"].(string)
+	if status != "SC_OK" {
+		return nil, fmt.Errorf("获取运营商失败: %s", status)
+	}
+
+	dataValue, ok := res["data"].([]interface{})
+	if !ok {
+		return nil, fmt.Errorf("响应数据格式错误")
+	}
+
+	vendors := make([]map[string]interface{}, 0)
+	for _, v := range dataValue {
+		vendor, ok := v.(map[string]interface{})
+		if ok {
+			vendors = append(vendors, vendor)
+		}
+	}
+
+	return vendors, nil
+}
+
+// getGamesByVendor 获取指定运营商的所有游戏
+func (p *OnePlatform) getGamesByVendor(ctx context.Context, params *platform.GetGameSourceParams, vendorCode string) ([]map[string]interface{}, error) {
+	pageSize := 100
+	allGames := make([]map[string]interface{}, 0)
+
+	// 第一次请求获取总页数
+	traceId, _ := p.generateUUID()
+	data := map[string]interface{}{
+		"traceId":    traceId,
+		"vendorCode": vendorCode,
+		"pageNo":     1,
+		"pageSize":   pageSize,
+	}
+
+	signature, err := p.getSignature(data, params.SiteGame.ApiKey)
+	if err != nil {
+		return nil, err
+	}
+
+	headers := map[string]string{
+		"Content-Type": "application/json",
+		"X-API-Key":    params.SiteGame.ApiId,
+		"X-Signature":  signature,
+	}
+
+	url := strings.TrimSuffix(params.SiteGame.ApiUrl, "/") + "/game/list"
+	res, err := util.CurlPostHeader(url, headers, data)
+	if err != nil {
+		return nil, fmt.Errorf("请求API失败: %v", err)
+	}
+
+	status, _ := res["status"].(string)
+	if status != "SC_OK" {
+		return nil, fmt.Errorf("获取游戏列表失败: %s", status)
+	}
+
+	dataMap, ok := res["data"].(map[string]interface{})
+	if !ok {
+		return nil, fmt.Errorf("响应数据格式错误")
+	}
+
+	totalPages := 1
+	if tp, ok := dataMap["totalPages"].(float64); ok {
+		totalPages = int(tp)
+	}
+
+	// 遍历所有页
+	for pageNo := 1; pageNo <= totalPages; pageNo++ {
+		if pageNo > 1 {
+			// 重新生成请求
+			traceId, _ = p.generateUUID()
+			data = map[string]interface{}{
+				"traceId":    traceId,
+				"vendorCode": vendorCode,
+				"pageNo":     pageNo,
+				"pageSize":   pageSize,
+			}
+
+			signature, _ = p.getSignature(data, params.SiteGame.ApiKey)
+			headers["X-Signature"] = signature
+
+			res, err = util.CurlPostHeader(url, headers, data)
+			if err != nil {
+				g.Log().Errorf(ctx, "获取第 %d 页失败: %v", pageNo, err)
+				continue
+			}
+
+			dataMap, ok = res["data"].(map[string]interface{})
+			if !ok {
+				continue
+			}
+		}
+
+		// 解析游戏列表
+		games, ok := dataMap["games"].([]interface{})
+		if !ok || len(games) == 0 {
+			continue
+		}
+
+		for _, game := range games {
+			gameArray, ok := game.([]interface{})
+			if !ok || len(gameArray) < 8 {
+				continue
+			}
+
+			// 游戏数据格式：[code, name, style, img, img1, language, device, currency]
+			gameMap := map[string]interface{}{
+				"code":     gameArray[0],
+				"name":     gameArray[1],
+				"style":    gameArray[2],
+				"img":      gameArray[3],
+				"img1":     gameArray[4],
+				"language": gameArray[5],
+				"device":   gameArray[6],
+				"currency": gameArray[7],
+				"vendor":   vendorCode,
+			}
+
+			allGames = append(allGames, gameMap)
+		}
+	}
+
+	return allGames, nil
+}
+
+// syncGamesToDatabase 同步游戏到数据库
+func (p *OnePlatform) syncGamesToDatabase(ctx context.Context, params *platform.GetGameSourceParams, games []map[string]interface{}) error {
+	if len(games) == 0 {
+		return nil
+	}
+
+	// 使用动态数据库配置
+	groupName := fmt.Sprintf("site_%s", params.SiteCode)
+	db := g.DB(groupName)
+	if db == nil {
+		return fmt.Errorf("数据库连接不存在: %s", groupName)
+	}
+
+	g.Log().Infof(ctx, "开始同步游戏到数据库，共 %d 个游戏", len(games))
+
+	// 批量构建数据
+	batchSize := 100
+	successCount := 0
+	errorCount := 0
+
+	for i := 0; i < len(games); i += batchSize {
+		end := i + batchSize
+		if end > len(games) {
+			end = len(games)
+		}
+
+		batch := games[i:end]
+		insertData := make([]g.Map, 0, len(batch))
+		now := time.Now()
+
+		for _, game := range batch {
+			code, _ := game["code"].(string)
+			name, _ := game["name"].(string)
+			style, _ := game["style"].(string)
+			img, _ := game["img"].(string)
+			img1, _ := game["img1"].(string)
+			language, _ := game["language"].(string)
+			device, _ := game["device"].(string)
+			currency, _ := game["currency"].(string)
+			vendor, _ := game["vendor"].(string)
+
+			insertData = append(insertData, g.Map{
+				"site_id":    params.SiteId,
+				"platform":   "ONE",
+				"code":       code,
+				"name":       name,
+				"alias_name": name,
+				"style":      style,
+				"img":        img,
+				"img1":       img1,
+				"language":   language,
+				"device":     device,
+				"currency":   currency,
+				"vendor":     vendor,
+				"game_id":    params.GameId,
+				"hot":        0,
+				"recommend":  0,
+				"is_new":     0,
+				"status":     1,
+				"sort":       0,
+				"created_at": now,
+				"updated_at": now,
+			})
+		}
+
+		// 使用 Save 方法（相当于 INSERT ... ON DUPLICATE KEY UPDATE）
+		// 需要确保表有唯一键：site_id + platform + code
+		result, err := db.Model("game_list").Data(insertData).Save()
+		if err != nil {
+			g.Log().Errorf(ctx, "批量保存游戏失败: batch=%d-%d, err=%v", i, end, err)
+			errorCount += len(batch)
+			continue
+		}
+
+		affected, _ := result.RowsAffected()
+		successCount += int(affected)
+
+		g.Log().Infof(ctx, "批量保存完成: batch=%d-%d, affected=%d", i, end, affected)
+	}
+
+	g.Log().Infof(ctx, "游戏同步完成: 成功=%d, 失败=%d", successCount, errorCount)
+	return nil
+}
 func (p *OnePlatform) saveBetRecordsToMySQL(ctx context.Context, params *platform.PullRecordsParams, records []platform.BetRecord) error {
 	if len(records) == 0 {
 		return nil
