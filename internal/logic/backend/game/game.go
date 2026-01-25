@@ -538,6 +538,7 @@ func (s *sGame) GetGameList(ctx context.Context, req *v1.GetGameListReq) (*v1.Ge
 	// 获取分页数据
 	var gameList []entity.GameList
 	err = query.
+		Order("sort DESC").
 		Limit(int(req.Size)).
 		Offset(int(offset)).
 		Scan(&gameList)
