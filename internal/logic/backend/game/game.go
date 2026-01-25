@@ -446,3 +446,242 @@ func (s *sGame) SupplementBetRecords(ctx context.Context, req *v1.SupplementBetR
 		TotalRecords: int32(totalRecords),
 	}, nil
 }
+
+// GetGameList 获取游戏列表
+func (s *sGame) GetGameList(ctx context.Context, req *v1.GetGameListReq) (*v1.GetGameListRes, error) {
+	if req == nil {
+		return nil, fmt.Errorf("请求参数不能为空")
+	}
+
+	ctx, span := tracing.StartSpan(ctx, "game.GetGameList", trace.WithAttributes(
+		attribute.String("method", "GetGameList"),
+		attribute.Int("site_id", int(req.SiteId)),
+		attribute.String("platform", req.Platform),
+		attribute.Int("page", int(req.Page)),
+		attribute.Int("size", int(req.Size)),
+	))
+	defer span.End()
+
+	// 参数验证
+	if req.Page <= 0 {
+		req.Page = 1
+	}
+	if req.Size <= 0 {
+		req.Size = 20
+	}
+	if req.Size > 100 {
+		req.Size = 100 // 限制最大页面大小
+	}
+
+	siteId := req.SiteId
+	if siteId <= 0 {
+		siteId = 1 // 默认站点ID
+	}
+
+	// 构建查询条件
+	query := dao.GameList.Ctx(ctx).Where("site_id = ?", siteId)
+
+	// 平台过滤
+	if req.Platform != "" {
+		query = query.Where("platform = ?", req.Platform)
+	}
+
+	// 运营商过滤
+	if req.Vendor != "" {
+		query = query.Where("vendor = ?", req.Vendor)
+	}
+
+	// 游戏名称模糊搜索
+	if req.Name != "" {
+		query = query.Where("(name LIKE ? OR alias_name LIKE ?)", "%"+req.Name+"%", "%"+req.Name+"%")
+	}
+
+	// 游戏代码过滤
+	if req.Code != "" {
+		query = query.Where("code = ?", req.Code)
+	}
+
+	// 游戏类型过滤
+	if req.Style != "" {
+		query = query.Where("style = ?", req.Style)
+	}
+
+	// 热门过滤
+	if req.Hot >= 0 {
+		query = query.Where("hot = ?", req.Hot)
+	}
+
+	// 推荐过滤
+	if req.Recommend >= 0 {
+		query = query.Where("recommend = ?", req.Recommend)
+	}
+
+	// 新游戏过滤
+	if req.IsNew >= 0 {
+		query = query.Where("is_new = ?", req.IsNew)
+	}
+
+	// 状态过滤
+	if req.Status >= 0 {
+		query = query.Where("status = ?", req.Status)
+	}
+
+	// 获取总记录数
+	total, err := query.Count()
+	if err != nil {
+		return nil, fmt.Errorf("获取记录总数失败: %v", err)
+	}
+
+	// 计算分页信息
+	offset := (req.Page - 1) * req.Size
+
+	// 获取分页数据
+	var gameList []entity.GameList
+	err = query.
+		Order("sort DESC, id DESC").
+		Limit(int(req.Size)).
+		Offset(int(offset)).
+		Scan(&gameList)
+	if err != nil {
+		return nil, fmt.Errorf("获取游戏列表失败: %v", err)
+	}
+
+	// 转换为响应格式
+	list := make([]*v1.GameListItem, 0, len(gameList))
+	for _, game := range gameList {
+		// 处理时间格式
+		createdAt := ""
+		if game.CreatedAt != nil {
+			createdAt = game.CreatedAt.Format("2006-01-02 15:04:05")
+		}
+
+		updatedAt := ""
+		if game.UpdatedAt != nil {
+			updatedAt = game.UpdatedAt.Format("2006-01-02 15:04:05")
+		}
+
+		item := &v1.GameListItem{
+			Id:        int32(game.Id),
+			SiteId:    int32(game.SiteId),
+			Platform:  game.Platform,
+			Code:      game.Code,
+			Name:      game.Name,
+			AliasName: game.AliasName,
+			Style:     game.Style,
+			Img:       game.Img,
+			Img1:      game.Img1,
+			Language:  game.Language,
+			Device:    game.Device,
+			Currency:  "", // 数据库中没有此字段
+			Vendor:    game.Vendor,
+			Hot:       int32(game.Hot),
+			Recommend: int32(game.Recommend),
+			IsNew:     int32(game.IsNew),
+			Status:    int32(game.Status),
+			Sort:      int32(game.Sort),
+			LikeNum:   int32(game.LikeNum),
+			CreatedAt: createdAt,
+			UpdatedAt: updatedAt,
+		}
+		list = append(list, item)
+	}
+
+	return &v1.GetGameListRes{
+		List:  list,
+		Total: int32(total),
+		Page:  req.Page,
+		Size:  req.Size,
+	}, nil
+}
+
+// UpdateGameListItem 更新游戏列表项
+func (s *sGame) UpdateGameListItem(ctx context.Context, req *v1.UpdateGameListItemReq) (*v1.UpdateGameListItemRes, error) {
+	if req == nil {
+		return nil, fmt.Errorf("请求参数不能为空")
+	}
+
+	ctx, span := tracing.StartSpan(ctx, "game.UpdateGameListItem", trace.WithAttributes(
+		attribute.String("method", "UpdateGameListItem"),
+		attribute.Int("site_id", int(req.SiteId)),
+		attribute.Int("id", int(req.Id)),
+	))
+	defer span.End()
+
+	// 参数验证
+	if req.Id <= 0 {
+		return &v1.UpdateGameListItemRes{
+			Success: false,
+			Message: "游戏ID不能为空",
+		}, nil
+	}
+
+	siteId := req.SiteId
+	if siteId <= 0 {
+		siteId = 1 // 默认站点ID
+	}
+
+	// 检查游戏是否存在
+	count, err := dao.GameList.Ctx(ctx).
+		Where("id = ? AND site_id = ?", req.Id, siteId).
+		Count()
+	if err != nil {
+		return &v1.UpdateGameListItemRes{
+			Success: false,
+			Message: fmt.Sprintf("查询游戏失败: %v", err),
+		}, nil
+	}
+	if count == 0 {
+		return &v1.UpdateGameListItemRes{
+			Success: false,
+			Message: "游戏不存在",
+		}, nil
+	}
+
+	// 构建更新数据
+	updateData := g.Map{}
+
+	// 只更新后台管理字段
+	if req.AliasName != "" {
+		updateData["alias_name"] = req.AliasName
+	}
+	if req.Hot >= 0 {
+		updateData["hot"] = req.Hot
+	}
+	if req.Recommend >= 0 {
+		updateData["recommend"] = req.Recommend
+	}
+	if req.IsNew >= 0 {
+		updateData["is_new"] = req.IsNew
+	}
+	if req.Status >= 0 {
+		updateData["status"] = req.Status
+	}
+	if req.Sort >= 0 {
+		updateData["sort"] = req.Sort
+	}
+
+	// 如果没有要更新的字段
+	if len(updateData) == 0 {
+		return &v1.UpdateGameListItemRes{
+			Success: false,
+			Message: "没有要更新的字段",
+		}, nil
+	}
+
+	// 执行更新
+	_, err = dao.GameList.Ctx(ctx).
+		Where("id = ? AND site_id = ?", req.Id, siteId).
+		Data(updateData).
+		Update()
+	if err != nil {
+		return &v1.UpdateGameListItemRes{
+			Success: false,
+			Message: fmt.Sprintf("更新游戏失败: %v", err),
+		}, nil
+	}
+
+	return &v1.UpdateGameListItemRes{
+		Success: true,
+		Message: "更新成功",
+	}, nil
+}

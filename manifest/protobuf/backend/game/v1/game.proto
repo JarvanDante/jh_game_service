@@ -9,6 +9,10 @@ service Game {
     rpc UpdateGames(UpdateGamesReq) returns (UpdateGamesRes) {}
     rpc GetGameRecords(GetGameRecordsReq) returns (GetGameRecordsRes) {}
     rpc SupplementBetRecords(SupplementBetRecordsReq) returns (SupplementBetRecordsRes) {}
+    
+    // 游戏列表管理
+    rpc GetGameList(GetGameListReq) returns (GetGameListRes) {}
+    rpc UpdateGameListItem(UpdateGameListItemReq) returns (UpdateGameListItemRes) {}
 }
 
 message GetGamesReq {
@@ -112,4 +116,73 @@ message SupplementBetRecordsRes {
     bool success = 1;                      // 是否成功
     string message = 2;                    // 消息
     int32 total_records = 3;               // 总记录数
+}
+
+// ========== 游戏列表管理 ==========
+
+// 获取游戏列表请求
+message GetGameListReq {
+    int32 site_id = 1;                     // 站点ID
+    string platform = 2;                   // 平台（可选）ONE、IG_JILI
+    string vendor = 3;                     // 运营商（可选）PP、PGS、JL等
+    string name = 4;                       // 游戏名称（模糊搜索，可选）
+    string code = 5;                       // 游戏代码（可选）
+    string style = 6;                      // 游戏类型（可选）SLOTS、LIVE等
+    int32 hot = 7;                         // 是否热门（可选）-1=全部 0=否 1=是
+    int32 recommend = 8;                   // 是否推荐（可选）-1=全部 0=否 1=是
+    int32 is_new = 9;                      // 是否新游戏（可选）-1=全部 0=否 1=是
+    int32 status = 10;                     // 状态（可选）-1=全部 0=禁用 1=启用
+    int32 page = 11;                       // 页码
+    int32 size = 12;                       // 每页数量
+}
+
+// 获取游戏列表响应
+message GetGameListRes {
+    repeated GameListItem list = 1;        // 游戏列表
+    int32 total = 2;                       // 总记录数
+    int32 page = 3;                        // 当前页码
+    int32 size = 4;                        // 每页数量
+}
+
+// 游戏列表项
+message GameListItem {
+    int32 id = 1;                          // 自增ID
+    int32 site_id = 2;                     // 站点ID
+    string platform = 3;                   // 平台 ONE、IG_JILI
+    string code = 4;                       // 游戏代码
+    string name = 5;                       // 游戏名称
+    string alias_name = 6;                 // 别名（后台自定义）
+    string style = 7;                      // 游戏类型 SLOTS、LIVE等
+    string img = 8;                        // 游戏图片
+    string img1 = 9;                       // 游戏图片2
+    string language = 10;                  // 支持语言
+    string device = 11;                    // 支持设备
+    string currency = 12;                  // 支持货币
+    string vendor = 13;                    // 运营商
+    int32 hot = 14;                        // 是否热门 0=否 1=是
+    int32 recommend = 15;                  // 是否推荐 0=否 1=是
+    int32 is_new = 16;                     // 是否新游戏 0=否 1=是
+    int32 status = 17;                     // 状态 0=禁用 1=启用
+    int32 sort = 18;                       // 排序
+    int32 like_num = 19;                   // 点赞数
+    string created_at = 20;                // 创建时间
+    string updated_at = 21;                // 更新时间
+}
+
+// 更新游戏列表项请求
+message UpdateGameListItemReq {
+    int32 site_id = 1;                     // 站点ID
+    int32 id = 2;                          // 游戏ID
+    string alias_name = 3;                 // 别名（可选）
+    int32 hot = 4;                         // 是否热门（可选）-1=不修改 0=否 1=是
+    int32 recommend = 5;                   // 是否推荐（可选）-1=不修改 0=否 1=是
+    int32 is_new = 6;                      // 是否新游戏（可选）-1=不修改 0=否 1=是
+    int32 status = 7;                      // 状态（可选）-1=不修改 0=禁用 1=启用
+    int32 sort = 8;                        // 排序（可选）-1=不修改
+}
+
+// 更新游戏列表项响应
+message UpdateGameListItemRes {
+    bool success = 1;                      // 是否成功
+    string message = 2;                    // 消息
 }

@@ -11,6 +11,8 @@ type (
 		UpdateGames(ctx context.Context, req *v1.UpdateGamesReq) (*v1.UpdateGamesRes, error)
 		GetGameRecords(ctx context.Context, req *v1.GetGameRecordsReq) (*v1.GetGameRecordsRes, error)
 		SupplementBetRecords(ctx context.Context, req *v1.SupplementBetRecordsReq) (*v1.SupplementBetRecordsRes, error)
+		GetGameList(ctx context.Context, req *v1.GetGameListReq) (*v1.GetGameListRes, error)
+		UpdateGameListItem(ctx context.Context, req *v1.UpdateGameListItemReq) (*v1.UpdateGameListItemRes, error)
 	}
 )
 

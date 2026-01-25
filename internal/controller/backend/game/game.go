@@ -36,3 +36,13 @@ func (*Controller) GetGameRecords(ctx context.Context, req *v1.GetGameRecordsReq
 func (*Controller) SupplementBetRecords(ctx context.Context, req *v1.SupplementBetRecordsReq) (res *v1.SupplementBetRecordsRes, err error) {
 	return backend.Game().SupplementBetRecords(ctx, req)
 }
+
+// GetGameList 获取游戏列表
+func (*Controller) GetGameList(ctx context.Context, req *v1.GetGameListReq) (res *v1.GetGameListRes, err error) {
+	return backend.Game().GetGameList(ctx, req)
+}
+
+// UpdateGameListItem 更新游戏列表项
+func (*Controller) UpdateGameListItem(ctx context.Context, req *v1.UpdateGameListItemReq) (res *v1.UpdateGameListItemRes, err error) {
+	return backend.Game().UpdateGameListItem(ctx, req)
+}

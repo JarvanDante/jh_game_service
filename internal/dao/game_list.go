@@ -5,7 +5,10 @@
 package dao
 
 import (
+	"context"
 	"jh_game_service/internal/dao/internal"
+
+	"github.com/gogf/gf/v2/database/gdb"
 )
 
 // gameListDao is the data access object for the table game_list.
@@ -18,5 +21,12 @@ var (
 	// GameList is a globally accessible object for table game_list operations.
 	GameList = gameListDao{internal.NewGameListDao()}
 )
+
+// Ctx 重写Ctx方法，使用动态数据库连接
+func (d gameListDao) Ctx(ctx context.Context) *gdb.Model {
+	// 使用辅助函数获取动态Model
+	originalModel := d.GameListDao.Ctx(ctx)
+	return GetDynamicModel(ctx, d.Table(), originalModel)
+}
 
 // Add your custom methods and functionality below.
