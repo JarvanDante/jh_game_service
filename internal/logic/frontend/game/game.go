@@ -169,3 +169,67 @@ func (s *sGame) checkIPRestriction(ctx context.Context, gameId int32, key string
 	g.Log().Debugf(ctx, "IP限制检查功能待实现: clientIp=%s", clientIp)
 	return nil
 }
+
+//GetGameCategories
+/**
+ * @desc：获取游戏种类
+ * @param ctx
+ * @param req
+ * @return *v1.GetGameCategoriesRes
+ * @return error
+ * @author : Carson
+ */
+func (s *sGame) GetGameCategories(ctx context.Context, req *v1.GetGameCategoriesReq) (*v1.GetGameCategoriesRes, error) {
+	if req == nil {
+		return nil, fmt.Errorf("请求参数不能为空")
+	}
+
+	// 从上下文获取站点信息（不需要用户登录）
+	siteId, ok := middleware.GetSiteIdFromContext(ctx)
+	if !ok || siteId == 0 {
+		return nil, fmt.Errorf("获取站点信息失败")
+	}
+
+	// 构建查询条件
+	query := dao.SiteGame.Ctx(ctx).
+		Where(do.SiteGame{
+			SiteId: int(siteId),
+			Status: 1, // 只查询状态为1的游戏
+		})
+
+	// 如果指定了type，添加type过滤
+	if req.Type > 0 {
+		query = query.Where(do.SiteGame{
+			Type: int(req.Type),
+		})
+	}
+
+	// 按sort降序排序
+	query = query.Order("sort DESC")
+
+	// 查询游戏列表
+	var siteGames []entity.SiteGame
+	err := query.Scan(&siteGames)
+	if err != nil {
+		return nil, fmt.Errorf("查询游戏种类失败: %v", err)
+	}
+
+	// 转换为响应格式
+	categories := make([]*v1.GameCategory, 0, len(siteGames))
+	for _, game := range siteGames {
+		categories = append(categories, &v1.GameCategory{
+			GameId:    int32(game.GameId),
+			Name:      game.Name,
+			Platform:  game.Platform,
+			Type:      int32(game.Type),
+			ImageCode: game.ImageCode,
+			DbName:    game.DbName,
+			Sort:      int32(game.Sort),
+			Status:    int32(game.Status),
+		})
+	}
+
+	return &v1.GetGameCategoriesRes{
+		Categories: categories,
+	}, nil
+}

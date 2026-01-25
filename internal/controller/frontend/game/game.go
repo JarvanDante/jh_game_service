@@ -20,3 +20,8 @@ func Register(s *grpcx.GrpcServer) {
 func (*Controller) RedirectToGame(ctx context.Context, req *v1.RedirectToGameReq) (res *v1.RedirectToGameRes, err error) {
 	return frontend.Game().RedirectToGame(ctx, req)
 }
+
+// GetGameCategories 获取游戏种类
+func (*Controller) GetGameCategories(ctx context.Context, req *v1.GetGameCategoriesReq) (res *v1.GetGameCategoriesRes, err error) {
+	return frontend.Game().GetGameCategories(ctx, req)
+}

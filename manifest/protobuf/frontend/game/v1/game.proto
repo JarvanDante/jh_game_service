@@ -6,6 +6,7 @@ option go_package = "jh_game_service/api/frontend/game/v1";
 
 service Game {
     rpc RedirectToGame(RedirectToGameReq) returns (RedirectToGameRes) {}
+    rpc GetGameCategories(GetGameCategoriesReq) returns (GetGameCategoriesRes) {}
 }
 
 message RedirectToGameReq {
@@ -17,4 +18,23 @@ message RedirectToGameReq {
 message RedirectToGameRes {
     string type = 1;                   // 类型
     string url = 2;                    // 游戏跳转链接
+}
+
+message GetGameCategoriesReq {
+    int32 type = 1;                // 游戏类型（可选）
+}
+
+message GetGameCategoriesRes {
+    repeated GameCategory categories = 1;  // 游戏种类列表
+}
+
+message GameCategory {
+    int32 game_id = 1;             // 游戏ID
+    string name = 2;               // 游戏名称
+    string platform = 3;           // 平台
+    int32 type = 4;                // 游戏类型
+    string image_code = 5;         // 图片代码
+    string db_name = 6;            // 数据库名称
+    int32 sort = 7;                // 排序
+    int32 status = 8;              // 状态
 }

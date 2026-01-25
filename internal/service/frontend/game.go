@@ -8,6 +8,7 @@ import (
 type (
 	IGame interface {
 		RedirectToGame(ctx context.Context, req *v1.RedirectToGameReq) (*v1.RedirectToGameRes, error)
+		GetGameCategories(ctx context.Context, req *v1.GetGameCategoriesReq) (*v1.GetGameCategoriesRes, error)
 	}
 )
 
