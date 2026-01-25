@@ -233,3 +233,107 @@ func (s *sGame) GetGameCategories(ctx context.Context, req *v1.GetGameCategories
 		Categories: categories,
 	}, nil
 }
+
+//GetGameList
+/**
+ * @desc：获取游戏列表
+ * @param ctx
+ * @param req
+ * @return *v1.GetGameListRes
+ * @return error
+ * @author : Carson
+ */
+func (s *sGame) GetGameList(ctx context.Context, req *v1.GetGameListReq) (*v1.GetGameListRes, error) {
+	if req == nil {
+		return nil, fmt.Errorf("请求参数不能为空")
+	}
+
+	// 从上下文获取站点信息（不需要用户登录）
+	siteId, ok := middleware.GetSiteIdFromContext(ctx)
+	if !ok || siteId == 0 {
+		return nil, fmt.Errorf("获取站点信息失败")
+	}
+
+	// 参数验证
+	if req.Page <= 0 {
+		req.Page = 1
+	}
+	if req.Size <= 0 {
+		req.Size = 20
+	}
+	if req.Size > 100 {
+		req.Size = 100 // 限制最大页面大小
+	}
+
+	// 构建查询条件
+	query := dao.GameList.Ctx(ctx).Where("site_id = ?", siteId)
+
+	// 平台过滤
+	if req.Platform != "" {
+		query = query.Where("platform = ?", req.Platform)
+	}
+
+	// 热门过滤
+	if req.Hot > 0 {
+		query = query.Where("hot = ?", req.Hot)
+	}
+
+	// 新游戏过滤
+	if req.IsNew > 0 {
+		query = query.Where("is_new = ?", req.IsNew)
+	}
+
+	// 推荐过滤
+	if req.Recommend > 0 {
+		query = query.Where("recommend = ?", req.Recommend)
+	}
+
+	// 固定过滤状态为1（启用）
+	query = query.Where("status = ?", 1)
+
+	// 获取总记录数
+	total, err := query.Count()
+	if err != nil {
+		return nil, fmt.Errorf("获取记录总数失败: %v", err)
+	}
+
+	// 计算分页信息
+	offset := (req.Page - 1) * req.Size
+
+	// 获取分页数据
+	var gameList []entity.GameList
+	err = query.
+		Order("sort DESC").
+		Limit(int(req.Size)).
+		Offset(int(offset)).
+		Scan(&gameList)
+	if err != nil {
+		return nil, fmt.Errorf("获取游戏列表失败: %v", err)
+	}
+
+	// 转换为响应格式
+	list := make([]*v1.GameItem, 0, len(gameList))
+	for _, game := range gameList {
+		list = append(list, &v1.GameItem{
+			Id:        int32(game.Id),
+			SiteId:    int32(game.SiteId),
+			Platform:  game.Platform,
+			Vendor:    game.Vendor,
+			Code:      game.Code,
+			Name:      game.Name,
+			Style:     game.Style,
+			Img:       game.Img,
+			Img1:      game.Img1,
+			Hot:       int32(game.Hot),
+			Recommend: int32(game.Recommend),
+			IsNew:     int32(game.IsNew),
+			Status:    int32(game.Status),
+			Sort:      int32(game.Sort),
+		})
+	}
+
+	return &v1.GetGameListRes{
+		List:  list,
+		Total: int32(total),
+	}, nil
+}

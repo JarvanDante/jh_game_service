@@ -25,3 +25,8 @@ func (*Controller) RedirectToGame(ctx context.Context, req *v1.RedirectToGameReq
 func (*Controller) GetGameCategories(ctx context.Context, req *v1.GetGameCategoriesReq) (res *v1.GetGameCategoriesRes, err error) {
 	return frontend.Game().GetGameCategories(ctx, req)
 }
+
+// GetGameList 获取游戏列表
+func (*Controller) GetGameList(ctx context.Context, req *v1.GetGameListReq) (res *v1.GetGameListRes, err error) {
+	return frontend.Game().GetGameList(ctx, req)
+}

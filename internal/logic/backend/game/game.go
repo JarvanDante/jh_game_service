@@ -507,22 +507,22 @@ func (s *sGame) GetGameList(ctx context.Context, req *v1.GetGameListReq) (*v1.Ge
 	}
 
 	// 热门过滤
-	if req.Hot >= 0 {
+	if req.Hot != -1 {
 		query = query.Where("hot = ?", req.Hot)
 	}
 
 	// 推荐过滤
-	if req.Recommend >= 0 {
+	if req.Recommend != -1 {
 		query = query.Where("recommend = ?", req.Recommend)
 	}
 
 	// 新游戏过滤
-	if req.IsNew >= 0 {
+	if req.IsNew != -1 {
 		query = query.Where("is_new = ?", req.IsNew)
 	}
 
 	// 状态过滤
-	if req.Status >= 0 {
+	if req.Status != -1 {
 		query = query.Where("status = ?", req.Status)
 	}
 
