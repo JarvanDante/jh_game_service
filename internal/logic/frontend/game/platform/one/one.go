@@ -11,6 +11,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	balanceV1 "jh_game_service/api/grpc/balance/v1"
+	"jh_game_service/internal/consts"
 	"jh_game_service/internal/logic/frontend/game/platform"
 	"jh_game_service/internal/registry"
 	"jh_game_service/internal/util"
@@ -1069,6 +1070,7 @@ func (p *OnePlatform) getGamesByVendor(ctx context.Context, params *platform.Get
 
 			// 游戏数据格式：[code, name, style, img, img1, language, device, currency]
 			gameMap := map[string]interface{}{
+				"type":     consts.GameTypeSlot,
 				"code":     gameArray[0],
 				"name":     gameArray[1],
 				"style":    gameArray[2],
@@ -1161,10 +1163,12 @@ func (p *OnePlatform) syncGamesToDatabase(ctx context.Context, params *platform.
 			}
 		} else {
 			// 记录不存在：插入新记录，设置默认值
+			gameType, _ := game["type"].(int)
 			_, err = db.Model("game_list").Data(g.Map{
 				// 三方字段
 				"site_id":  params.SiteId,
 				"platform": "ONE",
+				"type":     gameType, // 添加type字段
 				"code":     code,
 				"name":     name,
 				"style":    style,

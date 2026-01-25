@@ -14,6 +14,7 @@ type GameList struct {
 	g.Meta    `orm:"table:game_list, do:true"`
 	Id        any         // ID
 	SiteId    any         // 商户id
+	Type      any         // 游戏种类
 	Platform  any         // 平台
 	Name      any         // 游戏名称
 	AliasName any         // 别名

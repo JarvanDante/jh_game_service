@@ -12,6 +12,7 @@ import (
 type GameList struct {
 	Id        int         `json:"id"        orm:"id"         description:"ID"`
 	SiteId    int         `json:"siteId"    orm:"site_id"    description:"商户id"`
+	Type      int         `json:"type"      orm:"type"       description:"游戏种类"`
 	Platform  string      `json:"platform"  orm:"platform"   description:"平台"`
 	Name      string      `json:"name"      orm:"name"       description:"游戏名称"`
 	AliasName string      `json:"aliasName" orm:"alias_name" description:"别名"`

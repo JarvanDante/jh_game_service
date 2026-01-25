@@ -23,6 +23,7 @@ type GameListDao struct {
 type GameListColumns struct {
 	Id        string // ID
 	SiteId    string // 商户id
+	Type      string // 游戏种类
 	Platform  string // 平台
 	Name      string // 游戏名称
 	AliasName string // 别名
@@ -49,6 +50,7 @@ type GameListColumns struct {
 var gameListColumns = GameListColumns{
 	Id:        "id",
 	SiteId:    "site_id",
+	Type:      "type",
 	Platform:  "platform",
 	Name:      "name",
 	AliasName: "alias_name",
