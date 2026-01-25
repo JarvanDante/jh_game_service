@@ -1102,69 +1102,99 @@ func (p *OnePlatform) syncGamesToDatabase(ctx context.Context, params *platform.
 
 	g.Log().Infof(ctx, "开始同步游戏到数据库，共 %d 个游戏", len(games))
 
-	// 批量构建数据
-	batchSize := 100
 	successCount := 0
 	errorCount := 0
+	now := time.Now()
 
-	for i := 0; i < len(games); i += batchSize {
-		end := i + batchSize
-		if end > len(games) {
-			end = len(games)
-		}
+	// 逐条处理（因为需要区分插入和更新的字段）
+	for _, game := range games {
+		code, _ := game["code"].(string)
+		name, _ := game["name"].(string)
+		style, _ := game["style"].(string)
+		img, _ := game["img"].(string)
+		img1, _ := game["img1"].(string)
+		language, _ := game["language"].(string)
+		device, _ := game["device"].(string)
+		currency, _ := game["currency"].(string)
+		vendor, _ := game["vendor"].(string)
 
-		batch := games[i:end]
-		insertData := make([]g.Map, 0, len(batch))
-		now := time.Now()
+		// 检查记录是否存在
+		count, err := db.Model("game_list").
+			Where("site_id", params.SiteId).
+			Where("platform", "ONE").
+			Where("code", code).
+			Count()
 
-		for _, game := range batch {
-			code, _ := game["code"].(string)
-			name, _ := game["name"].(string)
-			style, _ := game["style"].(string)
-			img, _ := game["img"].(string)
-			img1, _ := game["img1"].(string)
-			language, _ := game["language"].(string)
-			device, _ := game["device"].(string)
-			currency, _ := game["currency"].(string)
-			vendor, _ := game["vendor"].(string)
-
-			insertData = append(insertData, g.Map{
-				"site_id":    params.SiteId,
-				"platform":   "ONE",
-				"code":       code,
-				"name":       name,
-				"alias_name": name,
-				"style":      style,
-				"img":        img,
-				"img1":       img1,
-				"language":   language,
-				"device":     device,
-				"currency":   currency,
-				"vendor":     vendor,
-				"game_id":    params.GameId,
-				"hot":        0,
-				"recommend":  0,
-				"is_new":     0,
-				"status":     1,
-				"sort":       0,
-				"created_at": now,
-				"updated_at": now,
-			})
-		}
-
-		// 使用 Save 方法（相当于 INSERT ... ON DUPLICATE KEY UPDATE）
-		// 需要确保表有唯一键：site_id + platform + code
-		result, err := db.Model("game_list").Data(insertData).Save()
 		if err != nil {
-			g.Log().Errorf(ctx, "批量保存游戏失败: batch=%d-%d, err=%v", i, end, err)
-			errorCount += len(batch)
+			g.Log().Errorf(ctx, "查询游戏失败: code=%s, err=%v", code, err)
+			errorCount++
 			continue
 		}
 
-		affected, _ := result.RowsAffected()
-		successCount += int(affected)
+		if count > 0 {
+			// 记录已存在：只更新三方字段，保留后台管理字段
+			_, err = db.Model("game_list").
+				Where("site_id", params.SiteId).
+				Where("platform", "ONE").
+				Where("code", code).
+				Data(g.Map{
+					// 只更新三方同步字段
+					"name":       name,
+					"style":      style,
+					"img":        img,
+					"img1":       img1,
+					"language":   language,
+					"device":     device,
+					"currency":   currency,
+					"vendor":     vendor,
+					"updated_at": now,
+					// 不更新这些字段，保持原值：
+					// hot, recommend, is_new, status, sort, alias_name, like_num
+				}).
+				Update()
 
-		g.Log().Infof(ctx, "批量保存完成: batch=%d-%d, affected=%d", i, end, affected)
+			if err != nil {
+				g.Log().Errorf(ctx, "更新游戏失败: code=%s, err=%v", code, err)
+				errorCount++
+			} else {
+				successCount++
+			}
+		} else {
+			// 记录不存在：插入新记录，设置默认值
+			_, err = db.Model("game_list").Data(g.Map{
+				// 三方字段
+				"site_id":  params.SiteId,
+				"platform": "ONE",
+				"code":     code,
+				"name":     name,
+				"style":    style,
+				"img":      img,
+				"img1":     img1,
+				"language": language,
+				"device":   device,
+				"currency": currency,
+				"vendor":   vendor,
+				"game_id":  params.GameId,
+				// 后台管理字段（新记录使用默认值）
+				"alias_name": name, // 默认使用原始名称
+				"hot":        0,
+				"recommend":  0,
+				"like_num":   0,
+				"is_new":     0,
+				"status":     1, // 默认启用
+				"sort":       0,
+				// 时间字段
+				"created_at": now,
+				"updated_at": now,
+			}).Insert()
+
+			if err != nil {
+				g.Log().Errorf(ctx, "插入游戏失败: code=%s, err=%v", code, err)
+				errorCount++
+			} else {
+				successCount++
+			}
+		}
 	}
 
 	g.Log().Infof(ctx, "游戏同步完成: 成功=%d, 失败=%d", successCount, errorCount)
