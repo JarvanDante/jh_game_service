@@ -12,26 +12,64 @@ var GetGameConfigFunc func(ctx context.Context, siteId int, gameId int) (*entity
 // GamePlatform 游戏平台接口
 // 所有游戏平台都需要实现这个接口
 type GamePlatform interface {
-	// GetGameUrl 获取游戏链接（登录/进入游戏）
-	// 返回: map["type"]="url/html", map["url"]="游戏链接"
+
+	//
+	// GetGameUrl
+	//  @Description: 获取游戏链接（登录/进入游戏）
+	//  @param ctx
+	//  @param params
+	//  @return map[string]interface{}
+	//  @return error
+	//
 	GetGameUrl(ctx context.Context, params *GameParams) (map[string]interface{}, error)
 
-	// GetBalance 查询游戏余额
+	//
+	// GetBalance
+	//  @Description: 查询游戏余额
+	//  @param ctx
+	//  @param params
+	//  @return float64
+	//  @return error
+	//
 	GetBalance(ctx context.Context, params *GameParams) (float64, error)
 
-	// TransferIn 转入游戏（从中心钱包转到游戏钱包）
+	//
+	// TransferIn
+	//  @Description: 转入游戏（从中心钱包转到游戏钱包）
+	//  @param ctx
+	//  @param params
+	//  @return error
+	//
 	TransferIn(ctx context.Context, params *TransferParams) error
 
-	// TransferOut 转出游戏（从游戏钱包转到中心钱包）
+	//
+	// TransferOut
+	//  @Description: 转出游戏（从游戏钱包转到中心钱包）
+	//  @param ctx
+	//  @param params
+	//  @return error
+	//
 	TransferOut(ctx context.Context, params *TransferParams) error
 
-	// PullBetRecords 拉取注单
-	// startTime和endTime格式: "2006-01-02 15:04:05"
+	//
+	// PullBetRecords
+	//  @Description: 拉取注单 ./jh_game_service pull ONE
+	// 	              注单偿 ./jh_game_service pull ONE "2026-01-23 19:00:00" "2026-01-24 01:00:00"
+	//  @param ctx
+	//  @param params
+	//  @return []BetRecord
+	//  @return error
+	//
 	PullBetRecords(ctx context.Context, params *PullRecordsParams) ([]BetRecord, error)
 
-	// SupplementBetRecords 补单（定时任务调用）
-	// 用于补充拉单失败或遗漏的注单
-	SupplementBetRecords(ctx context.Context, params *SupplementParams) error
+	//
+	// GetGameSource
+	//  @Description: 获取游戏图片资源同步数据库
+	//  @param ctx
+	//  @param params
+	//  @return error
+	//
+	GetGameSource(ctx context.Context, params *GetGameSourceParams) error
 }
 
 // GameParams 游戏参数
@@ -70,12 +108,8 @@ type PullRecordsParams struct {
 	SiteGame  entity.SiteGame // 游戏配置
 }
 
-// SupplementParams 补单参数
-type SupplementParams struct {
-	SiteId    int             // 站点ID
-	StartTime string          // 开始时间
-	EndTime   string          // 结束时间
-	SiteGame  entity.SiteGame // 游戏配置
+// GetGameSourceParams 游戏资源参数
+type GetGameSourceParams struct {
 }
 
 // BetRecord 注单记录

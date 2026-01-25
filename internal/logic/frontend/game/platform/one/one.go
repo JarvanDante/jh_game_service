@@ -788,13 +788,6 @@ func (p *OnePlatform) parseTransaction(transArray []interface{}, headerMap map[s
 	return record
 }
 
-// SupplementBetRecords 补单
-func (p *OnePlatform) SupplementBetRecords(ctx context.Context, params *platform.SupplementParams) error {
-	// TODO: 实现补单逻辑
-	g.Log().Warning(ctx, "ONE平台补单功能待实现")
-	return fmt.Errorf("功能待实现")
-}
-
 // ========== 辅助方法 ==========
 
 // buildUsername 构建游戏用户名

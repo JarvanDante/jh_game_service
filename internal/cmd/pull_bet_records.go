@@ -113,7 +113,15 @@ var (
 	}
 )
 
-// pullAllPlatforms 拉取所有平台
+//pullAllPlatforms
+/**
+ * @desc：拉取所有平台(获取所有平台)
+ * @param ctx
+ * @param startTime
+ * @param endTime
+ * @return error
+ * @author : Carson
+ */
 func pullAllPlatforms(ctx context.Context, startTime, endTime string) error {
 	platforms := []string{"ONE", "IG_JILI"}
 
@@ -129,7 +137,16 @@ func pullAllPlatforms(ctx context.Context, startTime, endTime string) error {
 	return nil
 }
 
-// pullPlatform 拉取指定平台
+//pullPlatform
+/**
+ * @desc：拉取指定平台(单个)
+ * @param ctx
+ * @param platformName
+ * @param startTime
+ * @param endTime
+ * @return error
+ * @author : Carson
+ */
 func pullPlatform(ctx context.Context, platformName, startTime, endTime string) error {
 	fmt.Printf("\n平台==> %s \n", platformName)
 	dbManager := registry.GetDBConfigManager()
@@ -151,7 +168,18 @@ func pullPlatform(ctx context.Context, platformName, startTime, endTime string) 
 	return nil
 }
 
-// pullSitePlatform 拉取单个站点的指定平台
+//pullSitePlatform
+/**
+ * @desc：拉取单个站点的指定平台
+ * @param ctx
+ * @param siteCode
+ * @param platformName
+ * @param startTime
+ * @param endTime
+ * @return int
+ * @return error
+ * @author : Carson
+ */
 func pullSitePlatform(ctx context.Context, siteCode string, platformName, startTime, endTime string) (int, error) {
 	// 获取站点配置
 	dbManager := registry.GetDBConfigManager()
@@ -182,7 +210,19 @@ func pullSitePlatform(ctx context.Context, siteCode string, platformName, startT
 	return totalCount, nil
 }
 
-// pullGameBetRecords 拉取单个游戏的注单
+//pullGameBetRecords
+/**
+ * @desc：拉取单个游戏的注单
+ * @param ctx
+ * @param siteCode
+ * @param siteId
+ * @param gameConfig
+ * @param startTime
+ * @param endTime
+ * @return int
+ * @return error
+ * @author : Carson
+ */
 func pullGameBetRecords(ctx context.Context, siteCode string, siteId int, gameConfig *registry.GameConfig, startTime, endTime string) (int, error) {
 	// 创建游戏平台实例
 	gamePlatform, err := platform.GetFactory().Create(gameConfig.Platform)
