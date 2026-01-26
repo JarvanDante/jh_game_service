@@ -314,7 +314,7 @@ func (s *sGame) GetGameList(ctx context.Context, req *v1.GetGameListReq) (*v1.Ge
 	// 转换为响应格式
 	list := make([]*v1.GameItem, 0, len(gameList))
 	for _, game := range gameList {
-		list = append(list, &v1.GameItem{
+		gameItem := &v1.GameItem{
 			Id:        int32(game.Id),
 			SiteId:    int32(game.SiteId),
 			Platform:  game.Platform,
@@ -329,7 +329,22 @@ func (s *sGame) GetGameList(ctx context.Context, req *v1.GetGameListReq) (*v1.Ge
 			IsNew:     int32(game.IsNew),
 			Status:    int32(game.Status),
 			Sort:      int32(game.Sort),
-		})
+			GameId:    0, // 默认值
+		}
+
+		// 通过 platform 和 site_id 查询 site_game 表获取 game_id
+		var siteGame entity.SiteGame
+		err = dao.SiteGame.Ctx(ctx).
+			Where(do.SiteGame{
+				SiteId:   int(siteId),
+				Platform: game.Platform,
+			}).
+			Scan(&siteGame)
+		if err == nil && siteGame.Id > 0 {
+			gameItem.GameId = int32(siteGame.GameId)
+		}
+
+		list = append(list, gameItem)
 	}
 
 	return &v1.GetGameListRes{
