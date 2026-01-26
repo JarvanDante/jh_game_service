@@ -171,9 +171,6 @@ func (s *sGame) GetGameRecords(ctx context.Context, req *v1.GetGameRecordsReq) (
 	defer span.End()
 
 	// 参数验证
-	if req.Platform == "" {
-		return nil, fmt.Errorf("游戏平台不能为空")
-	}
 	if req.Page <= 0 {
 		req.Page = 1
 	}
@@ -196,9 +193,13 @@ func (s *sGame) GetGameRecords(ctx context.Context, req *v1.GetGameRecordsReq) (
 
 	// 构建查询条件
 	query := dao.BetRecords.Ctx(ctx).
-		Where("platform = ?", req.Platform).
 		Where("bet_time >= ?", startDate).
 		Where("bet_time <= ?", endDate)
+
+	// 如果指定了平台，添加平台过滤
+	if req.Platform != "" {
+		query = query.Where("platform = ?", req.Platform)
+	}
 
 	// 添加用户名过滤
 	if req.Username != "" {
@@ -245,9 +246,13 @@ func (s *sGame) GetGameRecords(ctx context.Context, req *v1.GetGameRecordsReq) (
 
 	// 计算当前平台总金额
 	totalAmountQuery := dao.BetRecords.Ctx(ctx).
-		Where("platform = ?", req.Platform).
 		Where("bet_time >= ?", startDate).
 		Where("bet_time <= ?", endDate)
+
+	// 如果指定了平台，添加平台过滤
+	if req.Platform != "" {
+		totalAmountQuery = totalAmountQuery.Where("platform = ?", req.Platform)
+	}
 
 	if req.Username != "" {
 		totalAmountQuery = totalAmountQuery.Where("username LIKE ?", "%"+req.Username+"%")
