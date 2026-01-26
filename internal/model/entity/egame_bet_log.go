@@ -8,7 +8,7 @@ import (
 	"github.com/gogf/gf/v2/os/gtime"
 )
 
-// EgameBetLog is the golang structure for table egame_bet_log.
+// EgameBetLog is the golang structure for table bet_records.
 type EgameBetLog struct {
 	Id           uint64      `json:"id"           orm:"id"            description:"自增主键"`
 	SiteId       int         `json:"siteId"       orm:"site_id"       description:"站点ID"`

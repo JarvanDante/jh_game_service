@@ -11,7 +11,7 @@ import (
 	"github.com/gogf/gf/v2/frame/g"
 )
 
-// EgameBetLogDao is the data access object for the table egame_bet_log.
+// EgameBetLogDao is the data access object for the table bet_records.
 type EgameBetLogDao struct {
 	table    string             // table is the underlying table name of the DAO.
 	group    string             // group is the database configuration group name of the current DAO.
@@ -19,7 +19,7 @@ type EgameBetLogDao struct {
 	handlers []gdb.ModelHandler // handlers for customized model modification.
 }
 
-// EgameBetLogColumns defines and stores column names for the table egame_bet_log.
+// EgameBetLogColumns defines and stores column names for the table bet_records.
 type EgameBetLogColumns struct {
 	Id           string // 自增主键
 	SiteId       string // 站点ID
@@ -71,7 +71,7 @@ var egameBetLogColumns = EgameBetLogColumns{
 func NewEgameBetLogDao(handlers ...gdb.ModelHandler) *EgameBetLogDao {
 	return &EgameBetLogDao{
 		group:    "default",
-		table:    "egame_bet_log",
+		table:    "bet_records",
 		columns:  egameBetLogColumns,
 		handlers: handlers,
 	}

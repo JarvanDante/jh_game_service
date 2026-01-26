@@ -9,9 +9,9 @@ import (
 	"github.com/gogf/gf/v2/os/gtime"
 )
 
-// EgameBetLog is the golang structure of table egame_bet_log for DAO operations like Where/Data.
+// EgameBetLog is the golang structure of table bet_records for DAO operations like Where/Data.
 type EgameBetLog struct {
-	g.Meta       `orm:"table:egame_bet_log, do:true"`
+	g.Meta       `orm:"table:bet_records, do:true"`
 	Id           any         // 自增主键
 	SiteId       any         // 站点ID
 	UserId       any         // 用户ID

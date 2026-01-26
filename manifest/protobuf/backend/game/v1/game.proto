@@ -13,6 +13,9 @@ service Game {
     // 游戏列表管理
     rpc GetGameList(GetGameListReq) returns (GetGameListRes) {}
     rpc UpdateGameListItem(UpdateGameListItemReq) returns (UpdateGameListItemRes) {}
+    
+    // 获取游戏平台列表
+    rpc GetGamePlatforms(GetGamePlatformsReq) returns (GetGamePlatformsRes) {}
 }
 
 message GetGamesReq {
@@ -185,4 +188,29 @@ message UpdateGameListItemReq {
 message UpdateGameListItemRes {
     bool success = 1;                      // 是否成功
     string message = 2;                    // 消息
+}
+
+// ========== 获取游戏平台列表 ==========
+
+// 获取游戏平台列表请求
+message GetGamePlatformsReq {
+    int32 site_id = 1;                     // 站点ID（可选，0表示不过滤）
+    int32 type = 2;                        // 游戏类型（可选，0表示不过滤）
+}
+
+// 获取游戏平台列表响应
+message GetGamePlatformsRes {
+    repeated GamePlatform platforms = 1;   // 平台列表
+}
+
+// 游戏平台信息
+message GamePlatform {
+    int32 game_id = 1;                     // 游戏ID
+    string name = 2;                       // 游戏名称
+    string platform = 3;                   // 平台标识
+    int32 type = 4;                        // 游戏类型 1=体育 2=彩票 3=真人 4=电子游戏 5=棋牌
+    string image_code = 5;                 // 图片标识
+    string db_name = 6;                    // 数据表名称
+    int32 sort = 7;                        // 排序
+    int32 status = 8;                      // 状态 1=启用 0=禁用
 }

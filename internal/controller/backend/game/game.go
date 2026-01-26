@@ -46,3 +46,8 @@ func (*Controller) GetGameList(ctx context.Context, req *v1.GetGameListReq) (res
 func (*Controller) UpdateGameListItem(ctx context.Context, req *v1.UpdateGameListItemReq) (res *v1.UpdateGameListItemRes, err error) {
 	return backend.Game().UpdateGameListItem(ctx, req)
 }
+
+// GetGamePlatforms 获取游戏平台列表
+func (*Controller) GetGamePlatforms(ctx context.Context, req *v1.GetGamePlatformsReq) (res *v1.GetGamePlatformsRes, err error) {
+	return backend.Game().GetGamePlatforms(ctx, req)
+}

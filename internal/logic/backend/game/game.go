@@ -195,8 +195,8 @@ func (s *sGame) GetGameRecords(ctx context.Context, req *v1.GetGameRecordsReq) (
 	}
 
 	// 构建查询条件
-	query := dao.EgameBetLog.Ctx(ctx).
-		Where("platform_code = ?", req.Platform).
+	query := dao.BetRecords.Ctx(ctx).
+		Where("platform = ?", req.Platform).
 		Where("bet_time >= ?", startDate).
 		Where("bet_time <= ?", endDate)
 
@@ -218,7 +218,7 @@ func (s *sGame) GetGameRecords(ctx context.Context, req *v1.GetGameRecordsReq) (
 
 	// 添加关键词搜索
 	if req.Keywords != "" {
-		query = query.Where("(order_id LIKE ? OR round_id LIKE ? OR game_name LIKE ?)",
+		query = query.Where("(order_no LIKE ? OR round_id LIKE ? OR game_name LIKE ?)",
 			"%"+req.Keywords+"%", "%"+req.Keywords+"%", "%"+req.Keywords+"%")
 	}
 
@@ -233,19 +233,19 @@ func (s *sGame) GetGameRecords(ctx context.Context, req *v1.GetGameRecordsReq) (
 	lastPage := int32((total + int(req.Size) - 1) / int(req.Size))
 
 	// 获取分页数据
-	var gameRecords []entity.EgameBetLog
+	var betRecords []entity.BetRecords
 	err = query.
 		Order("bet_time DESC").
 		Limit(int(req.Size)).
 		Offset(int(offset)).
-		Scan(&gameRecords)
+		Scan(&betRecords)
 	if err != nil {
 		return nil, fmt.Errorf("获取游戏记录失败: %v", err)
 	}
 
 	// 计算当前平台总金额
-	totalAmountQuery := dao.EgameBetLog.Ctx(ctx).
-		Where("platform_code = ?", req.Platform).
+	totalAmountQuery := dao.BetRecords.Ctx(ctx).
+		Where("platform = ?", req.Platform).
 		Where("bet_time >= ?", startDate).
 		Where("bet_time <= ?", endDate)
 
@@ -260,7 +260,7 @@ func (s *sGame) GetGameRecords(ctx context.Context, req *v1.GetGameRecordsReq) (
 		}
 	}
 	if req.Keywords != "" {
-		totalAmountQuery = totalAmountQuery.Where("(order_id LIKE ? OR round_id LIKE ? OR game_name LIKE ?)",
+		totalAmountQuery = totalAmountQuery.Where("(order_no LIKE ? OR round_id LIKE ? OR game_name LIKE ?)",
 			"%"+req.Keywords+"%", "%"+req.Keywords+"%", "%"+req.Keywords+"%")
 	}
 
@@ -274,8 +274,8 @@ func (s *sGame) GetGameRecords(ctx context.Context, req *v1.GetGameRecordsReq) (
 	allGameTotalAmount := totalAmount * 1.2 // 模拟所有游戏总金额
 
 	// 转换为响应格式
-	records := make([]*v1.GameRecord, 0, len(gameRecords))
-	for _, record := range gameRecords {
+	records := make([]*v1.GameRecord, 0, len(betRecords))
+	for _, record := range betRecords {
 		// 处理时间格式
 		betTime := ""
 		if record.BetTime != nil {
@@ -300,13 +300,13 @@ func (s *sGame) GetGameRecords(ctx context.Context, req *v1.GetGameRecordsReq) (
 		gameRecord := &v1.GameRecord{
 			Id:           record.Id,
 			SiteId:       int32(record.SiteId),
-			UserId:       record.UserId,
+			UserId:       int64(record.UserId),
 			Username:     record.Username,
-			PlatformCode: record.PlatformCode,
-			GameCode:     record.GameCode,
+			PlatformCode: record.Platform,
+			GameCode:     "",
 			GameName:     record.GameName,
 			GameType:     record.GameType,
-			OrderId:      record.OrderId,
+			OrderId:      record.OrderNo,
 			RoundId:      record.RoundId,
 			BetAmount:    fmt.Sprintf("%.6f", record.BetAmount),
 			WinAmount:    fmt.Sprintf("%.6f", record.WinAmount),
@@ -315,7 +315,7 @@ func (s *sGame) GetGameRecords(ctx context.Context, req *v1.GetGameRecordsReq) (
 			SettleTime:   settleTime,
 			Status:       int32(record.Status),
 			RawData:      record.RawData,
-			Remark:       record.Remark,
+			Remark:       "",
 			CreatedAt:    createdAt,
 			UpdatedAt:    updatedAt,
 		}
@@ -683,5 +683,61 @@ func (s *sGame) UpdateGameListItem(ctx context.Context, req *v1.UpdateGameListIt
 	return &v1.UpdateGameListItemRes{
 		Success: true,
 		Message: "更新成功",
+	}, nil
+}
+
+// GetGamePlatforms 获取游戏平台列表
+func (s *sGame) GetGamePlatforms(ctx context.Context, req *v1.GetGamePlatformsReq) (*v1.GetGamePlatformsRes, error) {
+	if req == nil {
+		return nil, fmt.Errorf("请求参数不能为空")
+	}
+
+	ctx, span := tracing.StartSpan(ctx, "game.GetGamePlatforms", trace.WithAttributes(
+		attribute.String("method", "GetGamePlatforms"),
+		attribute.Int("site_id", int(req.SiteId)),
+		attribute.Int("type", int(req.Type)),
+	))
+	defer span.End()
+
+	// 构建查询条件
+	query := dao.SiteGame.Ctx(ctx).Where("status = ?", 1) // 只查询启用的游戏
+
+	// 如果指定了站点ID，添加站点过滤
+	if req.SiteId > 0 {
+		query = query.Where("site_id = ?", req.SiteId)
+	}
+
+	// 如果指定了type，添加type过滤
+	if req.Type > 0 {
+		query = query.Where("type = ?", req.Type)
+	}
+
+	// 按sort降序排序
+	query = query.Order("sort DESC")
+
+	// 查询游戏列表
+	var siteGames []entity.SiteGame
+	err := query.Scan(&siteGames)
+	if err != nil {
+		return nil, fmt.Errorf("查询游戏平台失败: %v", err)
+	}
+
+	// 转换为响应格式
+	platforms := make([]*v1.GamePlatform, 0, len(siteGames))
+	for _, game := range siteGames {
+		platforms = append(platforms, &v1.GamePlatform{
+			GameId:    int32(game.GameId),
+			Name:      game.Name,
+			Platform:  game.Platform,
+			Type:      int32(game.Type),
+			ImageCode: game.ImageCode,
+			DbName:    game.DbName,
+			Sort:      int32(game.Sort),
+			Status:    int32(game.Status),
+		})
+	}
+
+	return &v1.GetGamePlatformsRes{
+		Platforms: platforms,
 	}, nil
 }
