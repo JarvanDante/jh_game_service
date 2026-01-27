@@ -7,7 +7,9 @@ import (
 	"jh_game_service/internal/dao"
 	"jh_game_service/internal/middleware"
 	"jh_game_service/internal/model/do"
+	"jh_game_service/internal/model/entity"
 	"jh_game_service/internal/util"
+	"time"
 
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/os/gtime"
@@ -25,6 +27,27 @@ type SyncUserToGameMessage struct {
 	SiteCode string `json:"site_code"`
 	UserID   int64  `json:"user_id"`
 	Username string `json:"username"`
+}
+
+// SyncBetToClickHouseMessage 同步注单到 ClickHouse 消息
+type SyncBetToClickHouseMessage struct {
+	SiteID      uint32  `json:"site_id"`
+	SiteCode    string  `json:"site_code"`
+	UserID      uint64  `json:"user_id"`
+	Username    string  `json:"username"`
+	Platform    string  `json:"platform"`
+	GameID      uint32  `json:"game_id"`
+	GameName    string  `json:"game_name"`
+	GameType    string  `json:"game_type"`
+	OrderNo     string  `json:"order_no"`
+	RoundID     string  `json:"round_id"`
+	BetAmount   float64 `json:"bet_amount"`
+	WinAmount   float64 `json:"win_amount"`
+	ValidAmount float64 `json:"valid_amount"`
+	NetAmount   float64 `json:"net_amount"`
+	BetTime     string  `json:"bet_time"`
+	SettleTime  string  `json:"settle_time"`
+	Status      uint8   `json:"status"`
 }
 
 // InitRabbitMQ 初始化RabbitMQ连接
@@ -195,5 +218,190 @@ func handleSyncUserMessage(ctx context.Context, msg amqp.Delivery) error {
 	g.Log().Infof(siteCtx, "用户映射创建成功: site_id=%d, user_id=%d, username=%s",
 		syncMsg.SiteID, syncMsg.UserID, syncMsg.Username)
 
+	return nil
+}
+
+// PublishBetToClickHouse 发布注单同步到 ClickHouse 的消息
+func PublishBetToClickHouse(ctx context.Context, msg *SyncBetToClickHouseMessage) error {
+	if channel == nil {
+		return fmt.Errorf("RabbitMQ channel未初始化")
+	}
+
+	// 声明 exchange（幂等操作）
+	err := channel.ExchangeDeclare(
+		"bet.sync", // exchange name
+		"topic",    // exchange type
+		true,       // durable
+		false,      // auto-deleted
+		false,      // internal
+		false,      // no-wait
+		nil,        // arguments
+	)
+	if err != nil {
+		return fmt.Errorf("声明exchange失败: %v", err)
+	}
+
+	// 序列化消息
+	body, err := json.Marshal(msg)
+	if err != nil {
+		return fmt.Errorf("序列化消息失败: %v", err)
+	}
+
+	// 发布消息
+	err = channel.Publish(
+		"bet.sync",               // exchange
+		"bet.sync_to_clickhouse", // routing key
+		false,                    // mandatory
+		false,                    // immediate
+		amqp.Publishing{
+			ContentType:  "application/json",
+			Body:         body,
+			DeliveryMode: amqp.Persistent, // 持久化消息
+		},
+	)
+	if err != nil {
+		return fmt.Errorf("发布消息失败: %v", err)
+	}
+
+	return nil
+}
+
+// StartSyncBetToClickHouseConsumer 启动同步注单到 ClickHouse 消费者
+func StartSyncBetToClickHouseConsumer(ctx context.Context) error {
+	if channel == nil {
+		return fmt.Errorf("RabbitMQ channel未初始化")
+	}
+
+	// 声明 exchange
+	err := channel.ExchangeDeclare(
+		"bet.sync", // exchange name
+		"topic",    // exchange type
+		true,       // durable
+		false,      // auto-deleted
+		false,      // internal
+		false,      // no-wait
+		nil,        // arguments
+	)
+	if err != nil {
+		return fmt.Errorf("声明exchange失败: %v", err)
+	}
+
+	// 声明队列
+	queue, err := channel.QueueDeclare(
+		"clickhouse.sync_bet", // queue name
+		true,                  // durable
+		false,                 // delete when unused
+		false,                 // exclusive
+		false,                 // no-wait
+		nil,                   // arguments
+	)
+	if err != nil {
+		return fmt.Errorf("声明队列失败: %v", err)
+	}
+
+	// 绑定队列到 exchange
+	err = channel.QueueBind(
+		queue.Name,               // queue name
+		"bet.sync_to_clickhouse", // routing key
+		"bet.sync",               // exchange
+		false,                    // no-wait
+		nil,                      // arguments
+	)
+	if err != nil {
+		return fmt.Errorf("绑定队列失败: %v", err)
+	}
+
+	// 设置 QoS
+	err = channel.Qos(
+		10,    // prefetch count (批量处理)
+		0,     // prefetch size
+		false, // global
+	)
+	if err != nil {
+		return fmt.Errorf("设置QoS失败: %v", err)
+	}
+
+	// 开始消费消息
+	msgs, err := channel.Consume(
+		queue.Name, // queue
+		"",         // consumer
+		false,      // auto-ack
+		false,      // exclusive
+		false,      // no-local
+		false,      // no-wait
+		nil,        // args
+	)
+	if err != nil {
+		return fmt.Errorf("开始消费失败: %v", err)
+	}
+
+	g.Log().Info(ctx, "ClickHouse 同步消费者已启动，等待消息...")
+
+	// 处理消息
+	go func() {
+		for msg := range msgs {
+			if err := handleSyncBetToClickHouseMessage(ctx, msg); err != nil {
+				g.Log().Errorf(ctx, "处理注单同步消息失败: %v", err)
+				msg.Nack(false, true) // 重新入队
+			} else {
+				msg.Ack(false) // 确认消息
+			}
+		}
+	}()
+
+	return nil
+}
+
+// handleSyncBetToClickHouseMessage 处理同步注单到 ClickHouse 消息
+func handleSyncBetToClickHouseMessage(ctx context.Context, msg amqp.Delivery) error {
+	var syncMsg SyncBetToClickHouseMessage
+	if err := json.Unmarshal(msg.Body, &syncMsg); err != nil {
+		g.Log().Errorf(ctx, "解析注单同步消息失败: %v, body: %s", err, string(msg.Body))
+		return err
+	}
+
+	g.Log().Infof(ctx, "收到注单同步消息: site=%s, order=%s, user_id=%d, platform=%s",
+		syncMsg.SiteCode, syncMsg.OrderNo, syncMsg.UserID, syncMsg.Platform)
+
+	// 转换为 ClickHouse 记录
+	record := &entity.ClickHouseBetRecord{
+		SiteID:      syncMsg.SiteID,
+		SiteCode:    syncMsg.SiteCode,
+		UserID:      syncMsg.UserID,
+		Username:    syncMsg.Username,
+		Platform:    syncMsg.Platform,
+		GameID:      syncMsg.GameID,
+		GameName:    syncMsg.GameName,
+		GameType:    syncMsg.GameType,
+		OrderNo:     syncMsg.OrderNo,
+		RoundID:     syncMsg.RoundID,
+		BetAmount:   syncMsg.BetAmount,
+		WinAmount:   syncMsg.WinAmount,
+		ValidAmount: syncMsg.ValidAmount,
+		NetAmount:   syncMsg.NetAmount,
+		Status:      syncMsg.Status,
+	}
+
+	// 解析时间
+	loc, _ := time.LoadLocation("Asia/Shanghai")
+	if syncMsg.BetTime != "" {
+		betTime, err := time.ParseInLocation("2006-01-02 15:04:05", syncMsg.BetTime, loc)
+		if err == nil {
+			record.BetTime = betTime
+		}
+	}
+	if syncMsg.SettleTime != "" && syncMsg.SettleTime != "0000-00-00 00:00:00" {
+		settleTime, err := time.ParseInLocation("2006-01-02 15:04:05", syncMsg.SettleTime, loc)
+		if err == nil {
+			record.SettleTime = &settleTime
+		}
+	}
+
+	// 插入到 ClickHouse
+	if err := util.InsertBetRecordToCH(ctx, record); err != nil {
+		return fmt.Errorf("插入ClickHouse失败: %w", err)
+	}
+
+	g.Log().Infof(ctx, "注单同步到ClickHouse成功: site=%s, order=%s", syncMsg.SiteCode, syncMsg.OrderNo)
 	return nil
 }

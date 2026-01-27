@@ -9,6 +9,7 @@ import (
 	"github.com/gogf/gf/v2/os/gcmd"
 	"jh_game_service/internal/logic/frontend/game/platform"
 	"jh_game_service/internal/model/entity"
+	"jh_game_service/internal/mq"
 	"jh_game_service/internal/registry"
 )
 
@@ -86,6 +87,15 @@ var (
 				return fmt.Errorf("初始化数据库配置管理器失败: %v", err)
 			}
 			defer dbManager.Stop()
+
+			// 初始化 RabbitMQ（用于发送同步消息）
+			fmt.Println("初始化RabbitMQ连接...")
+			if err := mq.InitRabbitMQ(ctx); err != nil {
+				fmt.Printf("RabbitMQ连接初始化失败: %v（将跳过ClickHouse同步）\n", err)
+			} else {
+				fmt.Println("RabbitMQ连接初始化成功")
+				defer mq.CloseRabbitMQ()
+			}
 
 			// 初始化ClickHouse
 			fmt.Println("初始化ClickHouse连接...")

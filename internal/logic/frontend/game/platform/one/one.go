@@ -13,6 +13,7 @@ import (
 	balanceV1 "jh_game_service/api/grpc/balance/v1"
 	"jh_game_service/internal/consts"
 	"jh_game_service/internal/logic/frontend/game/platform"
+	"jh_game_service/internal/mq"
 	"jh_game_service/internal/registry"
 	"jh_game_service/internal/util"
 	"math/rand"
@@ -690,10 +691,10 @@ func (p *OnePlatform) PullBetRecords(ctx context.Context, params *platform.PullR
 // parseTransaction 解析注单数据
 func (p *OnePlatform) parseTransaction(transArray []interface{}, headerMap map[string]int) *platform.BetRecord {
 	// 只打印第一条用于调试
-	if len(transArray) > 0 {
-		g.Log().Infof(context.Background(), "解析注单: arrayLen=%d, headerMap=%+v, firstData=%v",
-			len(transArray), headerMap, transArray)
-	}
+	//if len(transArray) > 0 {
+	//	g.Log().Infof(context.Background(), "解析注单: arrayLen=%d, headerMap=%+v, firstData=%v",
+	//		len(transArray), headerMap, transArray)
+	//}
 
 	getValue := func(key string) string {
 		idx, ok := headerMap[key]
@@ -767,8 +768,8 @@ func (p *OnePlatform) parseTransaction(transArray []interface{}, headerMap map[s
 	betTime := getTimeFromMs("vendorBetTime")
 	settleTime := getTimeFromMs("vendorSettleTime")
 
-	g.Log().Infof(context.Background(), "解析注单: transactionId=%s, username=%s, betTime=%s, settleTime=%s",
-		getValue("externalTransactionId"), getValue("username"), betTime, settleTime)
+	//g.Log().Infof(context.Background(), "解析注单: transactionId=%s, username=%s, betTime=%s, settleTime=%s",
+	//	getValue("externalTransactionId"), getValue("username"), betTime, settleTime)
 
 	record := &platform.BetRecord{
 		OrderNo:     getValue("externalTransactionId"), // 使用externalTransactionId而不是transactionId
@@ -1211,12 +1212,39 @@ func (p *OnePlatform) saveBetRecordsToMySQL(ctx context.Context, params *platfor
 		return fmt.Errorf("数据库连接不存在: %s", groupName)
 	}
 
-	// 批量插入注单（统一使用bet_records表）
+	// 1. 批量查询 user_mapping 获取 user_id
+	usernames := make([]string, 0, len(records))
+	for _, record := range records {
+		usernames = append(usernames, record.Username)
+	}
+
+	// 查询用户映射
+	userMappings := make(map[string]uint64) // username -> user_id
+	if len(usernames) > 0 {
+		var mappings []struct {
+			Username string `json:"username"`
+			UserId   uint64 `json:"user_id"`
+		}
+		err := db.Model("user_mapping").
+			Where("site_id", params.SiteId).
+			WhereIn("username", usernames).
+			Fields("username, user_id").
+			Scan(&mappings)
+		if err != nil {
+			g.Log().Warningf(ctx, "查询用户映射失败: %v", err)
+		} else {
+			for _, m := range mappings {
+				userMappings[m.Username] = m.UserId
+			}
+			g.Log().Infof(ctx, "查询到 %d 个用户映射", len(userMappings))
+		}
+	}
+
+	// 2. 批量插入注单到 MySQL
 	insertData := make([]g.Map, 0, len(records))
 	loc, _ := time.LoadLocation("Asia/Shanghai")
 
 	for _, record := range records {
-
 		// 解析时间
 		betTime, _ := time.ParseInLocation("2006-01-02 15:04:05", record.BetTime, loc)
 		settleTime, _ := time.ParseInLocation("2006-01-02 15:04:05", record.SettleTime, loc)
@@ -1224,16 +1252,30 @@ func (p *OnePlatform) saveBetRecordsToMySQL(ctx context.Context, params *platfor
 		// 计算净输赢
 		netAmount := record.WinAmount - record.BetAmount
 
+		// 从映射表获取 user_id
+		userId := userMappings[record.Username]
+		if userId == 0 {
+			g.Log().Warningf(ctx, "用户 %s 未找到映射，user_id 设为 0", record.Username)
+		}
+
+		// 获取游戏类型（转为字符串）
+		gameType := ""
+		if params.SiteGame.Type > 0 {
+			gameType = fmt.Sprintf("%d", params.SiteGame.Type)
+		}
+
 		insertData = append(insertData, g.Map{
 			"site_id":        params.SiteId,
 			"site_code":      params.SiteCode,
-			"user_id":        0, // game服务没有user表，暂时设为0
+			"user_id":        userId, // 使用映射的 user_id
 			"username":       record.Username,
 			"platform":       params.SiteGame.Platform,
 			"currency":       "PHP",
 			"game_id":        params.SiteGame.GameId,
 			"game_name":      record.GameName,
+			"game_type":      gameType,
 			"order_no":       record.OrderNo,
+			"round_id":       "", // BetRecord 没有 RoundId 字段
 			"bet_amount":     record.BetAmount,
 			"win_amount":     record.WinAmount,
 			"valid_amount":   record.ValidAmount,
@@ -1251,12 +1293,69 @@ func (p *OnePlatform) saveBetRecordsToMySQL(ctx context.Context, params *platfor
 		return nil
 	}
 
-	// 批量插入到bet_records表（使用INSERT IGNORE忽略重复数据，不影响自增ID）
+	// 批量插入到 bet_records 表
 	_, err := db.Model("bet_records").Data(insertData).InsertIgnore()
 	if err != nil {
 		return fmt.Errorf("批量插入注单失败: %v", err)
 	}
 
 	g.Log().Infof(ctx, "批量入库MySQL成功: 站点=%s, 插入 %d 条", params.SiteCode, len(insertData))
+
+	// 3. 发送 MQ 消息同步到 ClickHouse（只同步已结算的注单）
+	successCount := 0
+	failCount := 0
+
+	for _, record := range records {
+		// 只同步已结算的注单 (status=1)
+		if record.Status != 1 {
+			continue
+		}
+
+		userId := userMappings[record.Username]
+		if userId == 0 {
+			// 没有映射的用户跳过同步
+			continue
+		}
+
+		// 获取游戏类型（转为字符串）
+		gameType := ""
+		if params.SiteGame.Type > 0 {
+			gameType = fmt.Sprintf("%d", params.SiteGame.Type)
+		}
+
+		// 构建 MQ 消息
+		mqMsg := &mq.SyncBetToClickHouseMessage{
+			SiteID:      uint32(params.SiteId),
+			SiteCode:    params.SiteCode,
+			UserID:      userId,
+			Username:    record.Username,
+			Platform:    params.SiteGame.Platform,
+			GameID:      uint32(params.SiteGame.GameId),
+			GameName:    record.GameName,
+			GameType:    gameType,
+			OrderNo:     record.OrderNo,
+			RoundID:     "", // BetRecord 没有 RoundId 字段
+			BetAmount:   record.BetAmount,
+			WinAmount:   record.WinAmount,
+			ValidAmount: record.ValidAmount,
+			NetAmount:   record.WinAmount - record.BetAmount,
+			BetTime:     record.BetTime,
+			SettleTime:  record.SettleTime,
+			Status:      uint8(record.Status), // 转换为 uint8
+		}
+
+		// 发送 MQ 消息
+		if err := mq.PublishBetToClickHouse(ctx, mqMsg); err != nil {
+			g.Log().Errorf(ctx, "发送注单同步消息失败: order=%s, err=%v", record.OrderNo, err)
+			failCount++
+		} else {
+			successCount++
+		}
+	}
+
+	if successCount > 0 || failCount > 0 {
+		g.Log().Infof(ctx, "注单同步消息发送完成: 成功=%d, 失败=%d", successCount, failCount)
+	}
+
 	return nil
 }
