@@ -11,7 +11,10 @@ import (
 	"jh_game_service/internal/registry"
 	"jh_game_service/internal/service/backend"
 	"jh_game_service/internal/tracing"
+	"strconv"
+	"time"
 
+	"github.com/ClickHouse/clickhouse-go/v2/lib/column"
 	"github.com/gogf/gf/v2/database/gdb"
 	"github.com/gogf/gf/v2/frame/g"
 	"go.opentelemetry.io/otel/attribute"
@@ -24,6 +27,45 @@ type (
 
 func init() {
 	backend.RegisterGame(&sGame{})
+}
+
+// convertToFloat64 将interface{}转换为float64
+func convertToFloat64(v interface{}) float64 {
+	if v == nil {
+		return 0
+	}
+
+	switch val := v.(type) {
+	case float64:
+		return val
+	case float32:
+		return float64(val)
+	case int:
+		return float64(val)
+	case int64:
+		return float64(val)
+	case uint64:
+		return float64(val)
+	case string:
+		if f, err := strconv.ParseFloat(val, 64); err == nil {
+			return f
+		}
+	case column.Decimal:
+		// ClickHouse Decimal类型，尝试转换
+		if s := fmt.Sprintf("%v", val); s != "" {
+			if f, err := strconv.ParseFloat(s, 64); err == nil {
+				return f
+			}
+		}
+	default:
+		// 尝试通过fmt.Sprintf转换
+		if s := fmt.Sprintf("%v", val); s != "" {
+			if f, err := strconv.ParseFloat(s, 64); err == nil {
+				return f
+			}
+		}
+	}
+	return 0
 }
 
 // GetGames 获取游戏列表
@@ -745,4 +787,278 @@ func (s *sGame) GetGamePlatforms(ctx context.Context, req *v1.GetGamePlatformsRe
 	return &v1.GetGamePlatformsRes{
 		Platforms: platforms,
 	}, nil
+}
+
+// GetUserBetStats 获取用户注单统计（从 ClickHouse）
+func (s *sGame) GetUserBetStats(ctx context.Context, req *v1.GetUserBetStatsReq) (*v1.GetUserBetStatsRes, error) {
+	if req == nil {
+		return &v1.GetUserBetStatsRes{
+			Success: false,
+			Message: "请求参数不能为空",
+		}, nil
+	}
+
+	ctx, span := tracing.StartSpan(ctx, "game.GetUserBetStats", trace.WithAttributes(
+		attribute.String("method", "GetUserBetStats"),
+		attribute.Int("site_id", int(req.SiteId)),
+		attribute.Int64("user_id", req.UserId),
+	))
+	defer span.End()
+
+	// 添加详细的参数日志
+	g.Log().Infof(ctx, "GetUserBetStats 接收参数: site_id=%d, site_code=%s, user_id=%d, start=%s, end=%s, platform=%s",
+		req.SiteId, req.SiteCode, req.UserId, req.StartTime, req.EndTime, req.Platform)
+
+	// 使用getter方法获取值并打印
+	g.Log().Infof(ctx, "GetUserBetStats 使用getter: site_id=%d, site_code=%s, user_id=%d, start=%s, end=%s, platform=%s",
+		req.GetSiteId(), req.GetSiteCode(), req.GetUserId(), req.GetStartTime(), req.GetEndTime(), req.GetPlatform())
+
+	// 参数验证
+	if req.GetSiteId() <= 0 {
+		return &v1.GetUserBetStatsRes{
+			Success: false,
+			Message: fmt.Sprintf("站点ID不能为空或小于等于0，接收到的值: %d", req.GetSiteId()),
+		}, nil
+	}
+	if req.GetSiteCode() == "" {
+		return &v1.GetUserBetStatsRes{
+			Success: false,
+			Message: fmt.Sprintf("站点代码不能为空，接收到的值: '%s'", req.GetSiteCode()),
+		}, nil
+	}
+	if req.GetUserId() <= 0 {
+		return &v1.GetUserBetStatsRes{
+			Success: false,
+			Message: fmt.Sprintf("用户ID不能为空或小于等于0，接收到的值: %d", req.GetUserId()),
+		}, nil
+	}
+	if req.GetStartTime() == "" || req.GetEndTime() == "" {
+		return &v1.GetUserBetStatsRes{
+			Success: false,
+			Message: fmt.Sprintf("开始时间和结束时间不能为空，接收到的值: start='%s', end='%s'", req.GetStartTime(), req.GetEndTime()),
+		}, nil
+	}
+
+	// 获取 ClickHouse 连接
+	chManager := registry.GetClickHouseManager()
+	conn := chManager.GetConn()
+	if conn == nil {
+		return &v1.GetUserBetStatsRes{
+			Success: false,
+			Message: "ClickHouse 连接未初始化",
+		}, nil
+	}
+
+	// 先查询总记录数（调试用）
+	testQuery := "SELECT count() FROM game_analytics.bet_records WHERE site_id = ? AND site_code = ? AND user_id = ?"
+	testRows, err := chManager.Query(ctx, testQuery, req.GetSiteId(), req.GetSiteCode(), req.GetUserId())
+	if err != nil {
+		g.Log().Errorf(ctx, "测试查询失败: %v", err)
+	} else {
+		var totalCount uint64
+		if testRows.Next() {
+			testRows.Scan(&totalCount)
+			g.Log().Infof(ctx, "用户 %d 在 ClickHouse 中的总记录数: %d", req.GetUserId(), totalCount)
+		}
+		testRows.Close()
+	}
+
+	// 查询时间范围内的记录数（使用字符串比较，避免时区问题）
+	testQuery2 := "SELECT count(), min(bet_time), max(bet_time) FROM game_analytics.bet_records WHERE site_id = ? AND site_code = ? AND user_id = ?"
+	testRows2, err := chManager.Query(ctx, testQuery2, req.GetSiteId(), req.GetSiteCode(), req.GetUserId())
+	if err != nil {
+		g.Log().Errorf(ctx, "时间范围查询失败: %v", err)
+	} else {
+		var timeRangeCount uint64
+		var minTime, maxTime time.Time
+		if testRows2.Next() {
+			err = testRows2.Scan(&timeRangeCount, &minTime, &maxTime)
+			if err != nil {
+				g.Log().Errorf(ctx, "Scan失败: %v", err)
+			} else {
+				g.Log().Infof(ctx, "用户 %d 的记录数: %d, 最早时间: %s, 最晚时间: %s",
+					req.GetUserId(), timeRangeCount, minTime.Format("2006-01-02 15:04:05"), maxTime.Format("2006-01-02 15:04:05"))
+			}
+		}
+		testRows2.Close()
+	}
+
+	// 构建查询 SQL
+	query := `
+		SELECT 
+			user_id,
+			anyLast(username) as username,
+			count() as bet_count,
+			toFloat64(sum(bet_amount)) as bet_amount,
+			toFloat64(sum(win_amount)) as win_amount,
+			toFloat64(sum(valid_amount)) as valid_amount,
+			toFloat64(sum(net_amount)) as net_amount
+		FROM game_analytics.bet_records
+		WHERE site_id = ?
+		  AND site_code = ?
+		  AND user_id = ?
+		  AND toString(toTimeZone(bet_time, 'Asia/Shanghai')) >= ?
+		  AND toString(toTimeZone(bet_time, 'Asia/Shanghai')) <= ?
+	`
+
+	args := []interface{}{
+		req.GetSiteId(),
+		req.GetSiteCode(),
+		req.GetUserId(),
+		req.GetStartTime(),
+		req.GetEndTime(),
+	}
+
+	// 如果指定了平台，添加平台过滤
+	if req.GetPlatform() != "" {
+		query += " AND platform = ?"
+		args = append(args, req.GetPlatform())
+	}
+
+	query += " GROUP BY user_id"
+
+	// 将时间转换为Asia/Shanghai时区后转为字符串比较
+	g.Log().Infof(ctx, "执行查询，时区转换后字符串比较")
+	g.Log().Infof(ctx, "查询参数: site_id=%v, site_code=%v, user_id=%v, start=%v, end=%v, platform=%v",
+		args[0], args[1], args[2], args[3], args[4], req.GetPlatform())
+
+	// 执行查询
+	rows, err := conn.Query(ctx, query, args...)
+	if err != nil {
+		g.Log().Errorf(ctx, "查询用户注单统计失败: %v", err)
+		return &v1.GetUserBetStatsRes{
+			Success: false,
+			Message: fmt.Sprintf("查询失败: %v", err),
+		}, nil
+	}
+	defer rows.Close()
+
+	// 解析结果
+	stats := &v1.UserBetStats{
+		StartTime: req.GetStartTime(),
+		EndTime:   req.GetEndTime(),
+	}
+
+	if rows.Next() {
+		var userId uint64
+		var betCount uint64
+		var betAmount, winAmount, validAmount, netAmount float64
+		err = rows.Scan(
+			&userId,
+			&stats.Username,
+			&betCount,
+			&betAmount,
+			&winAmount,
+			&validAmount,
+			&netAmount,
+		)
+		if err != nil {
+			g.Log().Errorf(ctx, "解析查询结果失败: %v", err)
+			return &v1.GetUserBetStatsRes{
+				Success: false,
+				Message: fmt.Sprintf("解析结果失败: %v", err),
+			}, nil
+		}
+
+		// 转换类型
+		stats.UserId = int64(userId)
+		stats.BetCount = int64(betCount)
+
+		// 转换金额字段
+		stats.BetAmount = fmt.Sprintf("%.2f", betAmount)
+		stats.WinAmount = fmt.Sprintf("%.2f", winAmount)
+		stats.ValidAmount = fmt.Sprintf("%.2f", validAmount)
+		stats.NetAmount = fmt.Sprintf("%.2f", netAmount)
+	} else {
+		// 没有数据，返回空统计
+		stats.UserId = req.GetUserId()
+		stats.BetCount = 0
+		stats.BetAmount = "0.00"
+		stats.WinAmount = "0.00"
+		stats.ValidAmount = "0.00"
+		stats.NetAmount = "0.00"
+	}
+
+	// 查询按平台统计
+	platformStats, err := s.queryPlatformStats(ctx, chManager, req)
+	if err != nil {
+		g.Log().Warningf(ctx, "查询平台统计失败: %v", err)
+	} else {
+		stats.PlatformStats = platformStats
+	}
+
+	g.Log().Infof(ctx, "GetUserBetStats 成功: user_id=%d, bet_count=%d, valid_amount=%s, net_amount=%s",
+		stats.UserId, stats.BetCount, stats.ValidAmount, stats.NetAmount)
+
+	return &v1.GetUserBetStatsRes{
+		Success: true,
+		Message: "查询成功",
+		Stats:   stats,
+	}, nil
+}
+
+// queryPlatformStats 查询按平台统计
+func (s *sGame) queryPlatformStats(ctx context.Context, chManager *registry.ClickHouseManager, req *v1.GetUserBetStatsReq) ([]*v1.PlatformStats, error) {
+	query := `
+		SELECT 
+			platform,
+			count() as bet_count,
+			toFloat64(sum(bet_amount)) as bet_amount,
+			toFloat64(sum(win_amount)) as win_amount,
+			toFloat64(sum(valid_amount)) as valid_amount,
+			toFloat64(sum(net_amount)) as net_amount
+		FROM game_analytics.bet_records
+		WHERE site_id = ?
+		  AND site_code = ?
+		  AND user_id = ?
+		  AND toString(toTimeZone(bet_time, 'Asia/Shanghai')) >= ?
+		  AND toString(toTimeZone(bet_time, 'Asia/Shanghai')) <= ?
+	`
+
+	// 注意：将ClickHouse的UTC时间转换为Asia/Shanghai时区后转为字符串比较
+
+	args := []interface{}{
+		req.GetSiteId(),
+		req.GetSiteCode(),
+		req.GetUserId(),
+		req.GetStartTime(),
+		req.GetEndTime(),
+	}
+
+	if req.GetPlatform() != "" {
+		query += " AND platform = ?"
+		args = append(args, req.GetPlatform())
+	}
+
+	query += " GROUP BY platform ORDER BY valid_amount DESC"
+
+	// 使用 ClickHouseManager 的 Query 方法
+	rows, err := chManager.Query(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var platformStats []*v1.PlatformStats
+	for rows.Next() {
+		var platform string
+		var betCount uint64
+		var betAmount, winAmount, validAmount, netAmount float64
+
+		err = rows.Scan(&platform, &betCount, &betAmount, &winAmount, &validAmount, &netAmount)
+		if err != nil {
+			return nil, err
+		}
+
+		platformStats = append(platformStats, &v1.PlatformStats{
+			Platform:    platform,
+			BetCount:    int64(betCount),
+			BetAmount:   fmt.Sprintf("%.2f", betAmount),
+			WinAmount:   fmt.Sprintf("%.2f", winAmount),
+			ValidAmount: fmt.Sprintf("%.2f", validAmount),
+			NetAmount:   fmt.Sprintf("%.2f", netAmount),
+		})
+	}
+
+	return platformStats, nil
 }

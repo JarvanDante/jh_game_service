@@ -14,6 +14,7 @@ type (
 		GetGameList(ctx context.Context, req *v1.GetGameListReq) (*v1.GetGameListRes, error)
 		UpdateGameListItem(ctx context.Context, req *v1.UpdateGameListItemReq) (*v1.UpdateGameListItemRes, error)
 		GetGamePlatforms(ctx context.Context, req *v1.GetGamePlatformsReq) (*v1.GetGamePlatformsRes, error)
+		GetUserBetStats(ctx context.Context, req *v1.GetUserBetStatsReq) (*v1.GetUserBetStatsRes, error)
 	}
 )
 

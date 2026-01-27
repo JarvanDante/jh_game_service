@@ -51,3 +51,8 @@ func (*Controller) UpdateGameListItem(ctx context.Context, req *v1.UpdateGameLis
 func (*Controller) GetGamePlatforms(ctx context.Context, req *v1.GetGamePlatformsReq) (res *v1.GetGamePlatformsRes, err error) {
 	return backend.Game().GetGamePlatforms(ctx, req)
 }
+
+// GetUserBetStats 获取用户注单统计
+func (*Controller) GetUserBetStats(ctx context.Context, req *v1.GetUserBetStatsReq) (res *v1.GetUserBetStatsRes, err error) {
+	return backend.Game().GetUserBetStats(ctx, req)
+}

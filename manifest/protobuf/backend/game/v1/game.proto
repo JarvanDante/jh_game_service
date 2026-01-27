@@ -16,6 +16,9 @@ service Game {
     
     // 获取游戏平台列表
     rpc GetGamePlatforms(GetGamePlatformsReq) returns (GetGamePlatformsRes) {}
+    
+    // 用户注单统计（ClickHouse）
+    rpc GetUserBetStats(GetUserBetStatsReq) returns (GetUserBetStatsRes) {}
 }
 
 message GetGamesReq {
@@ -213,4 +216,47 @@ message GamePlatform {
     string db_name = 6;                    // 数据表名称
     int32 sort = 7;                        // 排序
     int32 status = 8;                      // 状态 1=启用 0=禁用
+}
+
+// ========== 用户注单统计（ClickHouse）==========
+
+// 获取用户注单统计请求
+message GetUserBetStatsReq {
+    int32 site_id = 1;                     // 站点ID
+    string site_code = 2;                  // 站点代码
+    int64 user_id = 3;                     // 用户ID
+    string start_time = 4;                 // 开始时间 格式: 2006-01-02 15:04:05
+    string end_time = 5;                   // 结束时间 格式: 2006-01-02 15:04:05
+    string platform = 6;                   // 平台（可选，为空则统计所有平台）
+}
+
+// 获取用户注单统计响应
+message GetUserBetStatsRes {
+    bool success = 1;                      // 是否成功
+    string message = 2;                    // 消息
+    UserBetStats stats = 3;                // 统计数据
+}
+
+// 用户注单统计
+message UserBetStats {
+    int64 user_id = 1;                     // 用户ID
+    string username = 2;                   // 用户名
+    int64 bet_count = 3;                   // 投注笔数
+    string bet_amount = 4;                 // 投注金额总和
+    string win_amount = 5;                 // 赢取金额总和
+    string valid_amount = 6;               // 有效投注总和
+    string net_amount = 7;                 // 净输赢总和
+    string start_time = 8;                 // 统计开始时间
+    string end_time = 9;                   // 统计结束时间
+    repeated PlatformStats platform_stats = 10; // 按平台统计
+}
+
+// 平台统计
+message PlatformStats {
+    string platform = 1;                   // 平台
+    int64 bet_count = 2;                   // 投注笔数
+    string bet_amount = 3;                 // 投注金额
+    string win_amount = 4;                 // 赢取金额
+    string valid_amount = 5;               // 有效投注
+    string net_amount = 6;                 // 净输赢
 }
