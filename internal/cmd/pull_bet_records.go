@@ -94,7 +94,11 @@ var (
 				fmt.Printf("RabbitMQ连接初始化失败: %v（将跳过ClickHouse同步）\n", err)
 			} else {
 				fmt.Println("RabbitMQ连接初始化成功")
-				defer mq.CloseRabbitMQ()
+				defer func() {
+					// 等待异步 MQ 消息发送完成
+					time.Sleep(2 * time.Second)
+					mq.CloseRabbitMQ()
+				}()
 			}
 
 			// 初始化ClickHouse
