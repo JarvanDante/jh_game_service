@@ -30,3 +30,8 @@ func (d betRecordsDao) Ctx(ctx context.Context) *gdb.Model {
 }
 
 // Add your custom methods and functionality below.
+
+func (d betRecordsDao) Test(ctx context.Context) int {
+	d.Ctx(ctx) // 使用 b 而不是 betRecordsDao
+	return 1
+}
