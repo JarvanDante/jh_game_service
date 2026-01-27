@@ -5,7 +5,10 @@
 package dao
 
 import (
+	"context"
 	"jh_game_service/internal/dao/internal"
+
+	"github.com/gogf/gf/v2/database/gdb"
 )
 
 // mqOutboxDao is the data access object for the table mq_outbox.
@@ -18,5 +21,12 @@ var (
 	// MqOutbox is a globally accessible object for table mq_outbox operations.
 	MqOutbox = mqOutboxDao{internal.NewMqOutboxDao()}
 )
+
+// Ctx 重写Ctx方法，使用动态数据库连接
+func (d mqOutboxDao) Ctx(ctx context.Context) *gdb.Model {
+	// 使用辅助函数获取动态Model
+	originalModel := d.MqOutboxDao.Ctx(ctx)
+	return GetDynamicModel(ctx, d.Table(), originalModel)
+}
 
 // Add your custom methods and functionality below.

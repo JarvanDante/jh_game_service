@@ -5,7 +5,10 @@
 package dao
 
 import (
+	"context"
 	"jh_game_service/internal/dao/internal"
+
+	"github.com/gogf/gf/v2/database/gdb"
 )
 
 // userMappingDao is the data access object for the table user_mapping.
@@ -18,5 +21,12 @@ var (
 	// UserMapping is a globally accessible object for table user_mapping operations.
 	UserMapping = userMappingDao{internal.NewUserMappingDao()}
 )
+
+// Ctx 重写Ctx方法，使用动态数据库连接
+func (d userMappingDao) Ctx(ctx context.Context) *gdb.Model {
+	// 使用辅助函数获取动态Model
+	originalModel := d.UserMappingDao.Ctx(ctx)
+	return GetDynamicModel(ctx, d.Table(), originalModel)
+}
 
 // Add your custom methods and functionality below.

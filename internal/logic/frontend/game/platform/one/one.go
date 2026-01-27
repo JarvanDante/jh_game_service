@@ -47,7 +47,7 @@ func init() {
  */
 func (p *OnePlatform) GetGameUrl(ctx context.Context, params *platform.GameParams) (map[string]interface{}, error) {
 	// 1. 构建游戏用户名
-	buildUsername := p.buildUsername(params.Username, params.SiteCode)
+	buildUsername := util.BuildUsername(params.Username, params.SiteCode)
 
 	// 2. 生成TraceID
 	traceId, _ := p.generateUUID()
@@ -250,7 +250,7 @@ func (p *OnePlatform) GetGameUrl(ctx context.Context, params *platform.GameParam
  */
 func (p *OnePlatform) GetBalance(ctx context.Context, params *platform.GameParams) (float64, error) {
 	// 1. 构建游戏用户名
-	buildUsername := p.buildUsername(params.Username, params.SiteCode)
+	buildUsername := util.BuildUsername(params.Username, params.SiteCode)
 
 	// 2. 生成TraceID
 	traceId, _ := p.generateUUID()
@@ -385,7 +385,7 @@ func (p *OnePlatform) TransferIn(ctx context.Context, params *platform.TransferP
 	g.Log().Infof(ctx, "扣款成功，订单号: %s", adjustRes.OrderNo)
 
 	// 2. 调用三方游戏API转账
-	buildUsername := p.buildUsername(params.Username, params.SiteCode)
+	buildUsername := util.BuildUsername(params.Username, params.SiteCode)
 	traceId, _ := p.generateUUID()
 
 	data := map[string]interface{}{
@@ -479,7 +479,7 @@ func (p *OnePlatform) TransferOut(ctx context.Context, params *platform.Transfer
 	g.Log().Infof(ctx, "创建转出订单成功，订单号: %s", adjustRes.OrderNo)
 
 	// 2. 调用三方游戏API转出
-	buildUsername := p.buildUsername(params.Username, params.SiteCode)
+	buildUsername := util.BuildUsername(params.Username, params.SiteCode)
 	traceId, _ := p.generateUUID()
 
 	// 如果没有传入OrderNo，生成一个
@@ -790,11 +790,6 @@ func (p *OnePlatform) parseTransaction(transArray []interface{}, headerMap map[s
 }
 
 // ========== 辅助方法 ==========
-
-// buildUsername 构建游戏用户名
-func (p *OnePlatform) buildUsername(username, siteCode string) string {
-	return siteCode + "_" + username
-}
 
 // getPlatformType 获取平台类型
 func (p *OnePlatform) getPlatformType(mobile int32) string {
