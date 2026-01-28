@@ -478,10 +478,19 @@ func (s *sGame) SupplementBetRecords(ctx context.Context, req *v1.SupplementBetR
 		}
 
 		recordCount := len(records)
+
+		// 添加详细日志
+		if recordCount == 0 {
+			g.Log().Warningf(ctx, "补单返回0条记录: 站点=%s, 平台=%s, 时间=%s~%s",
+				siteCode, req.Platform, req.StartTime, req.EndTime)
+		} else {
+			g.Log().Infof(ctx, "补单拉取成功: 站点=%s, 记录数=%d", siteCode, recordCount)
+		}
+
 		totalRecords += recordCount
 		successSites++
 
-		g.Log().Infof(ctx, "补单成功: 站点=%s, 记录数=%d", siteCode, recordCount)
+		g.Log().Infof(ctx, "补单完成: 站点=%s, 记录数=%d", siteCode, recordCount)
 	}
 
 	message := fmt.Sprintf("补单完成: 平台=%s, 成功站点=%d, 失败站点=%d, 总记录数=%d",

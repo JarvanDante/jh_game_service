@@ -1301,66 +1301,66 @@ func (p *OnePlatform) saveBetRecordsToMySQL(ctx context.Context, params *platfor
 
 	g.Log().Infof(ctx, "批量入库MySQL成功: 站点=%s, 插入 %d 条", params.SiteCode, len(insertData))
 
-	// 3. 异步发送 MQ 消息同步到 ClickHouse（只同步已结算的注单）
-	// 使用 goroutine 异步发送，不阻塞拉单流程
-	go func() {
-		mqCtx := context.Background()
-		successCount := 0
-		failCount := 0
+	// 3. 批量发送 MQ 消息同步到 ClickHouse（只同步已结算且有user_id的注单）
+	g.Log().Infof(ctx, "开始发送MQ消息: 总记录数=%d", len(records))
 
-		for _, record := range records {
-			// 只同步已结算的注单 (status=1)
-			if record.Status != 1 {
-				continue
-			}
+	syncCount := 0
+	skipCount := 0
+	failCount := 0
 
-			userId := userMappings[record.Username]
-			if userId == 0 {
-				// 没有映射的用户跳过同步
-				continue
-			}
-
-			// 获取游戏类型（转为字符串）
-			gameType := ""
-			if params.SiteGame.Type > 0 {
-				gameType = fmt.Sprintf("%d", params.SiteGame.Type)
-			}
-
-			// 构建 MQ 消息
-			mqMsg := &mq.SyncBetToClickHouseMessage{
-				SiteID:      uint32(params.SiteId),
-				SiteCode:    params.SiteCode,
-				UserID:      userId,
-				Username:    record.Username,
-				Platform:    params.SiteGame.Platform,
-				GameID:      uint32(params.SiteGame.GameId),
-				GameName:    record.GameName,
-				GameType:    gameType,
-				OrderNo:     record.OrderNo,
-				RoundID:     "", // BetRecord 没有 RoundId 字段
-				BetAmount:   record.BetAmount,
-				WinAmount:   record.WinAmount,
-				ValidAmount: record.ValidAmount,
-				NetAmount:   record.WinAmount - record.BetAmount,
-				BetTime:     record.BetTime,
-				SettleTime:  record.SettleTime,
-				Status:      uint8(record.Status), // 转换为 uint8
-			}
-
-			// 发送 MQ 消息
-			if err := mq.PublishBetToClickHouse(mqCtx, mqMsg); err != nil {
-				g.Log().Errorf(mqCtx, "发送注单同步消息失败: order=%s, err=%v", record.OrderNo, err)
-				failCount++
-			} else {
-				successCount++
-			}
+	for _, record := range records {
+		// 只同步已结算的注单 (status=1)
+		if record.Status != 1 {
+			skipCount++
+			continue
 		}
 
-		if successCount > 0 || failCount > 0 {
-			g.Log().Infof(mqCtx, "注单同步消息发送完成: 成功=%d, 失败=%d", successCount, failCount)
+		userId := userMappings[record.Username]
+		if userId == 0 {
+			// 没有映射的用户跳过同步
+			g.Log().Warningf(ctx, "用户 %s 没有映射，跳过同步", record.Username)
+			skipCount++
+			continue
 		}
-	}()
 
-	// 立即返回，不等待 MQ 发送完成
+		// 获取游戏类型（转为字符串）
+		gameType := ""
+		if params.SiteGame.Type > 0 {
+			gameType = fmt.Sprintf("%d", params.SiteGame.Type)
+		}
+
+		// 构建 MQ 消息
+		mqMsg := &mq.SyncBetToClickHouseMessage{
+			SiteID:      uint32(params.SiteId),
+			SiteCode:    params.SiteCode,
+			UserID:      userId,
+			Username:    record.Username,
+			Platform:    params.SiteGame.Platform,
+			GameID:      uint32(params.SiteGame.GameId),
+			GameName:    record.GameName,
+			GameType:    gameType,
+			OrderNo:     record.OrderNo,
+			RoundID:     "", // BetRecord 没有 RoundId 字段
+			BetAmount:   record.BetAmount,
+			WinAmount:   record.WinAmount,
+			ValidAmount: record.ValidAmount,
+			NetAmount:   record.WinAmount - record.BetAmount,
+			BetTime:     record.BetTime,
+			SettleTime:  record.SettleTime,
+			Status:      uint8(record.Status),
+		}
+
+		// 发送 MQ 消息（同步发送，确保消息发送成功）
+		if err := mq.PublishBetToClickHouse(ctx, mqMsg); err != nil {
+			g.Log().Errorf(ctx, "发送注单同步消息失败: order=%s, err=%v", record.OrderNo, err)
+			failCount++
+		} else {
+			syncCount++
+		}
+	}
+
+	g.Log().Infof(ctx, "MQ消息发送统计: 站点=%s, 成功=%d, 失败=%d, 跳过=%d",
+		params.SiteCode, syncCount, failCount, skipCount)
+
 	return nil
 }

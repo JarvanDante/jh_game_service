@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"jh_game_service/internal/controller/backend/game"
 	frontendGame "jh_game_service/internal/controller/frontend/game"
+	"jh_game_service/internal/mq"
 	"os"
 	"time"
 
@@ -80,6 +81,17 @@ var (
 			} else {
 				fmt.Println("ClickHouse连接初始化成功")
 				defer chManager.Close()
+			}
+
+			// 初始化 RabbitMQ（用于发送注单同步消息）
+			fmt.Println("初始化RabbitMQ连接...")
+			if err := mq.InitRabbitMQ(ctx); err != nil {
+				fmt.Printf("RabbitMQ连接初始化失败: %v（将跳过ClickHouse同步）\n", err)
+				g.Log().Errorf(ctx, "RabbitMQ连接初始化失败: %v", err)
+				// 不中断服务，继续运行
+			} else {
+				fmt.Println("RabbitMQ连接初始化成功")
+				defer mq.CloseRabbitMQ()
 			}
 
 			// 确保在退出时停止数据库配置管理器
