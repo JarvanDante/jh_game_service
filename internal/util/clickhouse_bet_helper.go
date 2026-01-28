@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"jh_game_service/internal/model/entity"
 	"jh_game_service/internal/registry"
+	"time"
 
 	"github.com/gogf/gf/v2/frame/g"
+	"github.com/shopspring/decimal"
 )
 
 // InsertBetRecordToCH 插入注单到 ClickHouse
@@ -25,6 +27,17 @@ func InsertBetRecordToCH(ctx context.Context, record *entity.ClickHouseBetRecord
 	// 自动计算净输赢
 	record.CalculateNetAmount()
 
+	// 设置更新时间（用于 ReplacingMergeTree 去重）
+	if record.UpdatedAt.IsZero() {
+		record.UpdatedAt = time.Now()
+	}
+
+	// 将 float64 转换为 Decimal 类型
+	betAmount := decimal.NewFromFloat(record.BetAmount)
+	winAmount := decimal.NewFromFloat(record.WinAmount)
+	validAmount := decimal.NewFromFloat(record.ValidAmount)
+	netAmount := decimal.NewFromFloat(record.NetAmount)
+
 	query := `
 		INSERT INTO game_analytics.bet_records (
 			site_id, site_code,
@@ -33,7 +46,7 @@ func InsertBetRecordToCH(ctx context.Context, record *entity.ClickHouseBetRecord
 			order_no, round_id,
 			bet_amount, win_amount, valid_amount, net_amount,
 			bet_time, settle_time,
-			status
+			status, updated_at
 		) VALUES (
 			?, ?,
 			?, ?,
@@ -41,7 +54,7 @@ func InsertBetRecordToCH(ctx context.Context, record *entity.ClickHouseBetRecord
 			?, ?,
 			?, ?, ?, ?,
 			?, ?,
-			?
+			?, ?
 		)
 	`
 
@@ -50,9 +63,9 @@ func InsertBetRecordToCH(ctx context.Context, record *entity.ClickHouseBetRecord
 		record.UserID, record.Username,
 		record.Platform, record.GameID, record.GameName, record.GameType,
 		record.OrderNo, record.RoundID,
-		record.BetAmount, record.WinAmount, record.ValidAmount, record.NetAmount,
+		betAmount, winAmount, validAmount, netAmount,
 		record.BetTime, record.SettleTime,
-		record.Status,
+		record.Status, record.UpdatedAt,
 	)
 
 	if err != nil {
@@ -64,6 +77,7 @@ func InsertBetRecordToCH(ctx context.Context, record *entity.ClickHouseBetRecord
 }
 
 // BatchInsertBetRecordsToCH 批量插入注单到 ClickHouse（推荐使用）
+// 实现幂等性：插入前检查 order_no 是否已存在
 func BatchInsertBetRecordsToCH(ctx context.Context, records []*entity.ClickHouseBetRecord) error {
 	if len(records) == 0 {
 		return nil
@@ -75,6 +89,72 @@ func BatchInsertBetRecordsToCH(ctx context.Context, records []*entity.ClickHouse
 		return fmt.Errorf("ClickHouse连接未初始化")
 	}
 
+	// 1. 收集所有 order_no
+	orderNos := make([]string, 0, len(records))
+	orderNoMap := make(map[string]*entity.ClickHouseBetRecord)
+	for _, record := range records {
+		if err := record.Validate(); err != nil {
+			g.Log().Warningf(ctx, "跳过无效记录: %v", err)
+			continue
+		}
+		orderNos = append(orderNos, record.OrderNo)
+		orderNoMap[record.OrderNo] = record
+	}
+
+	if len(orderNos) == 0 {
+		return nil
+	}
+
+	// 2. 查询已存在的 order_no（使用 IN 查询）
+	existingOrderNos := make(map[string]bool)
+	if len(orderNos) > 0 {
+		// 构建 IN 查询
+		query := "SELECT DISTINCT order_no FROM game_analytics.bet_records WHERE order_no IN ("
+		params := make([]interface{}, len(orderNos))
+		for i, orderNo := range orderNos {
+			if i > 0 {
+				query += ","
+			}
+			query += "?"
+			params[i] = orderNo
+		}
+		query += ")"
+
+		rows, err := conn.Query(ctx, query, params...)
+		if err != nil {
+			g.Log().Warningf(ctx, "查询已存在订单号失败: %v，继续插入", err)
+		} else {
+			defer rows.Close()
+			for rows.Next() {
+				var orderNo string
+				if err := rows.Scan(&orderNo); err == nil {
+					existingOrderNos[orderNo] = true
+				}
+			}
+		}
+	}
+
+	// 3. 过滤掉已存在的记录
+	newRecords := make([]*entity.ClickHouseBetRecord, 0, len(records))
+	skippedCount := 0
+	for _, record := range records {
+		if existingOrderNos[record.OrderNo] {
+			skippedCount++
+			continue
+		}
+		newRecords = append(newRecords, record)
+	}
+
+	if skippedCount > 0 {
+		g.Log().Infof(ctx, "跳过已存在的订单: %d条", skippedCount)
+	}
+
+	if len(newRecords) == 0 {
+		g.Log().Infof(ctx, "所有记录都已存在，跳过插入")
+		return nil
+	}
+
+	// 4. 批量插入新记录
 	batch, err := conn.PrepareBatch(ctx, `
 		INSERT INTO game_analytics.bet_records (
 			site_id, site_code,
@@ -83,31 +163,36 @@ func BatchInsertBetRecordsToCH(ctx context.Context, records []*entity.ClickHouse
 			order_no, round_id,
 			bet_amount, win_amount, valid_amount, net_amount,
 			bet_time, settle_time,
-			status
+			status, updated_at
 		)
 	`)
 	if err != nil {
 		return fmt.Errorf("准备批量插入失败: %v", err)
 	}
 
-	for _, record := range records {
-		// 验证数据
-		if err := record.Validate(); err != nil {
-			g.Log().Warningf(ctx, "跳过无效记录: %v", err)
-			continue
-		}
-
+	for _, record := range newRecords {
 		// 自动计算净输赢
 		record.CalculateNetAmount()
+
+		// 设置更新时间（用于 ReplacingMergeTree 去重）
+		if record.UpdatedAt.IsZero() {
+			record.UpdatedAt = time.Now()
+		}
+
+		// 将 float64 转换为 Decimal 类型
+		betAmount := decimal.NewFromFloat(record.BetAmount)
+		winAmount := decimal.NewFromFloat(record.WinAmount)
+		validAmount := decimal.NewFromFloat(record.ValidAmount)
+		netAmount := decimal.NewFromFloat(record.NetAmount)
 
 		err = batch.Append(
 			record.SiteID, record.SiteCode,
 			record.UserID, record.Username,
 			record.Platform, record.GameID, record.GameName, record.GameType,
 			record.OrderNo, record.RoundID,
-			record.BetAmount, record.WinAmount, record.ValidAmount, record.NetAmount,
+			betAmount, winAmount, validAmount, netAmount,
 			record.BetTime, record.SettleTime,
-			record.Status,
+			record.Status, record.UpdatedAt,
 		)
 		if err != nil {
 			return fmt.Errorf("添加记录到批次失败: %v", err)
@@ -119,7 +204,7 @@ func BatchInsertBetRecordsToCH(ctx context.Context, records []*entity.ClickHouse
 		return err
 	}
 
-	g.Log().Infof(ctx, "批量插入ClickHouse成功: %d条记录", len(records))
+	g.Log().Infof(ctx, "批量插入ClickHouse成功: %d条新记录（跳过%d条已存在）", len(newRecords), skippedCount)
 	return nil
 }
 

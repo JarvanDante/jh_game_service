@@ -53,6 +53,11 @@ type ClickHouseBetRecord struct {
 	Status uint8 `ch:"status" json:"status"` // 0=未结算, 1=已结算, 2=取消, 3=无效
 
 	// =====================
+	// 版本字段（用于 ReplacingMergeTree 去重）
+	// =====================
+	UpdatedAt time.Time `ch:"updated_at" json:"updated_at"` // 更新时间，用于保留最新版本
+
+	// =====================
 	// 派生时间字段（自动生成，不需要手动设置）
 	// =====================
 	// BetDate time.Time `ch:"bet_date"` // MATERIALIZED 字段，ClickHouse 自动生成

@@ -311,9 +311,9 @@ func StartSyncBetToClickHouseConsumer(ctx context.Context) error {
 		return fmt.Errorf("绑定队列失败: %v", err)
 	}
 
-	// 设置 QoS
+	// 设置 QoS - 预取更多消息用于批量处理
 	err = channel.Qos(
-		10,    // prefetch count (批量处理)
+		1000,  // prefetch count (批量处理1000条)
 		0,     // prefetch size
 		false, // global
 	)
@@ -335,24 +335,138 @@ func StartSyncBetToClickHouseConsumer(ctx context.Context) error {
 		return fmt.Errorf("开始消费失败: %v", err)
 	}
 
-	g.Log().Info(ctx, "ClickHouse 同步消费者已启动，等待消息...")
+	g.Log().Info(ctx, "ClickHouse 同步消费者已启动（批量模式），等待消息...")
 
-	// 处理消息
-	go func() {
-		for msg := range msgs {
-			if err := handleSyncBetToClickHouseMessage(ctx, msg); err != nil {
-				g.Log().Errorf(ctx, "处理注单同步消息失败: %v", err)
-				msg.Nack(false, true) // 重新入队
-			} else {
-				msg.Ack(false) // 确认消息
-			}
-		}
-	}()
+	// 批量处理消息
+	go batchProcessSyncBetMessages(ctx, msgs)
 
 	return nil
 }
 
-// handleSyncBetToClickHouseMessage 处理同步注单到 ClickHouse 消息
+// batchProcessSyncBetMessages 批量处理同步注单消息
+func batchProcessSyncBetMessages(ctx context.Context, msgs <-chan amqp.Delivery) {
+	const (
+		batchSize    = 1000            // 批量大小：1000条
+		flushTimeout = 5 * time.Second // 刷新超时时间：5秒
+	)
+
+	var batch []*entity.ClickHouseBetRecord
+	var batchMsgs []amqp.Delivery
+	ticker := time.NewTicker(flushTimeout)
+	defer ticker.Stop()
+
+	flushBatch := func() {
+		if len(batch) == 0 {
+			return
+		}
+
+		g.Log().Infof(ctx, "开始批量插入ClickHouse: %d条记录", len(batch))
+
+		// 批量插入到 ClickHouse
+		if err := util.BatchInsertBetRecordsToCH(ctx, batch); err != nil {
+			g.Log().Errorf(ctx, "批量插入ClickHouse失败: %v", err)
+			// 批量Nack，重新入队
+			for _, msg := range batchMsgs {
+				msg.Nack(false, true)
+			}
+		} else {
+			g.Log().Infof(ctx, "批量插入ClickHouse成功: %d条记录", len(batch))
+			// 批量Ack
+			for _, msg := range batchMsgs {
+				msg.Ack(false)
+			}
+		}
+
+		// 清空批次
+		batch = batch[:0]
+		batchMsgs = batchMsgs[:0]
+	}
+
+	for {
+		select {
+		case msg, ok := <-msgs:
+			if !ok {
+				// 通道关闭，刷新剩余数据
+				flushBatch()
+				g.Log().Info(ctx, "消息通道已关闭，批量处理器退出")
+				return
+			}
+
+			// 解析消息
+			record, err := parseSyncBetMessage(ctx, msg)
+			if err != nil {
+				g.Log().Errorf(ctx, "解析消息失败: %v, body: %s", err, string(msg.Body))
+				msg.Nack(false, false) // 丢弃无效消息
+				continue
+			}
+
+			// 添加到批次
+			batch = append(batch, record)
+			batchMsgs = append(batchMsgs, msg)
+
+			// 达到批量大小，立即刷新
+			if len(batch) >= batchSize {
+				flushBatch()
+				ticker.Reset(flushTimeout) // 重置定时器
+			}
+
+		case <-ticker.C:
+			// 定时刷新，避免消息积压太久
+			if len(batch) > 0 {
+				g.Log().Infof(ctx, "定时刷新批次: %d条记录", len(batch))
+				flushBatch()
+			}
+		}
+	}
+}
+
+// parseSyncBetMessage 解析同步注单消息
+func parseSyncBetMessage(ctx context.Context, msg amqp.Delivery) (*entity.ClickHouseBetRecord, error) {
+	var syncMsg SyncBetToClickHouseMessage
+	if err := json.Unmarshal(msg.Body, &syncMsg); err != nil {
+		return nil, fmt.Errorf("解析JSON失败: %w", err)
+	}
+
+	// 转换为 ClickHouse 记录
+	record := &entity.ClickHouseBetRecord{
+		SiteID:      syncMsg.SiteID,
+		SiteCode:    syncMsg.SiteCode,
+		UserID:      syncMsg.UserID,
+		Username:    syncMsg.Username,
+		Platform:    syncMsg.Platform,
+		GameID:      syncMsg.GameID,
+		GameName:    syncMsg.GameName,
+		GameType:    syncMsg.GameType,
+		OrderNo:     syncMsg.OrderNo,
+		RoundID:     syncMsg.RoundID,
+		BetAmount:   syncMsg.BetAmount,
+		WinAmount:   syncMsg.WinAmount,
+		ValidAmount: syncMsg.ValidAmount,
+		NetAmount:   syncMsg.NetAmount,
+		Status:      syncMsg.Status,
+		UpdatedAt:   time.Now(), // 设置更新时间用于去重
+	}
+
+	// 解析时间
+	loc, _ := time.LoadLocation("Asia/Shanghai")
+	if syncMsg.BetTime != "" {
+		betTime, err := time.ParseInLocation("2006-01-02 15:04:05", syncMsg.BetTime, loc)
+		if err == nil {
+			record.BetTime = betTime
+		}
+	}
+	if syncMsg.SettleTime != "" && syncMsg.SettleTime != "0000-00-00 00:00:00" {
+		settleTime, err := time.ParseInLocation("2006-01-02 15:04:05", syncMsg.SettleTime, loc)
+		if err == nil {
+			record.SettleTime = &settleTime
+		}
+	}
+
+	return record, nil
+}
+
+// handleSyncBetToClickHouseMessage 处理同步注单到 ClickHouse 消息（已废弃，使用批量处理）
+// 保留此函数以便回滚
 func handleSyncBetToClickHouseMessage(ctx context.Context, msg amqp.Delivery) error {
 	var syncMsg SyncBetToClickHouseMessage
 	if err := json.Unmarshal(msg.Body, &syncMsg); err != nil {
@@ -380,6 +494,7 @@ func handleSyncBetToClickHouseMessage(ctx context.Context, msg amqp.Delivery) er
 		ValidAmount: syncMsg.ValidAmount,
 		NetAmount:   syncMsg.NetAmount,
 		Status:      syncMsg.Status,
+		UpdatedAt:   time.Now(), // 设置更新时间用于去重
 	}
 
 	// 解析时间
