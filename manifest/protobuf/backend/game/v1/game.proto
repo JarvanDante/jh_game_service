@@ -19,6 +19,9 @@ service Game {
     
     // 用户注单统计（ClickHouse）
     rpc GetUserBetStats(GetUserBetStatsReq) returns (GetUserBetStatsRes) {}
+    
+    // 同步任务管理
+    rpc GetSyncTasks(GetSyncTasksReq) returns (GetSyncTasksRes) {}
 }
 
 message GetGamesReq {
@@ -259,4 +262,50 @@ message PlatformStats {
     string win_amount = 4;                 // 赢取金额
     string valid_amount = 5;               // 有效投注
     string net_amount = 6;                 // 净输赢
+}
+
+
+// ========== 同步任务管理 ==========
+
+// 获取同步任务列表请求
+message GetSyncTasksReq {
+    int32 site_id = 1;                     // 站点ID（可选，0表示不过滤）
+    string site_code = 2;                  // 站点代码（可选）
+    string platform = 3;                   // 平台（可选）
+    int32 task_type = 4;                   // 任务类型（可选）1=定时拉单 2=手动补单 0=全部
+    int32 status = 5;                      // 状态（可选）1=进行中 2=已完成 3=失败 0=全部
+    int32 page = 6;                        // 页码
+    int32 size = 7;                        // 每页数量
+}
+
+// 获取同步任务列表响应
+message GetSyncTasksRes {
+    repeated SyncTask list = 1;            // 任务列表
+    int32 total = 2;                       // 总记录数
+    int32 page = 3;                        // 当前页码
+    int32 size = 4;                        // 每页数量
+}
+
+// 同步任务
+message SyncTask {
+    int64 id = 1;                          // 任务ID
+    int32 site_id = 2;                     // 站点ID
+    string site_code = 3;                  // 站点代码
+    string platform = 4;                   // 游戏平台
+    int32 task_type = 5;                   // 任务类型 1=定时拉单 2=手动补单
+    string start_time = 6;                 // 拉单开始时间
+    string end_time = 7;                   // 拉单结束时间
+    int32 mysql_total = 8;                 // MySQL总记录数
+    int32 mysql_inserted = 9;              // MySQL新插入数
+    int32 mysql_duplicated = 10;           // MySQL重复跳过数
+    int32 mq_sent = 11;                    // MQ发送成功数
+    int32 mq_failed = 12;                  // MQ发送失败数
+    int32 mq_skipped = 13;                 // MQ跳过数
+    int32 ch_synced = 14;                  // ClickHouse已同步数
+    int32 ch_failed = 15;                  // ClickHouse同步失败数
+    int32 status = 16;                     // 任务状态 1=进行中 2=已完成 3=失败
+    string error_msg = 17;                 // 错误信息
+    string created_at = 18;                // 创建时间
+    string updated_at = 19;                // 更新时间
+    string completed_at = 20;              // 完成时间
 }

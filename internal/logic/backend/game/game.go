@@ -1091,3 +1091,127 @@ func (s *sGame) queryPlatformStats(ctx context.Context, chManager *registry.Clic
 
 	return platformStats, nil
 }
+
+// GetSyncTasks 获取同步任务列表
+func (s *sGame) GetSyncTasks(ctx context.Context, req *v1.GetSyncTasksReq) (*v1.GetSyncTasksRes, error) {
+	if req == nil {
+		return nil, fmt.Errorf("请求参数不能为空")
+	}
+
+	ctx, span := tracing.StartSpan(ctx, "game.GetSyncTasks", trace.WithAttributes(
+		attribute.String("method", "GetSyncTasks"),
+		attribute.Int("site_id", int(req.SiteId)),
+		attribute.String("site_code", req.SiteCode),
+		attribute.String("platform", req.Platform),
+		attribute.Int("task_type", int(req.TaskType)),
+		attribute.Int("status", int(req.Status)),
+		attribute.Int("page", int(req.Page)),
+		attribute.Int("size", int(req.Size)),
+	))
+	defer span.End()
+
+	// 参数验证
+	if req.Page <= 0 {
+		req.Page = 1
+	}
+	if req.Size <= 0 {
+		req.Size = 20
+	}
+	if req.Size > 100 {
+		req.Size = 100 // 限制最大页面大小
+	}
+
+	// 构建查询条件
+	query := dao.SyncTask.Ctx(ctx)
+
+	// 站点ID过滤（0表示不过滤）
+	if req.SiteId > 0 {
+		query = query.Where("site_id", req.SiteId)
+	}
+
+	// 站点代码过滤
+	if req.SiteCode != "" {
+		query = query.Where("site_code", req.SiteCode)
+	}
+
+	// 平台过滤
+	if req.Platform != "" {
+		query = query.Where("platform", req.Platform)
+	}
+
+	// 任务类型过滤（0表示不过滤）
+	if req.TaskType > 0 {
+		query = query.Where("task_type", req.TaskType)
+	}
+
+	// 状态过滤（0表示不过滤）
+	if req.Status > 0 {
+		query = query.Where("status", req.Status)
+	}
+
+	// 获取总记录数
+	total, err := query.Count()
+	if err != nil {
+		return nil, fmt.Errorf("获取任务总数失败: %v", err)
+	}
+
+	// 计算分页信息
+	offset := (req.Page - 1) * req.Size
+
+	// 获取分页数据 - 使用 Fields 指定字段并转换时间为字符串
+	records, err := query.
+		Fields(`
+			id, site_id, site_code, platform, task_type,
+			DATE_FORMAT(start_time, '%Y-%m-%d %H:%i:%s') as start_time,
+			DATE_FORMAT(end_time, '%Y-%m-%d %H:%i:%s') as end_time,
+			mysql_total, mysql_inserted, mysql_duplicated,
+			mq_sent, mq_failed, mq_skipped,
+			ch_synced, ch_failed,
+			status, error_msg,
+			DATE_FORMAT(created_at, '%Y-%m-%d %H:%i:%s') as created_at,
+			DATE_FORMAT(updated_at, '%Y-%m-%d %H:%i:%s') as updated_at,
+			DATE_FORMAT(completed_at, '%Y-%m-%d %H:%i:%s') as completed_at
+		`).
+		Order("id DESC").
+		Limit(int(req.Size)).
+		Offset(int(offset)).
+		All()
+	if err != nil {
+		return nil, fmt.Errorf("获取任务列表失败: %v", err)
+	}
+
+	// 转换为响应格式
+	list := make([]*v1.SyncTask, 0, len(records))
+	for _, record := range records {
+		syncTask := &v1.SyncTask{
+			Id:              record["id"].Int64(),
+			SiteId:          record["site_id"].Int32(),
+			SiteCode:        record["site_code"].String(),
+			Platform:        record["platform"].String(),
+			TaskType:        record["task_type"].Int32(),
+			StartTime:       record["start_time"].String(),
+			EndTime:         record["end_time"].String(),
+			MysqlTotal:      record["mysql_total"].Int32(),
+			MysqlInserted:   record["mysql_inserted"].Int32(),
+			MysqlDuplicated: record["mysql_duplicated"].Int32(),
+			MqSent:          record["mq_sent"].Int32(),
+			MqFailed:        record["mq_failed"].Int32(),
+			MqSkipped:       record["mq_skipped"].Int32(),
+			ChSynced:        record["ch_synced"].Int32(),
+			ChFailed:        record["ch_failed"].Int32(),
+			Status:          record["status"].Int32(),
+			ErrorMsg:        record["error_msg"].String(),
+			CreatedAt:       record["created_at"].String(),
+			UpdatedAt:       record["updated_at"].String(),
+			CompletedAt:     record["completed_at"].String(),
+		}
+		list = append(list, syncTask)
+	}
+
+	return &v1.GetSyncTasksRes{
+		List:  list,
+		Total: int32(total),
+		Page:  req.Page,
+		Size:  req.Size,
+	}, nil
+}

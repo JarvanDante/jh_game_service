@@ -28,6 +28,7 @@ const (
 	Game_UpdateGameListItem_FullMethodName   = "/game.Game/UpdateGameListItem"
 	Game_GetGamePlatforms_FullMethodName     = "/game.Game/GetGamePlatforms"
 	Game_GetUserBetStats_FullMethodName      = "/game.Game/GetUserBetStats"
+	Game_GetSyncTasks_FullMethodName         = "/game.Game/GetSyncTasks"
 )
 
 // GameClient is the client API for Game service.
@@ -45,6 +46,8 @@ type GameClient interface {
 	GetGamePlatforms(ctx context.Context, in *GetGamePlatformsReq, opts ...grpc.CallOption) (*GetGamePlatformsRes, error)
 	// 用户注单统计（ClickHouse）
 	GetUserBetStats(ctx context.Context, in *GetUserBetStatsReq, opts ...grpc.CallOption) (*GetUserBetStatsRes, error)
+	// 同步任务管理
+	GetSyncTasks(ctx context.Context, in *GetSyncTasksReq, opts ...grpc.CallOption) (*GetSyncTasksRes, error)
 }
 
 type gameClient struct {
@@ -135,6 +138,16 @@ func (c *gameClient) GetUserBetStats(ctx context.Context, in *GetUserBetStatsReq
 	return out, nil
 }
 
+func (c *gameClient) GetSyncTasks(ctx context.Context, in *GetSyncTasksReq, opts ...grpc.CallOption) (*GetSyncTasksRes, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetSyncTasksRes)
+	err := c.cc.Invoke(ctx, Game_GetSyncTasks_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // GameServer is the server API for Game service.
 // All implementations must embed UnimplementedGameServer
 // for forward compatibility.
@@ -150,6 +163,8 @@ type GameServer interface {
 	GetGamePlatforms(context.Context, *GetGamePlatformsReq) (*GetGamePlatformsRes, error)
 	// 用户注单统计（ClickHouse）
 	GetUserBetStats(context.Context, *GetUserBetStatsReq) (*GetUserBetStatsRes, error)
+	// 同步任务管理
+	GetSyncTasks(context.Context, *GetSyncTasksReq) (*GetSyncTasksRes, error)
 	mustEmbedUnimplementedGameServer()
 }
 
@@ -183,6 +198,9 @@ func (UnimplementedGameServer) GetGamePlatforms(context.Context, *GetGamePlatfor
 }
 func (UnimplementedGameServer) GetUserBetStats(context.Context, *GetUserBetStatsReq) (*GetUserBetStatsRes, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetUserBetStats not implemented")
+}
+func (UnimplementedGameServer) GetSyncTasks(context.Context, *GetSyncTasksReq) (*GetSyncTasksRes, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetSyncTasks not implemented")
 }
 func (UnimplementedGameServer) mustEmbedUnimplementedGameServer() {}
 func (UnimplementedGameServer) testEmbeddedByValue()              {}
@@ -349,6 +367,24 @@ func _Game_GetUserBetStats_Handler(srv interface{}, ctx context.Context, dec fun
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Game_GetSyncTasks_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetSyncTasksReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(GameServer).GetSyncTasks(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Game_GetSyncTasks_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(GameServer).GetSyncTasks(ctx, req.(*GetSyncTasksReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Game_ServiceDesc is the grpc.ServiceDesc for Game service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -387,6 +423,10 @@ var Game_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetUserBetStats",
 			Handler:    _Game_GetUserBetStats_Handler,
+		},
+		{
+			MethodName: "GetSyncTasks",
+			Handler:    _Game_GetSyncTasks_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

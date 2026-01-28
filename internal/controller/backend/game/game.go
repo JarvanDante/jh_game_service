@@ -56,3 +56,8 @@ func (*Controller) GetGamePlatforms(ctx context.Context, req *v1.GetGamePlatform
 func (*Controller) GetUserBetStats(ctx context.Context, req *v1.GetUserBetStatsReq) (res *v1.GetUserBetStatsRes, err error) {
 	return backend.Game().GetUserBetStats(ctx, req)
 }
+
+// GetSyncTasks 获取同步任务列表
+func (*Controller) GetSyncTasks(ctx context.Context, req *v1.GetSyncTasksReq) (res *v1.GetSyncTasksRes, err error) {
+	return backend.Game().GetSyncTasks(ctx, req)
+}

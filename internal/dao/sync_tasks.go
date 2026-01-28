@@ -5,7 +5,10 @@
 package dao
 
 import (
+	"context"
 	"jh_game_service/internal/dao/internal"
+
+	"github.com/gogf/gf/v2/database/gdb"
 )
 
 // syncTasksDao is the data access object for the table sync_tasks.
@@ -18,5 +21,12 @@ var (
 	// SyncTasks is a globally accessible object for table sync_tasks operations.
 	SyncTasks = syncTasksDao{internal.NewSyncTasksDao()}
 )
+
+// Ctx 重写Ctx方法，使用动态数据库连接
+func (d syncTasksDao) Ctx(ctx context.Context) *gdb.Model {
+	// 使用辅助函数获取动态Model
+	originalModel := d.SyncTasksDao.Ctx(ctx)
+	return GetDynamicModel(ctx, d.Table(), originalModel)
+}
 
 // Add your custom methods and functionality below.

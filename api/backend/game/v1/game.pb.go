@@ -2077,6 +2077,365 @@ func (x *PlatformStats) GetNetAmount() string {
 	return ""
 }
 
+// 获取同步任务列表请求
+type GetSyncTasksReq struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	SiteId        int32                  `protobuf:"varint,1,opt,name=site_id,json=siteId,proto3" json:"site_id" dc:"站点ID（可选，0表示不过滤）"`                  // 站点ID（可选，0表示不过滤）
+	SiteCode      string                 `protobuf:"bytes,2,opt,name=site_code,json=siteCode,proto3" json:"site_code" dc:"站点代码（可选）"`                    // 站点代码（可选）
+	Platform      string                 `protobuf:"bytes,3,opt,name=platform,proto3" json:"platform" dc:"平台（可选）"`                                      // 平台（可选）
+	TaskType      int32                  `protobuf:"varint,4,opt,name=task_type,json=taskType,proto3" json:"task_type" dc:"任务类型（可选）1=定时拉单 2=手动补单 0=全部"` // 任务类型（可选）1=定时拉单 2=手动补单 0=全部
+	Status        int32                  `protobuf:"varint,5,opt,name=status,proto3" json:"status" dc:"状态（可选）1=进行中 2=已完成 3=失败 0=全部"`                    // 状态（可选）1=进行中 2=已完成 3=失败 0=全部
+	Page          int32                  `protobuf:"varint,6,opt,name=page,proto3" json:"page" dc:"页码"`                                                 // 页码
+	Size          int32                  `protobuf:"varint,7,opt,name=size,proto3" json:"size" dc:"每页数量"`                                               // 每页数量
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetSyncTasksReq) Reset() {
+	*x = GetSyncTasksReq{}
+	mi := &file_backend_game_v1_game_proto_msgTypes[24]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetSyncTasksReq) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetSyncTasksReq) ProtoMessage() {}
+
+func (x *GetSyncTasksReq) ProtoReflect() protoreflect.Message {
+	mi := &file_backend_game_v1_game_proto_msgTypes[24]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetSyncTasksReq.ProtoReflect.Descriptor instead.
+func (*GetSyncTasksReq) Descriptor() ([]byte, []int) {
+	return file_backend_game_v1_game_proto_rawDescGZIP(), []int{24}
+}
+
+func (x *GetSyncTasksReq) GetSiteId() int32 {
+	if x != nil {
+		return x.SiteId
+	}
+	return 0
+}
+
+func (x *GetSyncTasksReq) GetSiteCode() string {
+	if x != nil {
+		return x.SiteCode
+	}
+	return ""
+}
+
+func (x *GetSyncTasksReq) GetPlatform() string {
+	if x != nil {
+		return x.Platform
+	}
+	return ""
+}
+
+func (x *GetSyncTasksReq) GetTaskType() int32 {
+	if x != nil {
+		return x.TaskType
+	}
+	return 0
+}
+
+func (x *GetSyncTasksReq) GetStatus() int32 {
+	if x != nil {
+		return x.Status
+	}
+	return 0
+}
+
+func (x *GetSyncTasksReq) GetPage() int32 {
+	if x != nil {
+		return x.Page
+	}
+	return 0
+}
+
+func (x *GetSyncTasksReq) GetSize() int32 {
+	if x != nil {
+		return x.Size
+	}
+	return 0
+}
+
+// 获取同步任务列表响应
+type GetSyncTasksRes struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	List          []*SyncTask            `protobuf:"bytes,1,rep,name=list,proto3" json:"list" dc:"任务列表"`    // 任务列表
+	Total         int32                  `protobuf:"varint,2,opt,name=total,proto3" json:"total" dc:"总记录数"` // 总记录数
+	Page          int32                  `protobuf:"varint,3,opt,name=page,proto3" json:"page" dc:"当前页码"`   // 当前页码
+	Size          int32                  `protobuf:"varint,4,opt,name=size,proto3" json:"size" dc:"每页数量"`   // 每页数量
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetSyncTasksRes) Reset() {
+	*x = GetSyncTasksRes{}
+	mi := &file_backend_game_v1_game_proto_msgTypes[25]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetSyncTasksRes) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetSyncTasksRes) ProtoMessage() {}
+
+func (x *GetSyncTasksRes) ProtoReflect() protoreflect.Message {
+	mi := &file_backend_game_v1_game_proto_msgTypes[25]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetSyncTasksRes.ProtoReflect.Descriptor instead.
+func (*GetSyncTasksRes) Descriptor() ([]byte, []int) {
+	return file_backend_game_v1_game_proto_rawDescGZIP(), []int{25}
+}
+
+func (x *GetSyncTasksRes) GetList() []*SyncTask {
+	if x != nil {
+		return x.List
+	}
+	return nil
+}
+
+func (x *GetSyncTasksRes) GetTotal() int32 {
+	if x != nil {
+		return x.Total
+	}
+	return 0
+}
+
+func (x *GetSyncTasksRes) GetPage() int32 {
+	if x != nil {
+		return x.Page
+	}
+	return 0
+}
+
+func (x *GetSyncTasksRes) GetSize() int32 {
+	if x != nil {
+		return x.Size
+	}
+	return 0
+}
+
+// 同步任务
+type SyncTask struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	Id              int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id" dc:"任务ID"`                                                         // 任务ID
+	SiteId          int32                  `protobuf:"varint,2,opt,name=site_id,json=siteId,proto3" json:"site_id" dc:"站点ID"`                                   // 站点ID
+	SiteCode        string                 `protobuf:"bytes,3,opt,name=site_code,json=siteCode,proto3" json:"site_code" dc:"站点代码"`                              // 站点代码
+	Platform        string                 `protobuf:"bytes,4,opt,name=platform,proto3" json:"platform" dc:"游戏平台"`                                              // 游戏平台
+	TaskType        int32                  `protobuf:"varint,5,opt,name=task_type,json=taskType,proto3" json:"task_type" dc:"任务类型 1=定时拉单 2=手动补单"`               // 任务类型 1=定时拉单 2=手动补单
+	StartTime       string                 `protobuf:"bytes,6,opt,name=start_time,json=startTime,proto3" json:"start_time" dc:"拉单开始时间"`                         // 拉单开始时间
+	EndTime         string                 `protobuf:"bytes,7,opt,name=end_time,json=endTime,proto3" json:"end_time" dc:"拉单结束时间"`                               // 拉单结束时间
+	MysqlTotal      int32                  `protobuf:"varint,8,opt,name=mysql_total,json=mysqlTotal,proto3" json:"mysql_total" dc:"MySQL总记录数"`                  // MySQL总记录数
+	MysqlInserted   int32                  `protobuf:"varint,9,opt,name=mysql_inserted,json=mysqlInserted,proto3" json:"mysql_inserted" dc:"MySQL新插入数"`         // MySQL新插入数
+	MysqlDuplicated int32                  `protobuf:"varint,10,opt,name=mysql_duplicated,json=mysqlDuplicated,proto3" json:"mysql_duplicated" dc:"MySQL重复跳过数"` // MySQL重复跳过数
+	MqSent          int32                  `protobuf:"varint,11,opt,name=mq_sent,json=mqSent,proto3" json:"mq_sent" dc:"MQ发送成功数"`                               // MQ发送成功数
+	MqFailed        int32                  `protobuf:"varint,12,opt,name=mq_failed,json=mqFailed,proto3" json:"mq_failed" dc:"MQ发送失败数"`                         // MQ发送失败数
+	MqSkipped       int32                  `protobuf:"varint,13,opt,name=mq_skipped,json=mqSkipped,proto3" json:"mq_skipped" dc:"MQ跳过数"`                        // MQ跳过数
+	ChSynced        int32                  `protobuf:"varint,14,opt,name=ch_synced,json=chSynced,proto3" json:"ch_synced" dc:"ClickHouse已同步数"`                  // ClickHouse已同步数
+	ChFailed        int32                  `protobuf:"varint,15,opt,name=ch_failed,json=chFailed,proto3" json:"ch_failed" dc:"ClickHouse同步失败数"`                 // ClickHouse同步失败数
+	Status          int32                  `protobuf:"varint,16,opt,name=status,proto3" json:"status" dc:"任务状态 1=进行中 2=已完成 3=失败"`                               // 任务状态 1=进行中 2=已完成 3=失败
+	ErrorMsg        string                 `protobuf:"bytes,17,opt,name=error_msg,json=errorMsg,proto3" json:"error_msg" dc:"错误信息"`                             // 错误信息
+	CreatedAt       string                 `protobuf:"bytes,18,opt,name=created_at,json=createdAt,proto3" json:"created_at" dc:"创建时间"`                          // 创建时间
+	UpdatedAt       string                 `protobuf:"bytes,19,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at" dc:"更新时间"`                          // 更新时间
+	CompletedAt     string                 `protobuf:"bytes,20,opt,name=completed_at,json=completedAt,proto3" json:"completed_at" dc:"完成时间"`                    // 完成时间
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *SyncTask) Reset() {
+	*x = SyncTask{}
+	mi := &file_backend_game_v1_game_proto_msgTypes[26]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SyncTask) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SyncTask) ProtoMessage() {}
+
+func (x *SyncTask) ProtoReflect() protoreflect.Message {
+	mi := &file_backend_game_v1_game_proto_msgTypes[26]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SyncTask.ProtoReflect.Descriptor instead.
+func (*SyncTask) Descriptor() ([]byte, []int) {
+	return file_backend_game_v1_game_proto_rawDescGZIP(), []int{26}
+}
+
+func (x *SyncTask) GetId() int64 {
+	if x != nil {
+		return x.Id
+	}
+	return 0
+}
+
+func (x *SyncTask) GetSiteId() int32 {
+	if x != nil {
+		return x.SiteId
+	}
+	return 0
+}
+
+func (x *SyncTask) GetSiteCode() string {
+	if x != nil {
+		return x.SiteCode
+	}
+	return ""
+}
+
+func (x *SyncTask) GetPlatform() string {
+	if x != nil {
+		return x.Platform
+	}
+	return ""
+}
+
+func (x *SyncTask) GetTaskType() int32 {
+	if x != nil {
+		return x.TaskType
+	}
+	return 0
+}
+
+func (x *SyncTask) GetStartTime() string {
+	if x != nil {
+		return x.StartTime
+	}
+	return ""
+}
+
+func (x *SyncTask) GetEndTime() string {
+	if x != nil {
+		return x.EndTime
+	}
+	return ""
+}
+
+func (x *SyncTask) GetMysqlTotal() int32 {
+	if x != nil {
+		return x.MysqlTotal
+	}
+	return 0
+}
+
+func (x *SyncTask) GetMysqlInserted() int32 {
+	if x != nil {
+		return x.MysqlInserted
+	}
+	return 0
+}
+
+func (x *SyncTask) GetMysqlDuplicated() int32 {
+	if x != nil {
+		return x.MysqlDuplicated
+	}
+	return 0
+}
+
+func (x *SyncTask) GetMqSent() int32 {
+	if x != nil {
+		return x.MqSent
+	}
+	return 0
+}
+
+func (x *SyncTask) GetMqFailed() int32 {
+	if x != nil {
+		return x.MqFailed
+	}
+	return 0
+}
+
+func (x *SyncTask) GetMqSkipped() int32 {
+	if x != nil {
+		return x.MqSkipped
+	}
+	return 0
+}
+
+func (x *SyncTask) GetChSynced() int32 {
+	if x != nil {
+		return x.ChSynced
+	}
+	return 0
+}
+
+func (x *SyncTask) GetChFailed() int32 {
+	if x != nil {
+		return x.ChFailed
+	}
+	return 0
+}
+
+func (x *SyncTask) GetStatus() int32 {
+	if x != nil {
+		return x.Status
+	}
+	return 0
+}
+
+func (x *SyncTask) GetErrorMsg() string {
+	if x != nil {
+		return x.ErrorMsg
+	}
+	return ""
+}
+
+func (x *SyncTask) GetCreatedAt() string {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return ""
+}
+
+func (x *SyncTask) GetUpdatedAt() string {
+	if x != nil {
+		return x.UpdatedAt
+	}
+	return ""
+}
+
+func (x *SyncTask) GetCompletedAt() string {
+	if x != nil {
+		return x.CompletedAt
+	}
+	return ""
+}
+
 var File_backend_game_v1_game_proto protoreflect.FileDescriptor
 
 const file_backend_game_v1_game_proto_rawDesc = "" +
@@ -2282,7 +2641,47 @@ const file_backend_game_v1_game_proto_rawDesc = "" +
 	"win_amount\x18\x04 \x01(\tR\twinAmount\x12!\n" +
 	"\fvalid_amount\x18\x05 \x01(\tR\vvalidAmount\x12\x1d\n" +
 	"\n" +
-	"net_amount\x18\x06 \x01(\tR\tnetAmount2\xb9\x04\n" +
+	"net_amount\x18\x06 \x01(\tR\tnetAmount\"\xc0\x01\n" +
+	"\x0fGetSyncTasksReq\x12\x17\n" +
+	"\asite_id\x18\x01 \x01(\x05R\x06siteId\x12\x1b\n" +
+	"\tsite_code\x18\x02 \x01(\tR\bsiteCode\x12\x1a\n" +
+	"\bplatform\x18\x03 \x01(\tR\bplatform\x12\x1b\n" +
+	"\ttask_type\x18\x04 \x01(\x05R\btaskType\x12\x16\n" +
+	"\x06status\x18\x05 \x01(\x05R\x06status\x12\x12\n" +
+	"\x04page\x18\x06 \x01(\x05R\x04page\x12\x12\n" +
+	"\x04size\x18\a \x01(\x05R\x04size\"s\n" +
+	"\x0fGetSyncTasksRes\x12\"\n" +
+	"\x04list\x18\x01 \x03(\v2\x0e.game.SyncTaskR\x04list\x12\x14\n" +
+	"\x05total\x18\x02 \x01(\x05R\x05total\x12\x12\n" +
+	"\x04page\x18\x03 \x01(\x05R\x04page\x12\x12\n" +
+	"\x04size\x18\x04 \x01(\x05R\x04size\"\xdb\x04\n" +
+	"\bSyncTask\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\x03R\x02id\x12\x17\n" +
+	"\asite_id\x18\x02 \x01(\x05R\x06siteId\x12\x1b\n" +
+	"\tsite_code\x18\x03 \x01(\tR\bsiteCode\x12\x1a\n" +
+	"\bplatform\x18\x04 \x01(\tR\bplatform\x12\x1b\n" +
+	"\ttask_type\x18\x05 \x01(\x05R\btaskType\x12\x1d\n" +
+	"\n" +
+	"start_time\x18\x06 \x01(\tR\tstartTime\x12\x19\n" +
+	"\bend_time\x18\a \x01(\tR\aendTime\x12\x1f\n" +
+	"\vmysql_total\x18\b \x01(\x05R\n" +
+	"mysqlTotal\x12%\n" +
+	"\x0emysql_inserted\x18\t \x01(\x05R\rmysqlInserted\x12)\n" +
+	"\x10mysql_duplicated\x18\n" +
+	" \x01(\x05R\x0fmysqlDuplicated\x12\x17\n" +
+	"\amq_sent\x18\v \x01(\x05R\x06mqSent\x12\x1b\n" +
+	"\tmq_failed\x18\f \x01(\x05R\bmqFailed\x12\x1d\n" +
+	"\n" +
+	"mq_skipped\x18\r \x01(\x05R\tmqSkipped\x12\x1b\n" +
+	"\tch_synced\x18\x0e \x01(\x05R\bchSynced\x12\x1b\n" +
+	"\tch_failed\x18\x0f \x01(\x05R\bchFailed\x12\x16\n" +
+	"\x06status\x18\x10 \x01(\x05R\x06status\x12\x1b\n" +
+	"\terror_msg\x18\x11 \x01(\tR\berrorMsg\x12\x1d\n" +
+	"\n" +
+	"created_at\x18\x12 \x01(\tR\tcreatedAt\x12\x1d\n" +
+	"\n" +
+	"updated_at\x18\x13 \x01(\tR\tupdatedAt\x12!\n" +
+	"\fcompleted_at\x18\x14 \x01(\tR\vcompletedAt2\xf9\x04\n" +
 	"\x04Game\x122\n" +
 	"\bGetGames\x12\x11.game.GetGamesReq\x1a\x11.game.GetGamesRes\"\x00\x12;\n" +
 	"\vUpdateGames\x12\x14.game.UpdateGamesReq\x1a\x14.game.UpdateGamesRes\"\x00\x12D\n" +
@@ -2291,7 +2690,8 @@ const file_backend_game_v1_game_proto_rawDesc = "" +
 	"\vGetGameList\x12\x14.game.GetGameListReq\x1a\x14.game.GetGameListRes\"\x00\x12P\n" +
 	"\x12UpdateGameListItem\x12\x1b.game.UpdateGameListItemReq\x1a\x1b.game.UpdateGameListItemRes\"\x00\x12J\n" +
 	"\x10GetGamePlatforms\x12\x19.game.GetGamePlatformsReq\x1a\x19.game.GetGamePlatformsRes\"\x00\x12G\n" +
-	"\x0fGetUserBetStats\x12\x18.game.GetUserBetStatsReq\x1a\x18.game.GetUserBetStatsRes\"\x00B%Z#jh_game_service/api/backend/game/v1b\x06proto3"
+	"\x0fGetUserBetStats\x12\x18.game.GetUserBetStatsReq\x1a\x18.game.GetUserBetStatsRes\"\x00\x12>\n" +
+	"\fGetSyncTasks\x12\x15.game.GetSyncTasksReq\x1a\x15.game.GetSyncTasksRes\"\x00B%Z#jh_game_service/api/backend/game/v1b\x06proto3"
 
 var (
 	file_backend_game_v1_game_proto_rawDescOnce sync.Once
@@ -2305,7 +2705,7 @@ func file_backend_game_v1_game_proto_rawDescGZIP() []byte {
 	return file_backend_game_v1_game_proto_rawDescData
 }
 
-var file_backend_game_v1_game_proto_msgTypes = make([]protoimpl.MessageInfo, 25)
+var file_backend_game_v1_game_proto_msgTypes = make([]protoimpl.MessageInfo, 28)
 var file_backend_game_v1_game_proto_goTypes = []any{
 	(*GetGamesReq)(nil),             // 0: game.GetGamesReq
 	(*GetGamesRes)(nil),             // 1: game.GetGamesRes
@@ -2331,10 +2731,13 @@ var file_backend_game_v1_game_proto_goTypes = []any{
 	(*GetUserBetStatsRes)(nil),      // 21: game.GetUserBetStatsRes
 	(*UserBetStats)(nil),            // 22: game.UserBetStats
 	(*PlatformStats)(nil),           // 23: game.PlatformStats
-	nil,                             // 24: game.GetGamesRes.DataEntry
+	(*GetSyncTasksReq)(nil),         // 24: game.GetSyncTasksReq
+	(*GetSyncTasksRes)(nil),         // 25: game.GetSyncTasksRes
+	(*SyncTask)(nil),                // 26: game.SyncTask
+	nil,                             // 27: game.GetGamesRes.DataEntry
 }
 var file_backend_game_v1_game_proto_depIdxs = []int32{
-	24, // 0: game.GetGamesRes.data:type_name -> game.GetGamesRes.DataEntry
+	27, // 0: game.GetGamesRes.data:type_name -> game.GetGamesRes.DataEntry
 	3,  // 1: game.GameTypeList.games:type_name -> game.GameInfo
 	5,  // 2: game.UpdateGamesReq.data:type_name -> game.GameUpdateInfo
 	9,  // 3: game.GetGameRecordsRes.data:type_name -> game.GameRecord
@@ -2342,28 +2745,31 @@ var file_backend_game_v1_game_proto_depIdxs = []int32{
 	19, // 5: game.GetGamePlatformsRes.platforms:type_name -> game.GamePlatform
 	22, // 6: game.GetUserBetStatsRes.stats:type_name -> game.UserBetStats
 	23, // 7: game.UserBetStats.platform_stats:type_name -> game.PlatformStats
-	2,  // 8: game.GetGamesRes.DataEntry.value:type_name -> game.GameTypeList
-	0,  // 9: game.Game.GetGames:input_type -> game.GetGamesReq
-	4,  // 10: game.Game.UpdateGames:input_type -> game.UpdateGamesReq
-	7,  // 11: game.Game.GetGameRecords:input_type -> game.GetGameRecordsReq
-	10, // 12: game.Game.SupplementBetRecords:input_type -> game.SupplementBetRecordsReq
-	12, // 13: game.Game.GetGameList:input_type -> game.GetGameListReq
-	15, // 14: game.Game.UpdateGameListItem:input_type -> game.UpdateGameListItemReq
-	17, // 15: game.Game.GetGamePlatforms:input_type -> game.GetGamePlatformsReq
-	20, // 16: game.Game.GetUserBetStats:input_type -> game.GetUserBetStatsReq
-	1,  // 17: game.Game.GetGames:output_type -> game.GetGamesRes
-	6,  // 18: game.Game.UpdateGames:output_type -> game.UpdateGamesRes
-	8,  // 19: game.Game.GetGameRecords:output_type -> game.GetGameRecordsRes
-	11, // 20: game.Game.SupplementBetRecords:output_type -> game.SupplementBetRecordsRes
-	13, // 21: game.Game.GetGameList:output_type -> game.GetGameListRes
-	16, // 22: game.Game.UpdateGameListItem:output_type -> game.UpdateGameListItemRes
-	18, // 23: game.Game.GetGamePlatforms:output_type -> game.GetGamePlatformsRes
-	21, // 24: game.Game.GetUserBetStats:output_type -> game.GetUserBetStatsRes
-	17, // [17:25] is the sub-list for method output_type
-	9,  // [9:17] is the sub-list for method input_type
-	9,  // [9:9] is the sub-list for extension type_name
-	9,  // [9:9] is the sub-list for extension extendee
-	0,  // [0:9] is the sub-list for field type_name
+	26, // 8: game.GetSyncTasksRes.list:type_name -> game.SyncTask
+	2,  // 9: game.GetGamesRes.DataEntry.value:type_name -> game.GameTypeList
+	0,  // 10: game.Game.GetGames:input_type -> game.GetGamesReq
+	4,  // 11: game.Game.UpdateGames:input_type -> game.UpdateGamesReq
+	7,  // 12: game.Game.GetGameRecords:input_type -> game.GetGameRecordsReq
+	10, // 13: game.Game.SupplementBetRecords:input_type -> game.SupplementBetRecordsReq
+	12, // 14: game.Game.GetGameList:input_type -> game.GetGameListReq
+	15, // 15: game.Game.UpdateGameListItem:input_type -> game.UpdateGameListItemReq
+	17, // 16: game.Game.GetGamePlatforms:input_type -> game.GetGamePlatformsReq
+	20, // 17: game.Game.GetUserBetStats:input_type -> game.GetUserBetStatsReq
+	24, // 18: game.Game.GetSyncTasks:input_type -> game.GetSyncTasksReq
+	1,  // 19: game.Game.GetGames:output_type -> game.GetGamesRes
+	6,  // 20: game.Game.UpdateGames:output_type -> game.UpdateGamesRes
+	8,  // 21: game.Game.GetGameRecords:output_type -> game.GetGameRecordsRes
+	11, // 22: game.Game.SupplementBetRecords:output_type -> game.SupplementBetRecordsRes
+	13, // 23: game.Game.GetGameList:output_type -> game.GetGameListRes
+	16, // 24: game.Game.UpdateGameListItem:output_type -> game.UpdateGameListItemRes
+	18, // 25: game.Game.GetGamePlatforms:output_type -> game.GetGamePlatformsRes
+	21, // 26: game.Game.GetUserBetStats:output_type -> game.GetUserBetStatsRes
+	25, // 27: game.Game.GetSyncTasks:output_type -> game.GetSyncTasksRes
+	19, // [19:28] is the sub-list for method output_type
+	10, // [10:19] is the sub-list for method input_type
+	10, // [10:10] is the sub-list for extension type_name
+	10, // [10:10] is the sub-list for extension extendee
+	0,  // [0:10] is the sub-list for field type_name
 }
 
 func init() { file_backend_game_v1_game_proto_init() }
@@ -2377,7 +2783,7 @@ func file_backend_game_v1_game_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_backend_game_v1_game_proto_rawDesc), len(file_backend_game_v1_game_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   25,
+			NumMessages:   28,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
