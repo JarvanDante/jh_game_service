@@ -313,7 +313,7 @@ func StartSyncBetToClickHouseConsumer(ctx context.Context) error {
 
 	// 设置 QoS - 预取更多消息用于批量处理
 	err = channel.Qos(
-		1000,  // prefetch count (批量处理1000条)
+		5000,  // prefetch count (批量处理5000条)
 		0,     // prefetch size
 		false, // global
 	)
@@ -346,7 +346,7 @@ func StartSyncBetToClickHouseConsumer(ctx context.Context) error {
 // batchProcessSyncBetMessages 批量处理同步注单消息
 func batchProcessSyncBetMessages(ctx context.Context, msgs <-chan amqp.Delivery) {
 	const (
-		batchSize    = 1000            // 批量大小：1000条
+		batchSize    = 5000            // 批量大小：5000条
 		flushTimeout = 5 * time.Second // 刷新超时时间：5秒
 	)
 
