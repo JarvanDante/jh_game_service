@@ -106,6 +106,7 @@ type PullRecordsParams struct {
 	Page      int             // 页码
 	PageSize  int             // 每页数量
 	SiteGame  entity.SiteGame // 游戏配置
+	TaskId    int64           // 同步任务ID（用于跟踪）
 }
 
 // GetGameSourceParams 游戏资源参数

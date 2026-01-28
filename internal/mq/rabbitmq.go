@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"jh_game_service/internal/dao"
+	"jh_game_service/internal/logic/sync_task"
 	"jh_game_service/internal/middleware"
 	"jh_game_service/internal/model/do"
 	"jh_game_service/internal/model/entity"
@@ -48,6 +49,7 @@ type SyncBetToClickHouseMessage struct {
 	BetTime     string  `json:"bet_time"`
 	SettleTime  string  `json:"settle_time"`
 	Status      uint8   `json:"status"`
+	TaskId      int64   `json:"task_id"` // 同步任务ID
 }
 
 // InitRabbitMQ 初始化RabbitMQ连接
@@ -352,6 +354,7 @@ func batchProcessSyncBetMessages(ctx context.Context, msgs <-chan amqp.Delivery)
 
 	var batch []*entity.ClickHouseBetRecord
 	var batchMsgs []amqp.Delivery
+	var batchTaskIds []int64 // 记录每条消息的task_id
 	ticker := time.NewTicker(flushTimeout)
 	defer ticker.Stop()
 
@@ -365,12 +368,40 @@ func batchProcessSyncBetMessages(ctx context.Context, msgs <-chan amqp.Delivery)
 		// 批量插入到 ClickHouse
 		if err := util.BatchInsertBetRecordsToCH(ctx, batch); err != nil {
 			g.Log().Errorf(ctx, "批量插入ClickHouse失败: %v", err)
+
+			// 更新任务失败统计
+			taskFailCount := make(map[int64]int)
+			for _, taskId := range batchTaskIds {
+				if taskId > 0 {
+					taskFailCount[taskId]++
+				}
+			}
+			for taskId, count := range taskFailCount {
+				if err := sync_task.IncrementClickHouseFailed(ctx, taskId, count); err != nil {
+					g.Log().Errorf(ctx, "更新任务失败统计失败: task_id=%d, err=%v", taskId, err)
+				}
+			}
+
 			// 批量Nack，重新入队
 			for _, msg := range batchMsgs {
 				msg.Nack(false, true)
 			}
 		} else {
 			g.Log().Infof(ctx, "批量插入ClickHouse成功: %d条记录", len(batch))
+
+			// 更新任务成功统计
+			taskSuccessCount := make(map[int64]int)
+			for _, taskId := range batchTaskIds {
+				if taskId > 0 {
+					taskSuccessCount[taskId]++
+				}
+			}
+			for taskId, count := range taskSuccessCount {
+				if err := sync_task.IncrementClickHouseSynced(ctx, taskId, count); err != nil {
+					g.Log().Errorf(ctx, "更新任务成功统计失败: task_id=%d, err=%v", taskId, err)
+				}
+			}
+
 			// 批量Ack
 			for _, msg := range batchMsgs {
 				msg.Ack(false)
@@ -380,6 +411,7 @@ func batchProcessSyncBetMessages(ctx context.Context, msgs <-chan amqp.Delivery)
 		// 清空批次
 		batch = batch[:0]
 		batchMsgs = batchMsgs[:0]
+		batchTaskIds = batchTaskIds[:0]
 	}
 
 	for {
@@ -393,7 +425,7 @@ func batchProcessSyncBetMessages(ctx context.Context, msgs <-chan amqp.Delivery)
 			}
 
 			// 解析消息
-			record, err := parseSyncBetMessage(ctx, msg)
+			record, taskId, err := parseSyncBetMessage(ctx, msg)
 			if err != nil {
 				g.Log().Errorf(ctx, "解析消息失败: %v, body: %s", err, string(msg.Body))
 				msg.Nack(false, false) // 丢弃无效消息
@@ -403,6 +435,7 @@ func batchProcessSyncBetMessages(ctx context.Context, msgs <-chan amqp.Delivery)
 			// 添加到批次
 			batch = append(batch, record)
 			batchMsgs = append(batchMsgs, msg)
+			batchTaskIds = append(batchTaskIds, taskId)
 
 			// 达到批量大小，立即刷新
 			if len(batch) >= batchSize {
@@ -421,10 +454,10 @@ func batchProcessSyncBetMessages(ctx context.Context, msgs <-chan amqp.Delivery)
 }
 
 // parseSyncBetMessage 解析同步注单消息
-func parseSyncBetMessage(ctx context.Context, msg amqp.Delivery) (*entity.ClickHouseBetRecord, error) {
+func parseSyncBetMessage(ctx context.Context, msg amqp.Delivery) (*entity.ClickHouseBetRecord, int64, error) {
 	var syncMsg SyncBetToClickHouseMessage
 	if err := json.Unmarshal(msg.Body, &syncMsg); err != nil {
-		return nil, fmt.Errorf("解析JSON失败: %w", err)
+		return nil, 0, fmt.Errorf("解析JSON失败: %w", err)
 	}
 
 	// 转换为 ClickHouse 记录
@@ -462,7 +495,7 @@ func parseSyncBetMessage(ctx context.Context, msg amqp.Delivery) (*entity.ClickH
 		}
 	}
 
-	return record, nil
+	return record, syncMsg.TaskId, nil
 }
 
 // handleSyncBetToClickHouseMessage 处理同步注单到 ClickHouse 消息（已废弃，使用批量处理）

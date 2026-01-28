@@ -6,6 +6,7 @@ import (
 	v1 "jh_game_service/api/backend/game/v1"
 	"jh_game_service/internal/dao"
 	"jh_game_service/internal/logic/frontend/game/platform"
+	"jh_game_service/internal/logic/sync_task"
 	"jh_game_service/internal/model/do"
 	"jh_game_service/internal/model/entity"
 	"jh_game_service/internal/registry"
@@ -443,10 +444,20 @@ func (s *sGame) SupplementBetRecords(ctx context.Context, req *v1.SupplementBetR
 
 		g.Log().Infof(ctx, "开始补单: 站点=%s, 平台=%s, 游戏=%s", siteCode, req.Platform, targetGame.Name)
 
+		// 创建同步任务
+		taskId, err := sync_task.CreateTask(ctx, siteId, siteCode, req.Platform, 2, req.StartTime, req.EndTime)
+		if err != nil {
+			g.Log().Errorf(ctx, "创建同步任务失败: 站点=%s, 错误=%v", siteCode, err)
+			taskId = 0 // 继续执行，不中断补单
+		}
+
 		// 创建游戏平台实例
 		gamePlatform, err := platform.GetFactory().Create(req.Platform)
 		if err != nil {
 			g.Log().Errorf(ctx, "创建游戏平台实例失败: 站点=%s, 错误=%v", siteCode, err)
+			if taskId > 0 {
+				sync_task.CompleteTask(ctx, taskId, 3, fmt.Sprintf("创建游戏平台实例失败: %v", err))
+			}
 			failedSites++
 			continue
 		}
@@ -467,12 +478,16 @@ func (s *sGame) SupplementBetRecords(ctx context.Context, req *v1.SupplementBetR
 			},
 			StartTime: req.StartTime,
 			EndTime:   req.EndTime,
+			TaskId:    taskId, // 传递任务ID
 		}
 
 		// 调用拉单方法
 		records, err := gamePlatform.PullBetRecords(ctx, params)
 		if err != nil {
 			g.Log().Errorf(ctx, "拉取注单失败: 站点=%s, 错误=%v", siteCode, err)
+			if taskId > 0 {
+				sync_task.CompleteTask(ctx, taskId, 3, fmt.Sprintf("拉取注单失败: %v", err))
+			}
 			failedSites++
 			continue
 		}
@@ -485,6 +500,11 @@ func (s *sGame) SupplementBetRecords(ctx context.Context, req *v1.SupplementBetR
 				siteCode, req.Platform, req.StartTime, req.EndTime)
 		} else {
 			g.Log().Infof(ctx, "补单拉取成功: 站点=%s, 记录数=%d", siteCode, recordCount)
+		}
+
+		// 完成任务
+		if taskId > 0 {
+			sync_task.CompleteTask(ctx, taskId, 2, "")
 		}
 
 		totalRecords += recordCount

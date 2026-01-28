@@ -88,9 +88,10 @@ var (
 			if err := mq.InitRabbitMQ(ctx); err != nil {
 				fmt.Printf("RabbitMQ连接初始化失败: %v（将跳过ClickHouse同步）\n", err)
 				g.Log().Errorf(ctx, "RabbitMQ连接初始化失败: %v", err)
-				// 不中断服务，继续运行
+				// 不中断服务，继续运行（但补单功能将无法使用）
 			} else {
 				fmt.Println("RabbitMQ连接初始化成功")
+				g.Log().Info(ctx, "RabbitMQ连接初始化成功")
 				defer mq.CloseRabbitMQ()
 			}
 

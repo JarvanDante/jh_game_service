@@ -8,6 +8,7 @@ import (
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/os/gcmd"
 	"jh_game_service/internal/logic/frontend/game/platform"
+	"jh_game_service/internal/logic/sync_task"
 	"jh_game_service/internal/model/entity"
 	"jh_game_service/internal/mq"
 	"jh_game_service/internal/registry"
@@ -244,45 +245,41 @@ func pullGameBetRecords(ctx context.Context, siteCode string, siteId int, gameCo
 		return 0, fmt.Errorf("创建游戏平台实例失败: %v", err)
 	}
 
+	// 确定任务类型和时间范围
+	var taskType int
+	var actualStartTime, actualEndTime string
+
 	// 如果指定了时间范围，使用指定的时间（补单模式）
 	if startTime != "" && endTime != "" {
+		taskType = 2 // 手动补单
+		actualStartTime = startTime
+		actualEndTime = endTime
 		fmt.Printf("  补单模式: %s ~ %s\n", startTime, endTime)
+	} else {
+		// 正常拉单模式：从配置读取时间参数
+		taskType = 1 // 定时拉单
+		pullMinutes := g.Cfg().MustGet(ctx, "betRecordsPuller.pullMinutes", 10).Int()
+		apiDelay := g.Cfg().MustGet(ctx, "betRecordsPuller.apiDelay", 5).Int()
 
-		// 构建拉单参数
-		params := &platform.PullRecordsParams{
-			SiteId:   siteId,
-			SiteCode: siteCode,
-			SiteGame: entity.SiteGame{
-				GameId:   gameConfig.GameId,
-				Type:     gameConfig.Type,
-				Name:     gameConfig.Name,
-				Platform: gameConfig.Platform,
-				DbName:   gameConfig.DbName,
-				ApiId:    gameConfig.ApiId,
-				ApiKey:   gameConfig.ApiKey,
-				ApiUrl:   gameConfig.ApiUrl,
-			},
-			StartTime: startTime,
-			EndTime:   endTime,
-		}
+		// 计算时间范围
+		now := time.Now()
+		endTimeCalc := now.Add(-time.Duration(apiDelay) * time.Minute)
+		startTimeCalc := endTimeCalc.Add(-time.Duration(pullMinutes) * time.Minute)
 
-		// 调用拉单方法
-		records, err := gamePlatform.PullBetRecords(ctx, params)
-		if err != nil {
-			return 0, fmt.Errorf("拉取注单失败: %v", err)
-		}
-
-		return len(records), nil
+		actualStartTime = startTimeCalc.Format("2006-01-02 15:04:05")
+		actualEndTime = endTimeCalc.Format("2006-01-02 15:04:05")
+		fmt.Printf("  时间范围: %s ~ %s\n", actualStartTime, actualEndTime)
 	}
 
-	// 正常拉单模式：从配置读取时间参数
-	pullMinutes := g.Cfg().MustGet(ctx, "betRecordsPuller.pullMinutes", 10).Int()
-	apiDelay := g.Cfg().MustGet(ctx, "betRecordsPuller.apiDelay", 5).Int()
-
-	// 计算时间范围
-	now := time.Now()
-	endTimeCalc := now.Add(-time.Duration(apiDelay) * time.Minute)
-	startTimeCalc := endTimeCalc.Add(-time.Duration(pullMinutes) * time.Minute)
+	// 创建同步任务
+	taskId, err := sync_task.CreateTask(ctx, siteId, siteCode, gameConfig.Platform, taskType, actualStartTime, actualEndTime)
+	if err != nil {
+		fmt.Printf("  创建同步任务失败: %v\n", err)
+		// 不中断拉单，继续执行
+		taskId = 0
+	} else {
+		fmt.Printf("  创建同步任务成功: task_id=%d\n", taskId)
+	}
 
 	// 构建拉单参数
 	params := &platform.PullRecordsParams{
@@ -298,14 +295,25 @@ func pullGameBetRecords(ctx context.Context, siteCode string, siteId int, gameCo
 			ApiKey:   gameConfig.ApiKey,
 			ApiUrl:   gameConfig.ApiUrl,
 		},
-		StartTime: startTimeCalc.Format("2006-01-02 15:04:05"),
-		EndTime:   endTimeCalc.Format("2006-01-02 15:04:05"),
+		StartTime: actualStartTime,
+		EndTime:   actualEndTime,
+		TaskId:    taskId, // 传递任务ID
 	}
 
-	fmt.Printf("  时间范围: %s ~ %s\n", params.StartTime, params.EndTime)
-
-	// 调用拉单方法（内部已处理批量入库MySQL）
+	// 调用拉单方法（内部已处理批量入库MySQL和更新任务统计）
 	records, err := gamePlatform.PullBetRecords(ctx, params)
+
+	// 完成任务
+	if taskId > 0 {
+		if err != nil {
+			// 拉单失败，标记任务失败
+			sync_task.CompleteTask(ctx, taskId, 3, fmt.Sprintf("拉单失败: %v", err))
+		} else {
+			// 拉单成功，标记任务完成
+			sync_task.CompleteTask(ctx, taskId, 2, "")
+		}
+	}
+
 	if err != nil {
 		return 0, fmt.Errorf("拉取注单失败: %v", err)
 	}

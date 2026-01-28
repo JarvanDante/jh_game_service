@@ -13,6 +13,7 @@ import (
 	balanceV1 "jh_game_service/api/grpc/balance/v1"
 	"jh_game_service/internal/consts"
 	"jh_game_service/internal/logic/frontend/game/platform"
+	"jh_game_service/internal/logic/sync_task"
 	"jh_game_service/internal/mq"
 	"jh_game_service/internal/registry"
 	"jh_game_service/internal/util"
@@ -677,11 +678,25 @@ func (p *OnePlatform) PullBetRecords(ctx context.Context, params *platform.PullR
 
 	g.Log().Infof(ctx, "ONE平台拉单完成: 总记录数=%d", len(allRecords))
 
-	// 批量入库到MySQL
+	// 批量入库到MySQL并发送MQ消息
 	if len(allRecords) > 0 {
-		if err := p.saveBetRecordsToMySQL(ctx, params, allRecords); err != nil {
+		stats, err := p.saveBetRecordsToMySQL(ctx, params, allRecords, params.TaskId)
+		if err != nil {
 			g.Log().Errorf(ctx, "批量入库失败: %v", err)
 			return allRecords, err
+		}
+
+		// 如果有任务ID，更新任务统计
+		if params.TaskId > 0 && stats != nil {
+			// 更新MySQL统计
+			if err := sync_task.UpdateMySQLStats(ctx, params.TaskId, stats.MysqlTotal, stats.MysqlInserted, stats.MysqlDuplicated); err != nil {
+				g.Log().Errorf(ctx, "更新MySQL统计失败: %v", err)
+			}
+
+			// 更新MQ统计
+			if err := sync_task.UpdateMQStats(ctx, params.TaskId, stats.MqSent, stats.MqFailed, stats.MqSkipped); err != nil {
+				g.Log().Errorf(ctx, "更新MQ统计失败: %v", err)
+			}
 		}
 	}
 
@@ -1200,16 +1215,31 @@ func (p *OnePlatform) syncGamesToDatabase(ctx context.Context, params *platform.
 	g.Log().Infof(ctx, "游戏同步完成: 成功=%d, 失败=%d", successCount, errorCount)
 	return nil
 }
-func (p *OnePlatform) saveBetRecordsToMySQL(ctx context.Context, params *platform.PullRecordsParams, records []platform.BetRecord) error {
+
+// SyncStats 同步统计信息
+type SyncStats struct {
+	MysqlTotal      int // MySQL总记录数
+	MysqlInserted   int // MySQL新插入数
+	MysqlDuplicated int // MySQL重复跳过数
+	MqSent          int // MQ发送成功数
+	MqFailed        int // MQ发送失败数
+	MqSkipped       int // MQ跳过数
+}
+
+func (p *OnePlatform) saveBetRecordsToMySQL(ctx context.Context, params *platform.PullRecordsParams, records []platform.BetRecord, taskId int64) (*SyncStats, error) {
+	stats := &SyncStats{
+		MysqlTotal: len(records),
+	}
+
 	if len(records) == 0 {
-		return nil
+		return stats, nil
 	}
 
 	// 使用动态数据库配置
 	groupName := fmt.Sprintf("site_%s", params.SiteCode)
 	db := g.DB(groupName)
 	if db == nil {
-		return fmt.Errorf("数据库连接不存在: %s", groupName)
+		return stats, fmt.Errorf("数据库连接不存在: %s", groupName)
 	}
 
 	// 1. 批量查询 user_mapping 获取 user_id
@@ -1285,33 +1315,36 @@ func (p *OnePlatform) saveBetRecordsToMySQL(ctx context.Context, params *platfor
 			"status":         record.Status,
 			"raw_data":       record.RawData,
 			"ch_sync_status": 0,
+			"task_id":        taskId, // 关联任务ID
 		})
 	}
 
 	if len(insertData) == 0 {
 		g.Log().Warning(ctx, "没有有效的注单数据可插入")
-		return nil
+		return stats, nil
 	}
 
 	// 批量插入到 bet_records 表
-	_, err := db.Model("bet_records").Data(insertData).InsertIgnore()
+	result, err := db.Model("bet_records").Data(insertData).InsertIgnore()
 	if err != nil {
-		return fmt.Errorf("批量插入注单失败: %v", err)
+		return stats, fmt.Errorf("批量插入注单失败: %v", err)
 	}
 
-	g.Log().Infof(ctx, "批量入库MySQL成功: 站点=%s, 插入 %d 条", params.SiteCode, len(insertData))
+	// 获取实际插入的行数
+	rowsAffected, _ := result.RowsAffected()
+	stats.MysqlInserted = int(rowsAffected)
+	stats.MysqlDuplicated = len(insertData) - stats.MysqlInserted
+
+	g.Log().Infof(ctx, "批量入库MySQL成功: 站点=%s, 总数=%d, 新插入=%d, 重复跳过=%d",
+		params.SiteCode, len(insertData), stats.MysqlInserted, stats.MysqlDuplicated)
 
 	// 3. 批量发送 MQ 消息同步到 ClickHouse（只同步已结算且有user_id的注单）
 	g.Log().Infof(ctx, "开始发送MQ消息: 总记录数=%d", len(records))
 
-	syncCount := 0
-	skipCount := 0
-	failCount := 0
-
 	for _, record := range records {
 		// 只同步已结算的注单 (status=1)
 		if record.Status != 1 {
-			skipCount++
+			stats.MqSkipped++
 			continue
 		}
 
@@ -1319,7 +1352,7 @@ func (p *OnePlatform) saveBetRecordsToMySQL(ctx context.Context, params *platfor
 		if userId == 0 {
 			// 没有映射的用户跳过同步
 			g.Log().Warningf(ctx, "用户 %s 没有映射，跳过同步", record.Username)
-			skipCount++
+			stats.MqSkipped++
 			continue
 		}
 
@@ -1348,19 +1381,20 @@ func (p *OnePlatform) saveBetRecordsToMySQL(ctx context.Context, params *platfor
 			BetTime:     record.BetTime,
 			SettleTime:  record.SettleTime,
 			Status:      uint8(record.Status),
+			TaskId:      taskId, // 关联任务ID
 		}
 
 		// 发送 MQ 消息（同步发送，确保消息发送成功）
 		if err := mq.PublishBetToClickHouse(ctx, mqMsg); err != nil {
 			g.Log().Errorf(ctx, "发送注单同步消息失败: order=%s, err=%v", record.OrderNo, err)
-			failCount++
+			stats.MqFailed++
 		} else {
-			syncCount++
+			stats.MqSent++
 		}
 	}
 
 	g.Log().Infof(ctx, "MQ消息发送统计: 站点=%s, 成功=%d, 失败=%d, 跳过=%d",
-		params.SiteCode, syncCount, failCount, skipCount)
+		params.SiteCode, stats.MqSent, stats.MqFailed, stats.MqSkipped)
 
-	return nil
+	return stats, nil
 }
