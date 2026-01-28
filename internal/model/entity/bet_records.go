@@ -31,6 +31,7 @@ type BetRecords struct {
 	Status       int         `json:"status"       orm:"status"         description:"状态:0未结算,1已结算,2取消,3无效"`
 	RawData      string      `json:"rawData"      orm:"raw_data"       description:"原始数据JSON"`
 	ChSyncStatus int         `json:"chSyncStatus" orm:"ch_sync_status" description:"0未同步,1成功,2失败"`
+	TaskId       int64       `json:"taskId"       orm:"task_id"        description:"同步任务ID"`
 	ChSyncAt     *gtime.Time `json:"chSyncAt"     orm:"ch_sync_at"     description:"同步时间"`
 	ChSyncError  string      `json:"chSyncError"  orm:"ch_sync_error"  description:"同步错误"`
 	CreatedAt    *gtime.Time `json:"createdAt"    orm:"created_at"     description:"创建时间"`

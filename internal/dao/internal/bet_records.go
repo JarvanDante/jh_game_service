@@ -42,6 +42,7 @@ type BetRecordsColumns struct {
 	Status       string // 状态:0未结算,1已结算,2取消,3无效
 	RawData      string // 原始数据JSON
 	ChSyncStatus string // 0未同步,1成功,2失败
+	TaskId       string // 同步任务ID
 	ChSyncAt     string // 同步时间
 	ChSyncError  string // 同步错误
 	CreatedAt    string // 创建时间
@@ -71,6 +72,7 @@ var betRecordsColumns = BetRecordsColumns{
 	Status:       "status",
 	RawData:      "raw_data",
 	ChSyncStatus: "ch_sync_status",
+	TaskId:       "task_id",
 	ChSyncAt:     "ch_sync_at",
 	ChSyncError:  "ch_sync_error",
 	CreatedAt:    "created_at",

@@ -33,6 +33,7 @@ type BetRecords struct {
 	Status       any         // 状态:0未结算,1已结算,2取消,3无效
 	RawData      any         // 原始数据JSON
 	ChSyncStatus any         // 0未同步,1成功,2失败
+	TaskId       any         // 同步任务ID
 	ChSyncAt     *gtime.Time // 同步时间
 	ChSyncError  any         // 同步错误
 	CreatedAt    *gtime.Time // 创建时间
