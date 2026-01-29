@@ -1122,7 +1122,7 @@ func (s *sGame) GetSyncTasks(ctx context.Context, req *v1.GetSyncTasksReq) (*v1.
 	}
 
 	// 构建查询条件
-	query := dao.SyncTask.Ctx(ctx)
+	query := dao.SyncTasks.Ctx(ctx)
 
 	// 站点ID过滤（0表示不过滤）
 	if req.SiteId > 0 {

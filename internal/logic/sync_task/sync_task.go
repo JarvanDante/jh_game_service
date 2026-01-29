@@ -35,7 +35,7 @@ func CreateTask(ctx context.Context, siteId int, siteCode, platform string, task
 		UpdatedAt: gtime.Now(),
 	}
 
-	result, err := dao.SyncTask.Ctx(ctx).Insert(task)
+	result, err := dao.SyncTasks.Ctx(ctx).Insert(task)
 	if err != nil {
 		return 0, fmt.Errorf("创建同步任务失败: %v", err)
 	}
@@ -53,7 +53,7 @@ func CreateTask(ctx context.Context, siteId int, siteCode, platform string, task
 
 // UpdateMySQLStats 更新MySQL统计
 func UpdateMySQLStats(ctx context.Context, taskId int64, total, inserted, duplicated int) error {
-	_, err := dao.SyncTask.Ctx(ctx).
+	_, err := dao.SyncTasks.Ctx(ctx).
 		Where("id", taskId).
 		Data(do.SyncTask{
 			MysqlTotal:      total,
@@ -75,7 +75,7 @@ func UpdateMySQLStats(ctx context.Context, taskId int64, total, inserted, duplic
 
 // UpdateMQStats 更新MQ统计
 func UpdateMQStats(ctx context.Context, taskId int64, sent, failed, skipped int) error {
-	_, err := dao.SyncTask.Ctx(ctx).
+	_, err := dao.SyncTasks.Ctx(ctx).
 		Where("id", taskId).
 		Data(do.SyncTask{
 			MqSent:    sent,
@@ -97,7 +97,7 @@ func UpdateMQStats(ctx context.Context, taskId int64, sent, failed, skipped int)
 
 // UpdateClickHouseStats 更新ClickHouse统计（由消费者调用）
 func UpdateClickHouseStats(ctx context.Context, taskId int64, synced, failed int) error {
-	_, err := dao.SyncTask.Ctx(ctx).
+	_, err := dao.SyncTasks.Ctx(ctx).
 		Where("id", taskId).
 		Data(do.SyncTask{
 			ChSynced:  synced,
@@ -115,7 +115,7 @@ func UpdateClickHouseStats(ctx context.Context, taskId int64, synced, failed int
 
 // IncrementClickHouseSynced 增加ClickHouse已同步数（原子操作）
 func IncrementClickHouseSynced(ctx context.Context, taskId int64, count int) error {
-	_, err := dao.SyncTask.Ctx(ctx).
+	_, err := dao.SyncTasks.Ctx(ctx).
 		Where("id", taskId).
 		Increment("ch_synced", count)
 
@@ -128,7 +128,7 @@ func IncrementClickHouseSynced(ctx context.Context, taskId int64, count int) err
 
 // IncrementClickHouseFailed 增加ClickHouse失败数（原子操作）
 func IncrementClickHouseFailed(ctx context.Context, taskId int64, count int) error {
-	_, err := dao.SyncTask.Ctx(ctx).
+	_, err := dao.SyncTasks.Ctx(ctx).
 		Where("id", taskId).
 		Increment("ch_failed", count)
 
@@ -151,7 +151,7 @@ func CompleteTask(ctx context.Context, taskId int64, status int, errorMsg string
 		updateData.ErrorMsg = errorMsg
 	}
 
-	_, err := dao.SyncTask.Ctx(ctx).
+	_, err := dao.SyncTasks.Ctx(ctx).
 		Where("id", taskId).
 		Data(updateData).
 		Update()
@@ -168,7 +168,7 @@ func CompleteTask(ctx context.Context, taskId int64, status int, errorMsg string
 // GetTask 获取任务详情
 func GetTask(ctx context.Context, taskId int64) (*entity.SyncTask, error) {
 	var task entity.SyncTask
-	err := dao.SyncTask.Ctx(ctx).
+	err := dao.SyncTasks.Ctx(ctx).
 		Where("id", taskId).
 		Scan(&task)
 
@@ -181,7 +181,7 @@ func GetTask(ctx context.Context, taskId int64) (*entity.SyncTask, error) {
 
 // GetTaskList 获取任务列表
 func GetTaskList(ctx context.Context, siteId int, platform string, taskType int, page, pageSize int) ([]*entity.SyncTask, int, error) {
-	query := dao.SyncTask.Ctx(ctx)
+	query := dao.SyncTasks.Ctx(ctx)
 
 	// 过滤条件
 	if siteId > 0 {
