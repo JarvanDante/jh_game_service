@@ -30,3 +30,8 @@ func (*Controller) GetGameCategories(ctx context.Context, req *v1.GetGameCategor
 func (*Controller) GetGameList(ctx context.Context, req *v1.GetGameListReq) (res *v1.GetGameListRes, err error) {
 	return frontend.Game().GetGameList(ctx, req)
 }
+
+// GetGameBalance 获取游戏余额
+func (*Controller) GetGameBalance(ctx context.Context, req *v1.GetGameBalanceReq) (res *v1.GetGameBalanceRes, err error) {
+	return frontend.Game().GetGameBalance(ctx, req)
+}

@@ -8,6 +8,7 @@ service Game {
     rpc RedirectToGame(RedirectToGameReq) returns (RedirectToGameRes) {}
     rpc GetGameCategories(GetGameCategoriesReq) returns (GetGameCategoriesRes) {}
     rpc GetGameList(GetGameListReq) returns (GetGameListRes) {}
+    rpc GetGameBalance(GetGameBalanceReq) returns (GetGameBalanceRes) {}
 }
 
 message RedirectToGameReq {
@@ -70,4 +71,14 @@ message GameItem {
     int32 status = 13;             // 状态
     int32 sort = 14;               // 排序
     int32 game_id = 15;            // 游戏ID（从site_game表获取）
+}
+
+message GetGameBalanceReq {
+    int32 game_id = 1;             // 游戏ID
+}
+
+message GetGameBalanceRes {
+    float balance = 1;             // 游戏余额
+    bool success = 2;              // 是否成功
+    string message = 3;            // 消息
 }

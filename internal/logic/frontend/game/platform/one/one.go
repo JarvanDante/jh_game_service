@@ -8,14 +8,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/gogf/gf/v2/frame/g"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 	balanceV1 "jh_game_service/api/grpc/balance/v1"
 	"jh_game_service/internal/consts"
+	"jh_game_service/internal/grpc_client"
 	"jh_game_service/internal/logic/frontend/game/platform"
 	"jh_game_service/internal/logic/sync_task"
 	"jh_game_service/internal/mq"
-	"jh_game_service/internal/registry"
 	"jh_game_service/internal/util"
 	"math/rand"
 	"strconv"
@@ -55,7 +53,7 @@ func (p *OnePlatform) GetGameUrl(ctx context.Context, params *platform.GameParam
 	traceId, _ := p.generateUUID()
 
 	// 3. 获取最后一次游戏记录和用户余额
-	balanceClient, conn, err := p.getBalanceClient(ctx)
+	balanceClient, conn, err := grpc_client.GetBalanceClient(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("连接balance服务失败: %v", err)
 	}
@@ -356,7 +354,7 @@ func (p *OnePlatform) TransferIn(ctx context.Context, params *platform.TransferP
 	// 1. 调用balance服务扣款
 	g.Log().Info(ctx, "正在连接balance服务: jh_balance_service")
 
-	balanceClient, conn, err := p.getBalanceClient(ctx)
+	balanceClient, conn, err := grpc_client.GetBalanceClient(ctx)
 	if err != nil {
 		return fmt.Errorf("连接balance服务失败: %v", err)
 	}
@@ -450,7 +448,7 @@ func (p *OnePlatform) TransferOut(ctx context.Context, params *platform.Transfer
 	// 1. 调用balance服务创建pending订单（Type=1，不扣用户余额）
 	g.Log().Info(ctx, "正在连接balance服务: jh_balance_service")
 
-	balanceClient, conn, err := p.getBalanceClient(ctx)
+	balanceClient, conn, err := grpc_client.GetBalanceClient(ctx)
 	if err != nil {
 		return fmt.Errorf("连接balance服务失败: %v", err)
 	}
@@ -841,27 +839,6 @@ func (p *OnePlatform) getSignature(data interface{}, secretKey string) (string, 
 	h.Write(b)
 
 	return hex.EncodeToString(h.Sum(nil)), nil
-}
-
-// getBalanceClient 获取balance服务客户端
-func (p *OnePlatform) getBalanceClient(ctx context.Context) (balanceV1.BalanceClient, *grpc.ClientConn, error) {
-	// 从Consul获取balance服务地址
-	addr, err := registry.GetServiceAddr("jh_balance_service")
-	if err != nil {
-		return nil, nil, fmt.Errorf("从Consul获取balance服务地址失败: %v", err)
-	}
-
-	g.Log().Infof(ctx, "balance服务地址: %s", addr)
-
-	// 创建gRPC连接
-	conn, err := grpc.NewClient(
-		addr,
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-	if err != nil {
-		return nil, nil, fmt.Errorf("无法连接到balance服务: %v", err)
-	}
-	return balanceV1.NewBalanceClient(conn), conn, nil
 }
 
 // compensateBalance 补偿余额

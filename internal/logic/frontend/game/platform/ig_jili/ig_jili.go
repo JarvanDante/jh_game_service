@@ -9,19 +9,18 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"github.com/gogf/gf/v2/frame/g"
-	"github.com/gogf/gf/v2/util/gconv"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
-	balanceV1 "jh_game_service/api/grpc/balance/v1"
-	"jh_game_service/internal/logic/frontend/game/platform"
-	"jh_game_service/internal/registry"
-	"jh_game_service/internal/util"
 	"math"
 	mrand "math/rand"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/gogf/gf/v2/frame/g"
+	"github.com/gogf/gf/v2/util/gconv"
+	balanceV1 "jh_game_service/api/grpc/balance/v1"
+	"jh_game_service/internal/grpc_client"
+	"jh_game_service/internal/logic/frontend/game/platform"
+	"jh_game_service/internal/util"
 )
 
 // IGJiliPlatform JILI游戏平台实现
@@ -56,7 +55,7 @@ func (p *IGJiliPlatform) GetGameUrl(ctx context.Context, params *platform.GamePa
 	key, _ := p.generateKey(buildUsername, params)
 
 	// 3. 获取最后一次游戏记录和用户余额
-	balanceClient, conn, err := p.getBalanceClient(ctx)
+	balanceClient, conn, err := grpc_client.GetBalanceClient(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("连接balance服务失败: %v", err)
 	}
@@ -326,7 +325,7 @@ func (p *IGJiliPlatform) TransferIn(ctx context.Context, params *platform.Transf
 	// 1. 调用balance服务扣款
 	g.Log().Info(ctx, "正在连接balance服务: jh_balance_service")
 
-	balanceClient, conn, err := p.getBalanceClient(ctx)
+	balanceClient, conn, err := grpc_client.GetBalanceClient(ctx)
 	if err != nil {
 		return fmt.Errorf("连接balance服务失败: %v", err)
 	}
@@ -511,7 +510,7 @@ func (p *IGJiliPlatform) TransferOut(ctx context.Context, params *platform.Trans
 	// 1. 调用balance服务创建pending订单（Type=1，不扣用户余额）
 	g.Log().Info(ctx, "正在连接balance服务: jh_balance_service")
 
-	balanceClient, conn, err := p.getBalanceClient(ctx)
+	balanceClient, conn, err := grpc_client.GetBalanceClient(ctx)
 	if err != nil {
 		return fmt.Errorf("连接balance服务失败: %v", err)
 	}
@@ -905,27 +904,6 @@ func (p *IGJiliPlatform) getSignature(data interface{}, secretKey string) (strin
 	h.Write(b)
 
 	return hex.EncodeToString(h.Sum(nil)), nil
-}
-
-// getBalanceClient 获取balance服务客户端
-func (p *IGJiliPlatform) getBalanceClient(ctx context.Context) (balanceV1.BalanceClient, *grpc.ClientConn, error) {
-	// 从Consul获取balance服务地址
-	addr, err := registry.GetServiceAddr("jh_balance_service")
-	if err != nil {
-		return nil, nil, fmt.Errorf("从Consul获取balance服务地址失败: %v", err)
-	}
-
-	g.Log().Infof(ctx, "balance服务地址: %s", addr)
-
-	// 创建gRPC连接
-	conn, err := grpc.NewClient(
-		addr,
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-	if err != nil {
-		return nil, nil, fmt.Errorf("无法连接到balance服务: %v", err)
-	}
-	return balanceV1.NewBalanceClient(conn), conn, nil
 }
 
 // compensateBalance 补偿余额

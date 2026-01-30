@@ -352,3 +352,116 @@ func (s *sGame) GetGameList(ctx context.Context, req *v1.GetGameListReq) (*v1.Ge
 		Total: int32(total),
 	}, nil
 }
+
+//GetGameBalance
+/**
+ * @desc：获取游戏余额
+ * @param ctx
+ * @param req
+ * @return *v1.GetGameBalanceRes
+ * @return error
+ * @author : Carson
+ */
+func (s *sGame) GetGameBalance(ctx context.Context, req *v1.GetGameBalanceReq) (*v1.GetGameBalanceRes, error) {
+	if req == nil || req.GameId <= 0 {
+		return &v1.GetGameBalanceRes{
+			Balance: 0,
+			Success: false,
+			Message: "游戏ID无效",
+		}, nil
+	}
+
+	// 1. 获取站点和用户信息
+	siteCode, ok := middleware.GetSiteCodeFromContext(ctx)
+	if !ok {
+		return &v1.GetGameBalanceRes{
+			Balance: 0,
+			Success: false,
+			Message: "获取站点信息失败",
+		}, nil
+	}
+
+	userId, siteId, err := middleware.GetUserInfoFromContext(ctx)
+	if err != nil {
+		return &v1.GetGameBalanceRes{
+			Balance: 0,
+			Success: false,
+			Message: "获取用户信息失败",
+		}, nil
+	}
+
+	username := middleware.GetUsernameFromContext(ctx)
+	if username == "" {
+		return &v1.GetGameBalanceRes{
+			Balance: 0,
+			Success: false,
+			Message: "用户名不能为空",
+		}, nil
+	}
+
+	currency := middleware.GetCurrencyFromContext(ctx)
+	if currency == "" {
+		currency = "MMK(K)"
+	}
+
+	g.Log().Infof(ctx, "查询游戏余额: site_id=%d, user_id=%d, username=%s, game_id=%d",
+		siteId, userId, username, req.GameId)
+
+	// 2. 查询游戏配置
+	gameConfig, err := GetGameConfigById(ctx, siteId, int(req.GameId))
+	if err != nil {
+		g.Log().Errorf(ctx, "查询游戏配置失败: %v", err)
+		return &v1.GetGameBalanceRes{
+			Balance: 0,
+			Success: false,
+			Message: fmt.Sprintf("查询游戏配置失败: %v", err),
+		}, nil
+	}
+
+	g.Log().Infof(ctx, "游戏配置: GameId=%d, Platform=%s, Name=%s",
+		gameConfig.GameId, gameConfig.Platform, gameConfig.Name)
+
+	// 3. 使用工厂创建游戏平台实例
+	gamePlatform, err := platform.GetFactory().Create(gameConfig.Platform)
+	if err != nil {
+		g.Log().Errorf(ctx, "创建游戏平台实例失败: %v", err)
+		return &v1.GetGameBalanceRes{
+			Balance: 0,
+			Success: false,
+			Message: fmt.Sprintf("创建游戏平台实例失败: %v", err),
+		}, nil
+	}
+
+	g.Log().Infof(ctx, "成功创建游戏平台实例: %s", gameConfig.Platform)
+
+	// 4. 构建游戏参数
+	params := &platform.GameParams{
+		SiteId:   siteId,
+		UserId:   userId,
+		Username: username,
+		SiteCode: siteCode,
+		Currency: currency,
+		SiteGame: *gameConfig,
+	}
+
+	g.Log().Infof(ctx, "游戏参数: GameId=%d, ApiUrl=%s", params.SiteGame.GameId, params.SiteGame.ApiUrl)
+
+	// 5. 查询游戏余额
+	balance, err := gamePlatform.GetBalance(ctx, params)
+	if err != nil {
+		g.Log().Errorf(ctx, "查询游戏余额失败: %v", err)
+		return &v1.GetGameBalanceRes{
+			Balance: 0,
+			Success: false,
+			Message: fmt.Sprintf("查询游戏余额失败: %v", err),
+		}, nil
+	}
+
+	g.Log().Infof(ctx, "查询游戏余额成功: game_id=%d, balance=%.2f", req.GameId, balance)
+
+	return &v1.GetGameBalanceRes{
+		Balance: float32(balance),
+		Success: true,
+		Message: "查询成功",
+	}, nil
+}
