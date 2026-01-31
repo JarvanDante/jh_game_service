@@ -55,13 +55,13 @@ func (p *IGJiliPlatform) GetGameUrl(ctx context.Context, params *platform.GamePa
 	key, _ := p.generateKey(buildUsername, params)
 
 	// 3. 获取最后一次游戏记录和用户余额
-	balanceClient, conn, err := grpc_client.GetBalanceClient(ctx)
+	newCtx, balanceClient, conn, err := grpc_client.GetBalanceClientWithMetadata(ctx, params.SiteId)
 	if err != nil {
 		return nil, fmt.Errorf("连接balance服务失败: %v", err)
 	}
 	defer conn.Close()
 
-	lastGameRes, err := balanceClient.GetLastBalanceLogGame(ctx, &balanceV1.GetLastBalanceLogGameReq{
+	lastGameRes, err := balanceClient.GetLastBalanceLogGame(newCtx, &balanceV1.GetLastBalanceLogGameReq{
 		SiteId: int32(params.SiteId),
 		UserId: int32(params.UserId),
 	})
@@ -148,7 +148,7 @@ func (p *IGJiliPlatform) GetGameUrl(ctx context.Context, params *platform.GamePa
 				g.Log().Infof(ctx, "从旧游戏转出成功: %.2f", oldGameBalance)
 
 				// 重新查询中心钱包余额
-				lastGameRes2, err := balanceClient.GetLastBalanceLogGame(ctx, &balanceV1.GetLastBalanceLogGameReq{
+				lastGameRes2, err := balanceClient.GetLastBalanceLogGame(newCtx, &balanceV1.GetLastBalanceLogGameReq{
 					SiteId: int32(params.SiteId),
 					UserId: int32(params.UserId),
 				})
@@ -325,7 +325,7 @@ func (p *IGJiliPlatform) TransferIn(ctx context.Context, params *platform.Transf
 	// 1. 调用balance服务扣款
 	g.Log().Info(ctx, "正在连接balance服务: jh_balance_service")
 
-	balanceClient, conn, err := grpc_client.GetBalanceClient(ctx)
+	newCtx, balanceClient, conn, err := grpc_client.GetBalanceClientWithMetadata(ctx, params.SiteId)
 	if err != nil {
 		return fmt.Errorf("连接balance服务失败: %v", err)
 	}
@@ -334,7 +334,7 @@ func (p *IGJiliPlatform) TransferIn(ctx context.Context, params *platform.Transf
 	g.Log().Infof(ctx, "balance服务连接成功，准备调用AdjustBalance: siteId=%d, userId=%d, amount=%.2f",
 		params.SiteId, params.UserId, params.Amount)
 
-	adjustRes, err := balanceClient.AdjustBalance(ctx, &balanceV1.AdjustBalanceReq{
+	adjustRes, err := balanceClient.AdjustBalance(newCtx, &balanceV1.AdjustBalanceReq{
 		SiteId:   int32(params.SiteId),
 		UserId:   int32(params.UserId),
 		Amount:   float32(params.Amount),
@@ -378,7 +378,7 @@ func (p *IGJiliPlatform) TransferIn(ctx context.Context, params *platform.Transf
 	if err != nil {
 		g.Log().Errorf(ctx, "游戏API请求失败: %v", err)
 		// 转账失败，需要补偿余额
-		p.compensateBalance(ctx, balanceClient, params.SiteId, params.UserId, adjustRes.OrderNo, params.Amount)
+		p.compensateBalance(newCtx, balanceClient, params.SiteId, params.UserId, adjustRes.OrderNo, params.Amount)
 		return fmt.Errorf("游戏API请求失败: %v", err)
 	}
 
@@ -387,7 +387,7 @@ func (p *IGJiliPlatform) TransferIn(ctx context.Context, params *platform.Transf
 	if res["http_code"] != 200 {
 		g.Log().Errorf(ctx, "网络请求失败，请稍后再试。HTTP代码:%s", res["http_code"])
 		// 转账失败，需要补偿余额
-		p.compensateBalance(ctx, balanceClient, params.SiteId, params.UserId, adjustRes.OrderNo, params.Amount)
+		p.compensateBalance(newCtx, balanceClient, params.SiteId, params.UserId, adjustRes.OrderNo, params.Amount)
 		return fmt.Errorf("网络请求失败，请稍后再试。HTTP代码:%s", res["http_code"])
 	}
 
@@ -396,7 +396,7 @@ func (p *IGJiliPlatform) TransferIn(ctx context.Context, params *platform.Transf
 	if !exists {
 		g.Log().Errorf(ctx, "游戏API返回格式错误，缺少body字段")
 		// 转账失败，需要补偿余额
-		p.compensateBalance(ctx, balanceClient, params.SiteId, params.UserId, adjustRes.OrderNo, params.Amount)
+		p.compensateBalance(newCtx, balanceClient, params.SiteId, params.UserId, adjustRes.OrderNo, params.Amount)
 		return fmt.Errorf("游戏API返回格式错误，缺少body字段")
 	}
 
@@ -417,7 +417,7 @@ func (p *IGJiliPlatform) TransferIn(ctx context.Context, params *platform.Transf
 		}
 	default:
 		// 转账失败，需要补偿余额
-		p.compensateBalance(ctx, balanceClient, params.SiteId, params.UserId, adjustRes.OrderNo, params.Amount)
+		p.compensateBalance(newCtx, balanceClient, params.SiteId, params.UserId, adjustRes.OrderNo, params.Amount)
 		return fmt.Errorf("游戏API返回格式错误，body字段类型不正确: %T", bodyValue)
 	}
 
@@ -426,7 +426,7 @@ func (p *IGJiliPlatform) TransferIn(ctx context.Context, params *platform.Transf
 	if err := json.Unmarshal(bodyBytes, &dataMap); err != nil {
 		g.Log().Errorf(ctx, "解析游戏API响应失败: %v, body: %s", err, string(bodyBytes))
 		// 转账失败，需要补偿余额
-		p.compensateBalance(ctx, balanceClient, params.SiteId, params.UserId, adjustRes.OrderNo, params.Amount)
+		p.compensateBalance(newCtx, balanceClient, params.SiteId, params.UserId, adjustRes.OrderNo, params.Amount)
 		return fmt.Errorf("解析游戏API响应失败: %v", err)
 	}
 
@@ -461,7 +461,7 @@ func (p *IGJiliPlatform) TransferIn(ctx context.Context, params *platform.Transf
 	if errorCode != 0 {
 		g.Log().Errorf(ctx, "TransferIn游戏转账失败。错误代码:%d, 消息:%s", errorCode, message)
 		// 转账失败，需要补偿余额
-		p.compensateBalance(ctx, balanceClient, params.SiteId, params.UserId, adjustRes.OrderNo, params.Amount)
+		p.compensateBalance(newCtx, balanceClient, params.SiteId, params.UserId, adjustRes.OrderNo, params.Amount)
 		return fmt.Errorf("TransferIn游戏转账失败。错误代码:%d, 消息:%s", errorCode, message)
 	}
 	//url=https://wb-api-2.richjourney888.com/api1/ExchangeTransferByAgentId,
@@ -486,7 +486,7 @@ func (p *IGJiliPlatform) TransferIn(ctx context.Context, params *platform.Transf
 	}
 
 	// 更新转账状态
-	_, err = balanceClient.UpdateTransferStatus(ctx, &balanceV1.UpdateTransferStatusReq{
+	_, err = balanceClient.UpdateTransferStatus(newCtx, &balanceV1.UpdateTransferStatusReq{
 		OrderNo: adjustRes.OrderNo,
 	})
 	if err != nil {
@@ -510,7 +510,7 @@ func (p *IGJiliPlatform) TransferOut(ctx context.Context, params *platform.Trans
 	// 1. 调用balance服务创建pending订单（Type=1，不扣用户余额）
 	g.Log().Info(ctx, "正在连接balance服务: jh_balance_service")
 
-	balanceClient, conn, err := grpc_client.GetBalanceClient(ctx)
+	newCtx, balanceClient, conn, err := grpc_client.GetBalanceClientWithMetadata(ctx, params.SiteId)
 	if err != nil {
 		return fmt.Errorf("连接balance服务失败: %v", err)
 	}
@@ -519,7 +519,7 @@ func (p *IGJiliPlatform) TransferOut(ctx context.Context, params *platform.Trans
 	g.Log().Infof(ctx, "balance服务连接成功，准备调用AdjustBalance: siteId=%d, userId=%d, amount=%.2f, type=1(转出)",
 		params.SiteId, params.UserId, params.Amount)
 
-	adjustRes, err := balanceClient.AdjustBalance(ctx, &balanceV1.AdjustBalanceReq{
+	adjustRes, err := balanceClient.AdjustBalance(newCtx, &balanceV1.AdjustBalanceReq{
 		SiteId:   int32(params.SiteId),
 		UserId:   int32(params.UserId),
 		Amount:   float32(params.Amount),
@@ -562,7 +562,7 @@ func (p *IGJiliPlatform) TransferOut(ctx context.Context, params *platform.Trans
 	res, err := util.SendRequest(url, data)
 	if err != nil {
 		// 转出失败，标记订单失败
-		p.markTransferFailed(ctx, balanceClient, adjustRes.OrderNo)
+		p.markTransferFailed(newCtx, balanceClient, adjustRes.OrderNo)
 		return fmt.Errorf("游戏API请求失败: %v", err)
 	}
 
@@ -571,7 +571,7 @@ func (p *IGJiliPlatform) TransferOut(ctx context.Context, params *platform.Trans
 	if res["http_code"] != 200 {
 		g.Log().Errorf(ctx, "网络请求失败，请稍后再试。HTTP代码:%s", res["http_code"])
 		// 转出失败，标记订单失败
-		p.markTransferFailed(ctx, balanceClient, adjustRes.OrderNo)
+		p.markTransferFailed(newCtx, balanceClient, adjustRes.OrderNo)
 		return fmt.Errorf("网络请求失败，请稍后再试。HTTP代码:%s", res["http_code"])
 	}
 
@@ -580,7 +580,7 @@ func (p *IGJiliPlatform) TransferOut(ctx context.Context, params *platform.Trans
 	if !exists {
 		g.Log().Errorf(ctx, "游戏API返回格式错误，缺少body字段")
 		// 转出失败，标记订单失败
-		p.markTransferFailed(ctx, balanceClient, adjustRes.OrderNo)
+		p.markTransferFailed(newCtx, balanceClient, adjustRes.OrderNo)
 		return fmt.Errorf("游戏API返回格式错误，缺少body字段")
 	}
 
@@ -601,7 +601,7 @@ func (p *IGJiliPlatform) TransferOut(ctx context.Context, params *platform.Trans
 		}
 	default:
 		// 转出失败，标记订单失败
-		p.markTransferFailed(ctx, balanceClient, adjustRes.OrderNo)
+		p.markTransferFailed(newCtx, balanceClient, adjustRes.OrderNo)
 		return fmt.Errorf("游戏API返回格式错误，body字段类型不正确: %T", bodyValue)
 	}
 
@@ -610,7 +610,7 @@ func (p *IGJiliPlatform) TransferOut(ctx context.Context, params *platform.Trans
 	if err := json.Unmarshal(bodyBytes, &dataMap); err != nil {
 		g.Log().Errorf(ctx, "解析游戏API响应失败: %v, body: %s", err, string(bodyBytes))
 		// 转出失败，标记订单失败
-		p.markTransferFailed(ctx, balanceClient, adjustRes.OrderNo)
+		p.markTransferFailed(newCtx, balanceClient, adjustRes.OrderNo)
 		return fmt.Errorf("解析游戏API响应失败: %v", err)
 	}
 
@@ -645,7 +645,7 @@ func (p *IGJiliPlatform) TransferOut(ctx context.Context, params *platform.Trans
 	if errorCode != 0 {
 		g.Log().Errorf(ctx, "游戏转出失败。错误代码:%d, 消息:%s", errorCode, message)
 		// 转出失败，标记订单失败
-		p.markTransferFailed(ctx, balanceClient, adjustRes.OrderNo)
+		p.markTransferFailed(newCtx, balanceClient, adjustRes.OrderNo)
 		return fmt.Errorf("游戏转出失败。错误代码:%d, 消息:%s", errorCode, message)
 	}
 
@@ -655,18 +655,18 @@ func (p *IGJiliPlatform) TransferOut(ctx context.Context, params *platform.Trans
 	resDataMap, ok := resData.(map[string]interface{})
 	if !ok {
 		// 转出失败，标记订单失败
-		p.markTransferFailed(ctx, balanceClient, adjustRes.OrderNo)
+		p.markTransferFailed(newCtx, balanceClient, adjustRes.OrderNo)
 		return fmt.Errorf("resData 类型错误，不是对象")
 	}
 
 	if gconv.Int(resDataMap["Status"]) != 1 {
 		// 转出失败，标记订单失败
-		p.markTransferFailed(ctx, balanceClient, adjustRes.OrderNo)
+		p.markTransferFailed(newCtx, balanceClient, adjustRes.OrderNo)
 		return fmt.Errorf("输出失败")
 	}
 
 	// 更新转账状态（增加用户余额）
-	_, err = balanceClient.UpdateTransferStatus(ctx, &balanceV1.UpdateTransferStatusReq{
+	_, err = balanceClient.UpdateTransferStatus(newCtx, &balanceV1.UpdateTransferStatusReq{
 		OrderNo: adjustRes.OrderNo,
 	})
 	if err != nil {

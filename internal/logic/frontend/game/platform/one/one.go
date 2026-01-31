@@ -53,13 +53,13 @@ func (p *OnePlatform) GetGameUrl(ctx context.Context, params *platform.GameParam
 	traceId, _ := p.generateUUID()
 
 	// 3. 获取最后一次游戏记录和用户余额
-	balanceClient, conn, err := grpc_client.GetBalanceClient(ctx)
+	newCtx, balanceClient, conn, err := grpc_client.GetBalanceClientWithMetadata(ctx, params.SiteId)
 	if err != nil {
 		return nil, fmt.Errorf("连接balance服务失败: %v", err)
 	}
 	defer conn.Close()
 
-	lastGameRes, err := balanceClient.GetLastBalanceLogGame(ctx, &balanceV1.GetLastBalanceLogGameReq{
+	lastGameRes, err := balanceClient.GetLastBalanceLogGame(newCtx, &balanceV1.GetLastBalanceLogGameReq{
 		SiteId: int32(params.SiteId),
 		UserId: int32(params.UserId),
 	})
@@ -141,7 +141,7 @@ func (p *OnePlatform) GetGameUrl(ctx context.Context, params *platform.GameParam
 				g.Log().Infof(ctx, "从旧游戏转出成功: %.2f", oldGameBalance)
 
 				// 重新查询中心钱包余额
-				lastGameRes2, err := balanceClient.GetLastBalanceLogGame(ctx, &balanceV1.GetLastBalanceLogGameReq{
+				lastGameRes2, err := balanceClient.GetLastBalanceLogGame(newCtx, &balanceV1.GetLastBalanceLogGameReq{
 					SiteId: int32(params.SiteId),
 					UserId: int32(params.UserId),
 				})
@@ -354,7 +354,7 @@ func (p *OnePlatform) TransferIn(ctx context.Context, params *platform.TransferP
 	// 1. 调用balance服务扣款
 	g.Log().Info(ctx, "正在连接balance服务: jh_balance_service")
 
-	balanceClient, conn, err := grpc_client.GetBalanceClient(ctx)
+	newCtx, balanceClient, conn, err := grpc_client.GetBalanceClientWithMetadata(ctx, params.SiteId)
 	if err != nil {
 		return fmt.Errorf("连接balance服务失败: %v", err)
 	}
@@ -363,7 +363,7 @@ func (p *OnePlatform) TransferIn(ctx context.Context, params *platform.TransferP
 	g.Log().Infof(ctx, "balance服务连接成功，准备调用AdjustBalance: siteId=%d, userId=%d, amount=%.2f",
 		params.SiteId, params.UserId, params.Amount)
 
-	adjustRes, err := balanceClient.AdjustBalance(ctx, &balanceV1.AdjustBalanceReq{
+	adjustRes, err := balanceClient.AdjustBalance(newCtx, &balanceV1.AdjustBalanceReq{
 		SiteId:   int32(params.SiteId),
 		UserId:   int32(params.UserId),
 		Amount:   float32(params.Amount),
@@ -399,7 +399,7 @@ func (p *OnePlatform) TransferIn(ctx context.Context, params *platform.TransferP
 	signature, err := p.getSignature(data, params.SiteGame.ApiKey)
 	if err != nil {
 		// 失败：补偿余额
-		p.compensateBalance(ctx, balanceClient, params.SiteId, params.UserId, adjustRes.OrderNo, params.Amount)
+		p.compensateBalance(newCtx, balanceClient, params.SiteId, params.UserId, adjustRes.OrderNo, params.Amount)
 		return err
 	}
 
@@ -413,7 +413,7 @@ func (p *OnePlatform) TransferIn(ctx context.Context, params *platform.TransferP
 	res, err := util.CurlPostHeader(url, headers, data)
 	if err != nil {
 		// 失败：补偿余额
-		p.compensateBalance(ctx, balanceClient, params.SiteId, params.UserId, adjustRes.OrderNo, params.Amount)
+		p.compensateBalance(newCtx, balanceClient, params.SiteId, params.UserId, adjustRes.OrderNo, params.Amount)
 		return fmt.Errorf("游戏API请求失败: %v", err)
 	}
 
@@ -421,12 +421,12 @@ func (p *OnePlatform) TransferIn(ctx context.Context, params *platform.TransferP
 	status, _ := res["status"].(string)
 	if status != "SC_OK" {
 		// 失败：补偿余额
-		p.compensateBalance(ctx, balanceClient, params.SiteId, params.UserId, adjustRes.OrderNo, params.Amount)
+		p.compensateBalance(newCtx, balanceClient, params.SiteId, params.UserId, adjustRes.OrderNo, params.Amount)
 		return fmt.Errorf("转账失败: %s", status)
 	}
 
 	// 4. 成功：更新转账状态
-	_, err = balanceClient.UpdateTransferStatus(ctx, &balanceV1.UpdateTransferStatusReq{
+	_, err = balanceClient.UpdateTransferStatus(newCtx, &balanceV1.UpdateTransferStatusReq{
 		OrderNo: adjustRes.OrderNo,
 	})
 	if err != nil {
@@ -448,7 +448,7 @@ func (p *OnePlatform) TransferOut(ctx context.Context, params *platform.Transfer
 	// 1. 调用balance服务创建pending订单（Type=1，不扣用户余额）
 	g.Log().Info(ctx, "正在连接balance服务: jh_balance_service")
 
-	balanceClient, conn, err := grpc_client.GetBalanceClient(ctx)
+	newCtx, balanceClient, conn, err := grpc_client.GetBalanceClientWithMetadata(ctx, params.SiteId)
 	if err != nil {
 		return fmt.Errorf("连接balance服务失败: %v", err)
 	}
@@ -457,7 +457,7 @@ func (p *OnePlatform) TransferOut(ctx context.Context, params *platform.Transfer
 	g.Log().Infof(ctx, "balance服务连接成功，准备调用AdjustBalance: siteId=%d, userId=%d, amount=%.2f, type=1(转出)",
 		params.SiteId, params.UserId, params.Amount)
 
-	adjustRes, err := balanceClient.AdjustBalance(ctx, &balanceV1.AdjustBalanceReq{
+	adjustRes, err := balanceClient.AdjustBalance(newCtx, &balanceV1.AdjustBalanceReq{
 		SiteId:   int32(params.SiteId),
 		UserId:   int32(params.UserId),
 		Amount:   float32(params.Amount),
@@ -498,7 +498,7 @@ func (p *OnePlatform) TransferOut(ctx context.Context, params *platform.Transfer
 	signature, err := p.getSignature(data, params.SiteGame.ApiKey)
 	if err != nil {
 		// 失败：标记订单失败（转出失败不需要补偿余额）
-		p.markTransferFailed(ctx, balanceClient, adjustRes.OrderNo)
+		p.markTransferFailed(newCtx, balanceClient, adjustRes.OrderNo)
 		return err
 	}
 
@@ -513,7 +513,7 @@ func (p *OnePlatform) TransferOut(ctx context.Context, params *platform.Transfer
 	res, err := util.CurlPostHeader(url, headers, data)
 	if err != nil {
 		// 失败：标记订单失败
-		p.markTransferFailed(ctx, balanceClient, adjustRes.OrderNo)
+		p.markTransferFailed(newCtx, balanceClient, adjustRes.OrderNo)
 		return fmt.Errorf("游戏API请求失败: %v", err)
 	}
 
@@ -521,12 +521,12 @@ func (p *OnePlatform) TransferOut(ctx context.Context, params *platform.Transfer
 	status, _ := res["status"].(string)
 	if status != "SC_OK" {
 		// 失败：标记订单失败
-		p.markTransferFailed(ctx, balanceClient, adjustRes.OrderNo)
+		p.markTransferFailed(newCtx, balanceClient, adjustRes.OrderNo)
 		return fmt.Errorf("转出失败: %s", status)
 	}
 
 	// 4. 成功：更新转账状态（会增加用户余额）
-	_, err = balanceClient.UpdateTransferStatus(ctx, &balanceV1.UpdateTransferStatusReq{
+	_, err = balanceClient.UpdateTransferStatus(newCtx, &balanceV1.UpdateTransferStatusReq{
 		OrderNo: adjustRes.OrderNo,
 	})
 	if err != nil {
