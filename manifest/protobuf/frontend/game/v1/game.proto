@@ -9,6 +9,7 @@ service Game {
     rpc GetGameCategories(GetGameCategoriesReq) returns (GetGameCategoriesRes) {}
     rpc GetGameList(GetGameListReq) returns (GetGameListRes) {}
     rpc GetGameBalance(GetGameBalanceReq) returns (GetGameBalanceRes) {}
+    rpc RecallGameBalance(RecallGameBalanceReq) returns (RecallGameBalanceRes) {}
 }
 
 message RedirectToGameReq {
@@ -78,7 +79,18 @@ message GetGameBalanceReq {
 }
 
 message GetGameBalanceRes {
-    float balance = 1;             // 游戏余额
+    double balance = 1;            // 游戏余额（使用double保持精度）
     bool success = 2;              // 是否成功
     string message = 3;            // 消息
+}
+
+message RecallGameBalanceReq {
+}
+
+message RecallGameBalanceRes {
+    bool success = 1;              // 是否成功
+    string message = 2;            // 消息
+    double recalled_amount = 3;    // 回收的金额（使用double保持精度）
+    int32 game_id = 4;             // 回收的游戏ID
+    string game_name = 5;          // 回收的游戏名称
 }

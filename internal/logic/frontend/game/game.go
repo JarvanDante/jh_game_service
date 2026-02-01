@@ -6,7 +6,9 @@ import (
 	"github.com/gogf/gf/v2/frame/g"
 	"google.golang.org/grpc/metadata"
 	v1 "jh_game_service/api/frontend/game/v1"
+	balanceV1 "jh_game_service/api/grpc/balance/v1"
 	"jh_game_service/internal/dao"
+	grpc_client "jh_game_service/internal/grpc_client"
 	"jh_game_service/internal/logic/frontend/game/platform"
 	_ "jh_game_service/internal/logic/frontend/game/platform/ig_jili" // 自动注册IG_JILI平台
 	_ "jh_game_service/internal/logic/frontend/game/platform/one"     // 自动注册ONE平台
@@ -457,11 +459,190 @@ func (s *sGame) GetGameBalance(ctx context.Context, req *v1.GetGameBalanceReq) (
 		}, nil
 	}
 
-	g.Log().Infof(ctx, "查询游戏余额成功: game_id=%d, balance=%.2f", req.GameId, balance)
+	g.Log().Infof(ctx, "查询游戏余额成功: game_id=%d, balance=%.4f", req.GameId, balance)
 
 	return &v1.GetGameBalanceRes{
-		Balance: float32(balance),
+		Balance: balance,
 		Success: true,
 		Message: "查询成功",
+	}, nil
+}
+
+// RecallGameBalance 一键回收游戏余额
+/**
+ * @desc：一键回收三方游戏余额到中心钱包
+ * @param ctx
+ * @param req
+ * @return *v1.RecallGameBalanceRes
+ * @return error
+ * @author : AI Assistant
+ */
+func (s *sGame) RecallGameBalance(ctx context.Context, req *v1.RecallGameBalanceReq) (*v1.RecallGameBalanceRes, error) {
+	// 1. 获取站点和用户信息
+	siteCode, ok := middleware.GetSiteCodeFromContext(ctx)
+	if !ok {
+		return &v1.RecallGameBalanceRes{
+			Success: false,
+			Message: "获取站点信息失败",
+		}, nil
+	}
+
+	userId, siteId, err := middleware.GetUserInfoFromContext(ctx)
+	if err != nil {
+		return &v1.RecallGameBalanceRes{
+			Success: false,
+			Message: "获取用户信息失败",
+		}, nil
+	}
+
+	username := middleware.GetUsernameFromContext(ctx)
+	if username == "" {
+		return &v1.RecallGameBalanceRes{
+			Success: false,
+			Message: "用户名不能为空",
+		}, nil
+	}
+
+	currency := middleware.GetCurrencyFromContext(ctx)
+	if currency == "" {
+		currency = "MMK(K)"
+	}
+
+	g.Log().Infof(ctx, "一键回收游戏余额: site_id=%d, user_id=%d, username=%s", siteId, userId, username)
+
+	// 2. 调用 balance 服务获取 lastGameId
+	balanceClient, conn, err := grpc_client.GetBalanceClient(ctx)
+	if err != nil {
+		g.Log().Errorf(ctx, "连接balance服务失败: %v", err)
+		return &v1.RecallGameBalanceRes{
+			Success: false,
+			Message: "连接余额服务失败",
+		}, nil
+	}
+	defer conn.Close()
+
+	// 添加 metadata
+	md := metadata.New(map[string]string{
+		"site_id":   fmt.Sprintf("%d", siteId),
+		"user_id":   fmt.Sprintf("%d", userId),
+		"username":  username,
+		"site_code": siteCode,
+		"currency":  currency,
+	})
+	ctx = metadata.NewOutgoingContext(ctx, md)
+
+	// 获取最后进入的游戏ID
+	lastGameRes, err := balanceClient.GetLastBalanceLogGame(ctx, &balanceV1.GetLastBalanceLogGameReq{
+		SiteId: int32(siteId),
+		UserId: int32(userId),
+	})
+
+	if err != nil {
+		g.Log().Errorf(ctx, "查询最后游戏ID失败: %v", err)
+		return &v1.RecallGameBalanceRes{
+			Success: false,
+			Message: "查询游戏状态失败",
+		}, nil
+	}
+
+	lastGameId := int(lastGameRes.GameId)
+	g.Log().Infof(ctx, "最后游戏ID: %d", lastGameId)
+
+	// 3. 如果 lastGameId <= 0，说明用户没有在游戏中
+	if lastGameId <= 0 {
+		g.Log().Infof(ctx, "用户未在游戏中，无需回收")
+		return &v1.RecallGameBalanceRes{
+			Success:        true,
+			Message:        "无需回收，您当前未在游戏中",
+			RecalledAmount: 0,
+			GameId:         0,
+			GameName:       "",
+		}, nil
+	}
+
+	// 4. 查询游戏配置
+	gameConfig, err := GetGameConfigById(ctx, siteId, lastGameId)
+	if err != nil {
+		g.Log().Errorf(ctx, "查询游戏配置失败: %v", err)
+		return &v1.RecallGameBalanceRes{
+			Success: false,
+			Message: "查询游戏配置失败",
+		}, nil
+	}
+
+	g.Log().Infof(ctx, "游戏配置: GameId=%d, Platform=%s, Name=%s", gameConfig.GameId, gameConfig.Platform, gameConfig.Name)
+
+	// 5. 创建游戏平台实例
+	gamePlatform, err := platform.GetFactory().Create(gameConfig.Platform)
+	if err != nil {
+		g.Log().Errorf(ctx, "创建游戏平台实例失败: %v", err)
+		return &v1.RecallGameBalanceRes{
+			Success: false,
+			Message: "创建游戏平台实例失败",
+		}, nil
+	}
+
+	// 6. 构建游戏参数
+	params := &platform.GameParams{
+		SiteId:   siteId,
+		UserId:   userId,
+		Username: username,
+		SiteCode: siteCode,
+		Currency: currency,
+		SiteGame: *gameConfig,
+	}
+
+	// 7. 查询游戏余额
+	gameBalance, err := gamePlatform.GetBalance(ctx, params)
+	if err != nil {
+		g.Log().Errorf(ctx, "查询游戏余额失败: %v", err)
+		return &v1.RecallGameBalanceRes{
+			Success: false,
+			Message: "查询游戏余额失败",
+		}, nil
+	}
+
+	g.Log().Infof(ctx, "游戏余额: %.2f", gameBalance)
+
+	// 8. 如果游戏余额 <= 0，无需回收
+	if gameBalance <= 0 {
+		g.Log().Infof(ctx, "游戏余额为0，无需回收")
+		return &v1.RecallGameBalanceRes{
+			Success:        true,
+			Message:        "无需回收，游戏余额为0",
+			RecalledAmount: 0,
+			GameId:         int32(lastGameId),
+			GameName:       gameConfig.Name,
+		}, nil
+	}
+
+	// 9. 从游戏转出余额到中心钱包
+	transferParams := &platform.TransferParams{
+		SiteId:   siteId,
+		UserId:   userId,
+		Username: username,
+		SiteCode: siteCode,
+		Currency: currency,
+		Amount:   gameBalance,
+		SiteGame: *gameConfig,
+	}
+
+	err = gamePlatform.TransferOut(ctx, transferParams)
+	if err != nil {
+		g.Log().Errorf(ctx, "转出游戏余额失败: %v", err)
+		return &v1.RecallGameBalanceRes{
+			Success: false,
+			Message: fmt.Sprintf("回收失败: %v", err),
+		}, nil
+	}
+
+	g.Log().Infof(ctx, "一键回收成功: game_id=%d, game_name=%s, amount=%.3f", lastGameId, gameConfig.Name, gameBalance)
+
+	return &v1.RecallGameBalanceRes{
+		Success:        true,
+		Message:        "回收成功",
+		RecalledAmount: gameBalance,
+		GameId:         int32(lastGameId),
+		GameName:       gameConfig.Name,
 	}, nil
 }

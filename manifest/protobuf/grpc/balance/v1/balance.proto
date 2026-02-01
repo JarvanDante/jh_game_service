@@ -39,6 +39,8 @@ service Balance {
     rpc GetBalanceLog(GetBalanceLogReq) returns (GetBalanceLogRes) {}
     // 充值异步回调
     rpc DepositCallback(DepositCallbackReq) returns (DepositCallbackRes) {}
+    // 申请提现
+    rpc Withdraw(WithdrawReq) returns (WithdrawRes) {}
 }
 
 // 初始化用户余额请求
@@ -320,4 +322,18 @@ message DepositCallbackReq {
 message DepositCallbackRes {
     bool success = 1;           // 是否成功
     string message = 2;         // 消息
+}
+
+// 申请提现请求
+message WithdrawReq {
+    double money = 1;           // 提现金额
+    int32 withdraw_id = 2;      // 提现渠道ID
+    string nonce = 3;           // 防重放随机数
+}
+
+// 申请提现响应
+message WithdrawRes {
+    bool success = 1;           // 是否成功
+    string message = 2;         // 消息
+    string trade_no = 3;        // 订单号
 }

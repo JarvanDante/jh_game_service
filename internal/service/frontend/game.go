@@ -11,6 +11,7 @@ type (
 		GetGameCategories(ctx context.Context, req *v1.GetGameCategoriesReq) (*v1.GetGameCategoriesRes, error)
 		GetGameList(ctx context.Context, req *v1.GetGameListReq) (*v1.GetGameListRes, error)
 		GetGameBalance(ctx context.Context, req *v1.GetGameBalanceReq) (*v1.GetGameBalanceRes, error)
+		RecallGameBalance(ctx context.Context, req *v1.RecallGameBalanceReq) (*v1.RecallGameBalanceRes, error)
 	}
 )
 

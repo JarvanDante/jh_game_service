@@ -35,3 +35,8 @@ func (*Controller) GetGameList(ctx context.Context, req *v1.GetGameListReq) (res
 func (*Controller) GetGameBalance(ctx context.Context, req *v1.GetGameBalanceReq) (res *v1.GetGameBalanceRes, err error) {
 	return frontend.Game().GetGameBalance(ctx, req)
 }
+
+// RecallGameBalance 一键回收游戏余额
+func (*Controller) RecallGameBalance(ctx context.Context, req *v1.RecallGameBalanceReq) (res *v1.RecallGameBalanceRes, err error) {
+	return frontend.Game().RecallGameBalance(ctx, req)
+}

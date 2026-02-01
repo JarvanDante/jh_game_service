@@ -15,6 +15,7 @@ import (
 	"jh_game_service/internal/logic/sync_task"
 	"jh_game_service/internal/mq"
 	"jh_game_service/internal/util"
+	"math"
 	"math/rand"
 	"strconv"
 	"strings"
@@ -499,8 +500,9 @@ func (p *OnePlatform) TransferOut(ctx context.Context, params *platform.Transfer
 		params.OrderNo, _ = p.generateUUID()
 	}
 
-	// 四舍五入到2位小数，避免浮点数精度问题
-	amountRounded := float64(int(params.Amount*100+0.5)) / 100
+	// 向下取整到2位小数，避免超出实际余额
+	// 例如：1321.355 -> 1321.35（而不是四舍五入到 1321.36）
+	amountRounded := math.Floor(params.Amount*100) / 100
 
 	data := map[string]interface{}{
 		"username":       buildUsername,
