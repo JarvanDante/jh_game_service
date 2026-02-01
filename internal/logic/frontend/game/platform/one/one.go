@@ -84,29 +84,25 @@ func (p *OnePlatform) GetGameUrl(ctx context.Context, params *platform.GameParam
 			needTransfer = true
 			amount = userBalance
 		}
-	} else if lastGameId == currentGameId {
-		// 情况2：进入的是同一个游戏，不需要转账
-		g.Log().Infof(ctx, "进入同一个游戏，无需转账")
-		needTransfer = false
 	} else {
-		// 情况3：进入不同游戏，需要先从旧游戏转出，再转入新游戏
-		g.Log().Infof(ctx, "切换游戏: %d -> %d", lastGameId, currentGameId)
+		// 情况2：lastGameId > 0，需要先从最后一次游戏转出到中心钱包
+		g.Log().Infof(ctx, "用户上次进入过游戏: lastGameId=%d, currentGameId=%d", lastGameId, currentGameId)
 
-		// 3.1 查询旧游戏配置
+		// 2.1 查询旧游戏配置
 		oldGameConfig, err := platform.GetGameConfigFunc(ctx, params.SiteId, lastGameId)
 		if err != nil {
 			return nil, fmt.Errorf("查询旧游戏配置失败: %v", err)
 		}
 		g.Log().Infof(ctx, "旧游戏配置: GameId=%d, Platform=%s, Name=%s", oldGameConfig.GameId, oldGameConfig.Platform, oldGameConfig.Name)
 
-		// 3.2 使用工厂创建旧游戏平台实例
+		// 2.2 使用工厂创建旧游戏平台实例
 		oldPlatform, err := platform.GetFactory().Create(oldGameConfig.Platform)
 		if err != nil {
 			return nil, fmt.Errorf("创建旧游戏平台实例失败: %v", err)
 		}
 		g.Log().Infof(ctx, "成功创建旧游戏平台实例: %s", oldGameConfig.Platform)
 
-		// 3.3 构建旧游戏参数
+		// 2.3 构建旧游戏参数
 		oldParams := &platform.GameParams{
 			SiteId:   params.SiteId,
 			UserId:   params.UserId,
@@ -117,14 +113,14 @@ func (p *OnePlatform) GetGameUrl(ctx context.Context, params *platform.GameParam
 		}
 		g.Log().Infof(ctx, "旧游戏参数: GameId=%d, ApiUrl=%s", oldParams.SiteGame.GameId, oldParams.SiteGame.ApiUrl)
 
-		// 3.4 查询旧游戏余额
+		// 2.4 查询旧游戏余额
 		oldGameBalance, balanceErr := oldPlatform.GetBalance(ctx, oldParams)
 		if balanceErr != nil {
 			g.Log().Errorf(ctx, "查询旧游戏余额失败: %v", balanceErr)
 		} else {
 			g.Log().Infof(ctx, "旧游戏余额: %.2f", oldGameBalance)
 
-			// 3.5 如果旧游戏有余额，先转出到中心钱包
+			// 2.5 如果旧游戏有余额，先转出到中心钱包
 			if oldGameBalance > 0 {
 				transferErr := oldPlatform.TransferOut(ctx, &platform.TransferParams{
 					SiteId:   params.SiteId,
@@ -151,12 +147,12 @@ func (p *OnePlatform) GetGameUrl(ctx context.Context, params *platform.GameParam
 				} else {
 					// 如果查询失败，使用计算值
 					userBalance += oldGameBalance
-					g.Log().Warning(ctx, "查询中心钱包余额失败，使用计算值: %.2f", userBalance)
+					g.Log().Warningf(ctx, "查询中心钱包余额失败，使用计算值: %.2f", userBalance)
 				}
 			}
 		}
 
-		// 3.6 将中心钱包余额全部转入新游戏
+		// 2.6 将中心钱包余额全部转入当前游戏
 		if userBalance > 0 {
 			needTransfer = true
 			amount = userBalance
@@ -388,10 +384,13 @@ func (p *OnePlatform) TransferIn(ctx context.Context, params *platform.TransferP
 	buildUsername := util.BuildUsername(params.Username, params.SiteCode)
 	traceId, _ := p.generateUUID()
 
+	// 四舍五入到2位小数，避免浮点数精度问题
+	amountRounded := float64(int(params.Amount*100+0.5)) / 100
+
 	data := map[string]interface{}{
 		"username":       buildUsername,
 		"traceId":        traceId,
-		"transferAmount": params.Amount,
+		"transferAmount": amountRounded,
 		"currency":       params.Currency,
 		"referenceId":    params.OrderNo,
 	}
@@ -410,16 +409,22 @@ func (p *OnePlatform) TransferIn(ctx context.Context, params *platform.TransferP
 	}
 
 	url := strings.TrimSuffix(params.SiteGame.ApiUrl, "/") + "/cash/deposit"
+	g.Log().Infof(ctx, "调用三方游戏API转账: url=%s, username=%s, amount=%.2f", url, buildUsername, params.Amount)
+
 	res, err := util.CurlPostHeader(url, headers, data)
 	if err != nil {
+		g.Log().Errorf(ctx, "游戏API请求失败: %v", err)
 		// 失败：补偿余额
 		p.compensateBalance(newCtx, balanceClient, params.SiteId, params.UserId, adjustRes.OrderNo, params.Amount)
 		return fmt.Errorf("游戏API请求失败: %v", err)
 	}
 
+	g.Log().Infof(ctx, "三方游戏API响应: %v", res)
+
 	// 3. 检查响应
 	status, _ := res["status"].(string)
 	if status != "SC_OK" {
+		g.Log().Errorf(ctx, "转账失败，状态: %s", status)
 		// 失败：补偿余额
 		p.compensateBalance(newCtx, balanceClient, params.SiteId, params.UserId, adjustRes.OrderNo, params.Amount)
 		return fmt.Errorf("转账失败: %s", status)
@@ -487,10 +492,13 @@ func (p *OnePlatform) TransferOut(ctx context.Context, params *platform.Transfer
 		params.OrderNo, _ = p.generateUUID()
 	}
 
+	// 四舍五入到2位小数，避免浮点数精度问题
+	amountRounded := float64(int(params.Amount*100+0.5)) / 100
+
 	data := map[string]interface{}{
 		"username":       buildUsername,
 		"traceId":        traceId,
-		"transferAmount": params.Amount,
+		"transferAmount": amountRounded,
 		"currency":       params.Currency,
 		"referenceId":    params.OrderNo,
 	}
@@ -843,6 +851,8 @@ func (p *OnePlatform) getSignature(data interface{}, secretKey string) (string, 
 
 // compensateBalance 补偿余额
 func (p *OnePlatform) compensateBalance(ctx context.Context, client balanceV1.BalanceClient, siteId int, userId uint, orderNo string, amount float64) {
+	g.Log().Infof(ctx, "开始补偿余额: orderNo=%s, amount=%.2f", orderNo, amount)
+
 	_, err := client.CompensateBalance(ctx, &balanceV1.CompensateBalanceReq{
 		SiteId:  int32(siteId),
 		UserId:  int32(userId),
@@ -850,7 +860,9 @@ func (p *OnePlatform) compensateBalance(ctx context.Context, client balanceV1.Ba
 		Amount:  float32(amount),
 	})
 	if err != nil {
-		g.Log().Errorf(ctx, "补偿余额失败: %v", err)
+		g.Log().Errorf(ctx, "补偿余额失败: orderNo=%s, err=%v", orderNo, err)
+	} else {
+		g.Log().Infof(ctx, "补偿余额成功: orderNo=%s, amount=%.2f", orderNo, amount)
 	}
 }
 
