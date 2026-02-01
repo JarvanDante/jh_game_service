@@ -170,6 +170,7 @@ func (p *OnePlatform) GetGameUrl(ctx context.Context, params *platform.GameParam
 			Amount:   amount,
 			Currency: params.Currency,
 			OrderNo:  orderNo,
+			GameKey:  params.Request.Key, // 传入游戏key
 			SiteGame: params.SiteGame,
 		})
 		if err != nil {
@@ -366,6 +367,7 @@ func (p *OnePlatform) TransferIn(ctx context.Context, params *platform.TransferP
 		Type:     0, // 0=转出：从中心账户转账到游戏账户
 		GameName: params.SiteGame.Name,
 		GameId:   strconv.Itoa(params.SiteGame.GameId),
+		GameKey:  params.GameKey, // 传入游戏key
 	})
 
 	g.Log().Infof(ctx, "balance服务调用完成: err=%v", err)

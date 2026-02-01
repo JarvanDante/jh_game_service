@@ -94,6 +94,7 @@ type TransferParams struct {
 	Amount   float64         // 金额
 	Currency string          // 货币
 	OrderNo  string          // 订单号
+	GameKey  string          // 游戏key（进入游戏时的key）
 	SiteGame entity.SiteGame // 游戏配置
 }
 
