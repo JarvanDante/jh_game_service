@@ -117,6 +117,8 @@ func (p *OnePlatform) GetGameUrl(ctx context.Context, params *platform.GameParam
 		oldGameBalance, balanceErr := oldPlatform.GetBalance(ctx, oldParams)
 		if balanceErr != nil {
 			g.Log().Errorf(ctx, "查询旧游戏余额失败: %v", balanceErr)
+			// 查询失败，跳过转出步骤，直接使用中心钱包余额
+			g.Log().Warningf(ctx, "查询旧游戏余额失败，跳过转出步骤")
 		} else {
 			g.Log().Infof(ctx, "旧游戏余额: %.2f", oldGameBalance)
 
@@ -132,22 +134,24 @@ func (p *OnePlatform) GetGameUrl(ctx context.Context, params *platform.GameParam
 					SiteGame: *oldGameConfig, // 使用旧游戏配置
 				})
 				if transferErr != nil {
-					return nil, fmt.Errorf("从旧游戏转出失败: %v", transferErr)
-				}
-				g.Log().Infof(ctx, "从旧游戏转出成功: %.2f", oldGameBalance)
-
-				// 重新查询中心钱包余额
-				lastGameRes2, err := balanceClient.GetLastBalanceLogGame(newCtx, &balanceV1.GetLastBalanceLogGameReq{
-					SiteId: int32(params.SiteId),
-					UserId: int32(params.UserId),
-				})
-				if err == nil {
-					userBalance = float64(lastGameRes2.Amount)
-					g.Log().Infof(ctx, "转出后中心钱包余额: %.2f", userBalance)
+					// 转出失败，记录错误但不阻止进入游戏
+					g.Log().Errorf(ctx, "从旧游戏转出失败: %v，继续使用中心钱包余额", transferErr)
 				} else {
-					// 如果查询失败，使用计算值
-					userBalance += oldGameBalance
-					g.Log().Warningf(ctx, "查询中心钱包余额失败，使用计算值: %.2f", userBalance)
+					g.Log().Infof(ctx, "从旧游戏转出成功: %.2f", oldGameBalance)
+
+					// 重新查询中心钱包余额
+					lastGameRes2, err := balanceClient.GetLastBalanceLogGame(newCtx, &balanceV1.GetLastBalanceLogGameReq{
+						SiteId: int32(params.SiteId),
+						UserId: int32(params.UserId),
+					})
+					if err == nil {
+						userBalance = float64(lastGameRes2.Amount)
+						g.Log().Infof(ctx, "转出后中心钱包余额: %.2f", userBalance)
+					} else {
+						// 如果查询失败，使用计算值
+						userBalance += oldGameBalance
+						g.Log().Warningf(ctx, "查询中心钱包余额失败，使用计算值: %.2f", userBalance)
+					}
 				}
 			}
 		}
@@ -347,6 +351,7 @@ func (p *OnePlatform) GetBalance(ctx context.Context, params *platform.GameParam
  * @return error
  * @author : Carson
  */
+
 func (p *OnePlatform) TransferIn(ctx context.Context, params *platform.TransferParams) error {
 	// 1. 调用balance服务扣款
 	g.Log().Info(ctx, "正在连接balance服务: jh_balance_service")
