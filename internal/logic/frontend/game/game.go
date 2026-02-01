@@ -604,12 +604,12 @@ func (s *sGame) RecallGameBalance(ctx context.Context, req *v1.RecallGameBalance
 
 	g.Log().Infof(ctx, "游戏余额: %.2f", gameBalance)
 
-	// 8. 如果游戏余额 <= 0，无需回收
-	if gameBalance <= 0 {
-		g.Log().Infof(ctx, "游戏余额为0，无需回收")
+	// 8. 如果游戏余额 <= 0 或者太小（< 0.1），无需回收
+	if gameBalance <= 0 || gameBalance < 0.1 {
+		g.Log().Infof(ctx, "游戏余额太小(%.4f)，无需回收", gameBalance)
 		return &v1.RecallGameBalanceRes{
 			Success:        true,
-			Message:        "无需回收，游戏余额为0",
+			Message:        "回收成功",
 			RecalledAmount: 0,
 			GameId:         int32(lastGameId),
 			GameName:       gameConfig.Name,
