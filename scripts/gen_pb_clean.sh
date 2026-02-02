@@ -64,7 +64,22 @@ extract_custom_methods() {
     fi
 }
 
-# 检查是否需要额外的import
+# 提取现有的 import 部分（保留用户自定义的 import）
+extract_imports() {
+    local file="$1"
+    if [ -f "$file" ]; then
+        # 提取 import ( 到 ) 之间的内容，保持原有格式
+        awk '
+        /^import \($/,/^\)$/ {
+            if ($0 !~ /^import \(/ && $0 !~ /^\)$/) {
+                print
+            }
+        }
+        ' "$file"
+    fi
+}
+
+# 检查是否需要额外的import（已废弃，改用 extract_imports）
 check_imports() {
     local custom_content="$1"
     local imports=""
@@ -116,8 +131,19 @@ find internal/dao -name "*.go" -not -path "*/internal/*" -not -name "dynamic_db_
         custom_methods=$(extract_custom_methods "$file")
     fi
     
-    # 检查需要的额外imports
-    extra_imports=$(check_imports "$custom_methods")
+    # 提取现有的 imports（保留用户自定义的）
+    existing_imports=""
+    if [ -f "$file" ]; then
+        existing_imports=$(extract_imports "$file")
+    fi
+    
+    # 如果没有提取到 imports，使用默认的
+    if [ -z "$existing_imports" ]; then
+        existing_imports="    \"context\"
+    \"jh_game_service/internal/dao/internal\"
+    
+    \"github.com/gogf/gf/v2/database/gdb\""
+    fi
     
     # 根据是否支持 handlers 生成不同的初始化代码
     if [ "$supports_handlers" = "true" ]; then
@@ -135,10 +161,7 @@ find internal/dao -name "*.go" -not -path "*/internal/*" -not -name "dynamic_db_
         echo "package dao"
         echo ""
         echo "import ("
-        echo "    \"context\"$extra_imports"
-        echo "    \"jh_game_service/internal/dao/internal\""
-        echo "    "
-        echo "    \"github.com/gogf/gf/v2/database/gdb\""
+        echo "$existing_imports"
         echo ")"
         echo ""
         echo "// ${dao_var}Dao is the data access object for the table ${filename}."
