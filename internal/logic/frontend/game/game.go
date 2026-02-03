@@ -8,6 +8,7 @@ import (
 	v1 "jh_game_service/api/frontend/game/v1"
 	balanceV1 "jh_game_service/api/grpc/balance/v1"
 	"jh_game_service/internal/dao"
+	"jh_game_service/internal/domain"
 	grpc_client "jh_game_service/internal/grpc_client"
 	"jh_game_service/internal/logic/frontend/game/platform"
 	_ "jh_game_service/internal/logic/frontend/game/platform/ig_jili" // 自动注册IG_JILI平台
@@ -645,4 +646,40 @@ func (s *sGame) RecallGameBalance(ctx context.Context, req *v1.RecallGameBalance
 		GameId:         int32(lastGameId),
 		GameName:       gameConfig.Name,
 	}, nil
+}
+
+// GetUserBetHistory 获取用户历史投注列表（时间倒序）
+func (s *sGame) GetUserBetHistory(ctx context.Context, req *v1.GetUserBetHistoryReq) (*v1.GetUserBetHistoryRes, error) {
+	if req == nil {
+		return nil, fmt.Errorf("请求参数不能为空")
+	}
+	if req.GetStartTime() == "" || req.GetEndTime() == "" {
+		return nil, fmt.Errorf("开始时间和结束时间不能为空")
+	}
+
+	siteCode, ok := middleware.GetSiteCodeFromContext(ctx)
+	if !ok || siteCode == "" {
+		return nil, fmt.Errorf("获取站点信息失败")
+	}
+
+	userId, siteId, err := middleware.GetUserInfoFromContext(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("获取用户信息失败")
+	}
+
+	list, total, err := dao.BetRecords.QueryUserBetHistory(
+		ctx,
+		uint(siteId),
+		siteCode,
+		userId,
+		req.GetStartTime(),
+		req.GetEndTime(),
+		int(req.GetPage()),
+		int(req.GetSize()),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("查询历史投注失败: %v", err)
+	}
+
+	return domain.BuildUserBetHistoryRes(req.GetStartTime(), req.GetEndTime(), list, total), nil
 }

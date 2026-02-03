@@ -12,6 +12,7 @@ type (
 		GetGameList(ctx context.Context, req *v1.GetGameListReq) (*v1.GetGameListRes, error)
 		GetGameBalance(ctx context.Context, req *v1.GetGameBalanceReq) (*v1.GetGameBalanceRes, error)
 		RecallGameBalance(ctx context.Context, req *v1.RecallGameBalanceReq) (*v1.RecallGameBalanceRes, error)
+		GetUserBetHistory(ctx context.Context, req *v1.GetUserBetHistoryReq) (*v1.GetUserBetHistoryRes, error)
 	}
 )
 

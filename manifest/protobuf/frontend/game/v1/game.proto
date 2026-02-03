@@ -10,6 +10,7 @@ service Game {
     rpc GetGameList(GetGameListReq) returns (GetGameListRes) {}
     rpc GetGameBalance(GetGameBalanceReq) returns (GetGameBalanceRes) {}
     rpc RecallGameBalance(RecallGameBalanceReq) returns (RecallGameBalanceRes) {}
+    rpc GetUserBetHistory(GetUserBetHistoryReq) returns (GetUserBetHistoryRes) {}
 }
 
 message RedirectToGameReq {
@@ -93,4 +94,26 @@ message RecallGameBalanceRes {
     double recalled_amount = 3;    // 回收的金额（使用double保持精度）
     int32 game_id = 4;             // 回收的游戏ID
     string game_name = 5;          // 回收的游戏名称
+}
+
+message GetUserBetHistoryReq {
+    string start_time = 1;         // 开始时间 格式: 2006-01-02 15:04:05（默认当天开始）
+    string end_time = 2;           // 结束时间 格式: 2006-01-02 15:04:05（默认当天结束）
+    int32 page = 3;                // 页码（默认1）
+    int32 size = 4;                // 每页数量（默认20）
+}
+
+message GetUserBetHistoryRes {
+    repeated UserBetHistoryItem list = 1; // 历史投注列表
+    int32 total = 2;                      // 总数
+}
+
+message UserBetHistoryItem {
+    string game_name = 1;          // 游戏名称
+    double valid_amount = 2;       // 下注金额（有效投注）
+    string bet_time = 3;           // 下注时间
+    double win_amount = 4;         // 赢取金额
+    int32 status = 5;              // 是否结算状态
+    string order_no = 6;           // 订单号
+    double net_amount = 7;         // 净输赢
 }

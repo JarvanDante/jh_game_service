@@ -9,6 +9,7 @@ import (
 	"jh_game_service/internal/dao/internal"
 
 	"github.com/gogf/gf/v2/database/gdb"
+	"github.com/gogf/gf/v2/os/gtime"
 )
 
 // betRecordsDao is the data access object for the table bet_records.
@@ -76,6 +77,68 @@ func (d betRecordsDao) QueryUserBetSummary(
 	}
 
 	return &result, nil
+}
+
+// UserBetHistoryRow 用户投注历史行
+type UserBetHistoryRow struct {
+	GameName    string      `json:"game_name"`
+	ValidAmount float64     `json:"valid_amount"`
+	BetTime     *gtime.Time `json:"bet_time"`
+	WinAmount   float64     `json:"win_amount"`
+	NetAmount   float64     `json:"net_amount"`
+	Status      int         `json:"status"`
+	OrderNo     string      `json:"order_no"`
+}
+
+// QueryUserBetHistory 查询用户历史投注（时间倒序）
+func (d betRecordsDao) QueryUserBetHistory(
+	ctx context.Context,
+	siteId uint,
+	siteCode string,
+	userId uint,
+	startTime string,
+	endTime string,
+	page int,
+	size int,
+) (list []UserBetHistoryRow, total int, err error) {
+	model := d.Ctx(ctx).
+		As("br").
+		LeftJoin("game_list gl", "gl.site_id = br.site_id AND gl.code = br.game_name").
+		Where("br.site_id = ?", siteId).
+		Where("br.site_code = ?", siteCode).
+		Where("br.user_id = ?", userId).
+		Where("br.bet_time >= ?", startTime).
+		Where("br.bet_time <= ?", endTime)
+
+	count, err := model.Count()
+	if err != nil {
+		return nil, 0, err
+	}
+
+	offset := (page - 1) * size
+	if offset < 0 {
+		offset = 0
+	}
+
+	err = model.
+		Fields(
+			"COALESCE(gl.name, br.game_name) AS game_name",
+			"br.valid_amount",
+			"br.bet_time",
+			"br.win_amount",
+			"br.net_amount",
+			"br.status",
+			"br.order_no",
+		).
+		OrderDesc("br.bet_time").
+		Limit(size).
+		Offset(offset).
+		Scan(&list)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	return list, count, nil
 }
 
 func (d betRecordsDao) Test(ctx context.Context) int {

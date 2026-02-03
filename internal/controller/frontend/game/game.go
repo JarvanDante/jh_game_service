@@ -4,6 +4,7 @@ import (
 	"context"
 	v1 "jh_game_service/api/frontend/game/v1"
 	"jh_game_service/internal/service/frontend"
+	"time"
 
 	"github.com/gogf/gf/contrib/rpc/grpcx/v2"
 )
@@ -39,4 +40,33 @@ func (*Controller) GetGameBalance(ctx context.Context, req *v1.GetGameBalanceReq
 // RecallGameBalance 一键回收游戏余额
 func (*Controller) RecallGameBalance(ctx context.Context, req *v1.RecallGameBalanceReq) (res *v1.RecallGameBalanceRes, err error) {
 	return frontend.Game().RecallGameBalance(ctx, req)
+}
+
+// GetUserBetHistory 获取用户历史投注
+func (*Controller) GetUserBetHistory(ctx context.Context, req *v1.GetUserBetHistoryReq) (res *v1.GetUserBetHistoryRes, err error) {
+	if req == nil {
+		req = &v1.GetUserBetHistoryReq{}
+	}
+
+	if req.Page <= 0 {
+		req.Page = 1
+	}
+	if req.Size <= 0 {
+		req.Size = 5
+	}
+	if req.Size > 100 {
+		req.Size = 100
+	}
+
+	if req.StartTime == "" || req.EndTime == "" {
+		now := time.Now()
+		if req.StartTime == "" {
+			req.StartTime = now.Format("2006-01-02") + " 00:00:00"
+		}
+		if req.EndTime == "" {
+			req.EndTime = now.Format("2006-01-02") + " 23:59:59"
+		}
+	}
+
+	return frontend.Game().GetUserBetHistory(ctx, req)
 }
