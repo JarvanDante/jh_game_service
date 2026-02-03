@@ -9,7 +9,6 @@ import (
 	"jh_game_service/internal/dao/internal"
 
 	"github.com/gogf/gf/v2/database/gdb"
-	"github.com/gogf/gf/v2/os/gtime"
 )
 
 // betRecordsDao is the data access object for the table bet_records.
@@ -81,13 +80,13 @@ func (d betRecordsDao) QueryUserBetSummary(
 
 // UserBetHistoryRow 用户投注历史行
 type UserBetHistoryRow struct {
-	GameName    string      `json:"game_name"`
-	ValidAmount float64     `json:"valid_amount"`
-	BetTime     *gtime.Time `json:"bet_time"`
-	WinAmount   float64     `json:"win_amount"`
-	NetAmount   float64     `json:"net_amount"`
-	Status      int         `json:"status"`
-	OrderNo     string      `json:"order_no"`
+	GameName    string  `json:"game_name"`
+	ValidAmount float64 `json:"valid_amount"`
+	BetTime     string  `json:"bet_time"`
+	WinAmount   float64 `json:"win_amount"`
+	NetAmount   float64 `json:"net_amount"`
+	Status      int     `json:"status"`
+	OrderNo     string  `json:"order_no"`
 }
 
 // QueryUserBetHistory 查询用户历史投注（时间倒序）
@@ -124,7 +123,7 @@ func (d betRecordsDao) QueryUserBetHistory(
 		Fields(
 			"COALESCE(gl.name, br.game_name) AS game_name",
 			"br.valid_amount",
-			"br.bet_time",
+			"DATE_FORMAT(br.bet_time, '%Y-%m-%d %H:%i:%s') AS bet_time",
 			"br.win_amount",
 			"br.net_amount",
 			"br.status",

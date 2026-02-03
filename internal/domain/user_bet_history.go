@@ -11,15 +11,10 @@ import (
 func BuildUserBetHistoryRes(startTime, endTime string, rows []dao.UserBetHistoryRow, total int) *v1.GetUserBetHistoryRes {
 	items := make([]*v1.UserBetHistoryItem, 0, len(rows))
 	for _, row := range rows {
-		betTime := ""
-		if row.BetTime != nil {
-			betTime = row.BetTime.Format("2006-01-02 15:04:05")
-		}
-
 		items = append(items, &v1.UserBetHistoryItem{
 			GameName:    row.GameName,
 			ValidAmount: trunc2(row.ValidAmount),
-			BetTime:     betTime,
+			BetTime:     row.BetTime,
 			WinAmount:   trunc2(row.WinAmount),
 			Status:      int32(row.Status),
 			OrderNo:     row.OrderNo,
