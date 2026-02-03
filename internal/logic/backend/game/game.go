@@ -5,8 +5,10 @@ import (
 	"fmt"
 	v1 "jh_game_service/api/backend/game/v1"
 	"jh_game_service/internal/dao"
+	"jh_game_service/internal/domain"
 	"jh_game_service/internal/logic/frontend/game/platform"
 	"jh_game_service/internal/logic/sync_task"
+	"jh_game_service/internal/middleware"
 	"jh_game_service/internal/model/do"
 	"jh_game_service/internal/model/entity"
 	"jh_game_service/internal/registry"
@@ -1023,6 +1025,57 @@ func (s *sGame) GetUserBetStats(ctx context.Context, req *v1.GetUserBetStatsReq)
 		Success: true,
 		Message: "查询成功",
 		Stats:   stats,
+	}, nil
+}
+
+// GetUserBetSummary 获取用户时间范围注单汇总（MySQL）
+func (s *sGame) GetUserBetSummary(ctx context.Context, req *v1.GetUserBetSummaryReq) (*v1.GetUserBetSummaryRes, error) {
+	siteId, _ := middleware.GetSiteIdFromContext(ctx)
+	siteCode, _ := middleware.GetSiteCodeFromContext(ctx)
+	userId, _ := middleware.GetUserIdFromContext(ctx)
+
+	ctx, span := tracing.StartSpan(ctx, "game.GetUserBetSummary", trace.WithAttributes(
+		attribute.String("method", "GetUserBetSummary"),
+		attribute.Int("site_id", int(siteId)),
+		attribute.String("site_code", siteCode),
+		attribute.Int("user_id", int(userId)),
+		attribute.String("start_time", req.GetStartTime()),
+		attribute.String("end_time", req.GetEndTime()),
+		attribute.String("platform", req.GetPlatform()),
+	))
+	defer span.End()
+
+	summaryResult, err := dao.BetRecords.QueryUserBetSummary(
+		ctx,
+		siteId,
+		siteCode,
+		userId,
+		req.GetStartTime(),
+		req.GetEndTime(),
+		req.GetPlatform(),
+	)
+	if err != nil {
+		g.Log().Errorf(ctx, "查询用户注单汇总失败: %v", err)
+		return &v1.GetUserBetSummaryRes{
+			Success: false,
+			Message: fmt.Sprintf("查询失败: %v", err),
+		}, nil
+	}
+
+	summary := domain.BuildUserBetSummary(
+		req.GetStartTime(),
+		req.GetEndTime(),
+		summaryResult.BetCount,
+		summaryResult.BetAmount,
+		summaryResult.WinAmount,
+		summaryResult.ValidAmount,
+		summaryResult.NetAmount,
+	)
+
+	return &v1.GetUserBetSummaryRes{
+		Success: true,
+		Message: "查询成功",
+		Summary: summary,
 	}, nil
 }
 

@@ -3,6 +3,7 @@ package game
 import (
 	"context"
 	v1 "jh_game_service/api/backend/game/v1"
+	"jh_game_service/internal/middleware"
 	"jh_game_service/internal/service/backend"
 
 	"github.com/gogf/gf/contrib/rpc/grpcx/v2"
@@ -55,6 +56,47 @@ func (*Controller) GetGamePlatforms(ctx context.Context, req *v1.GetGamePlatform
 // GetUserBetStats 获取用户注单统计
 func (*Controller) GetUserBetStats(ctx context.Context, req *v1.GetUserBetStatsReq) (res *v1.GetUserBetStatsRes, err error) {
 	return backend.Game().GetUserBetStats(ctx, req)
+}
+
+// GetUserBetSummary 获取用户时间范围注单汇总
+func (*Controller) GetUserBetSummary(ctx context.Context, req *v1.GetUserBetSummaryReq) (res *v1.GetUserBetSummaryRes, err error) {
+	if req == nil {
+		return &v1.GetUserBetSummaryRes{
+			Success: false,
+			Message: "请求参数不能为空",
+		}, nil
+	}
+
+	if req.GetStartTime() == "" || req.GetEndTime() == "" {
+		return &v1.GetUserBetSummaryRes{
+			Success: false,
+			Message: "开始时间和结束时间不能为空",
+		}, nil
+	}
+
+	siteId, ok := middleware.GetSiteIdFromContext(ctx)
+	if !ok || siteId == 0 {
+		return &v1.GetUserBetSummaryRes{
+			Success: false,
+			Message: "site_id 缺失或无效",
+		}, nil
+	}
+	siteCode, ok := middleware.GetSiteCodeFromContext(ctx)
+	if !ok || siteCode == "" {
+		return &v1.GetUserBetSummaryRes{
+			Success: false,
+			Message: "site_code 缺失或无效",
+		}, nil
+	}
+	userId, ok := middleware.GetUserIdFromContext(ctx)
+	if !ok || userId == 0 {
+		return &v1.GetUserBetSummaryRes{
+			Success: false,
+			Message: "user_id 缺失或无效",
+		}, nil
+	}
+
+	return backend.Game().GetUserBetSummary(ctx, req)
 }
 
 // GetSyncTasks 获取同步任务列表

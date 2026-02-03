@@ -28,6 +28,7 @@ const (
 	Game_UpdateGameListItem_FullMethodName   = "/game.Game/UpdateGameListItem"
 	Game_GetGamePlatforms_FullMethodName     = "/game.Game/GetGamePlatforms"
 	Game_GetUserBetStats_FullMethodName      = "/game.Game/GetUserBetStats"
+	Game_GetUserBetSummary_FullMethodName    = "/game.Game/GetUserBetSummary"
 	Game_GetSyncTasks_FullMethodName         = "/game.Game/GetSyncTasks"
 )
 
@@ -46,6 +47,8 @@ type GameClient interface {
 	GetGamePlatforms(ctx context.Context, in *GetGamePlatformsReq, opts ...grpc.CallOption) (*GetGamePlatformsRes, error)
 	// 用户注单统计（ClickHouse）
 	GetUserBetStats(ctx context.Context, in *GetUserBetStatsReq, opts ...grpc.CallOption) (*GetUserBetStatsRes, error)
+	// 用户时间范围注单汇总（有效投注/净输赢/打码倍数）
+	GetUserBetSummary(ctx context.Context, in *GetUserBetSummaryReq, opts ...grpc.CallOption) (*GetUserBetSummaryRes, error)
 	// 同步任务管理
 	GetSyncTasks(ctx context.Context, in *GetSyncTasksReq, opts ...grpc.CallOption) (*GetSyncTasksRes, error)
 }
@@ -138,6 +141,16 @@ func (c *gameClient) GetUserBetStats(ctx context.Context, in *GetUserBetStatsReq
 	return out, nil
 }
 
+func (c *gameClient) GetUserBetSummary(ctx context.Context, in *GetUserBetSummaryReq, opts ...grpc.CallOption) (*GetUserBetSummaryRes, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetUserBetSummaryRes)
+	err := c.cc.Invoke(ctx, Game_GetUserBetSummary_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *gameClient) GetSyncTasks(ctx context.Context, in *GetSyncTasksReq, opts ...grpc.CallOption) (*GetSyncTasksRes, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(GetSyncTasksRes)
@@ -163,6 +176,8 @@ type GameServer interface {
 	GetGamePlatforms(context.Context, *GetGamePlatformsReq) (*GetGamePlatformsRes, error)
 	// 用户注单统计（ClickHouse）
 	GetUserBetStats(context.Context, *GetUserBetStatsReq) (*GetUserBetStatsRes, error)
+	// 用户时间范围注单汇总（有效投注/净输赢/打码倍数）
+	GetUserBetSummary(context.Context, *GetUserBetSummaryReq) (*GetUserBetSummaryRes, error)
 	// 同步任务管理
 	GetSyncTasks(context.Context, *GetSyncTasksReq) (*GetSyncTasksRes, error)
 	mustEmbedUnimplementedGameServer()
@@ -198,6 +213,9 @@ func (UnimplementedGameServer) GetGamePlatforms(context.Context, *GetGamePlatfor
 }
 func (UnimplementedGameServer) GetUserBetStats(context.Context, *GetUserBetStatsReq) (*GetUserBetStatsRes, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetUserBetStats not implemented")
+}
+func (UnimplementedGameServer) GetUserBetSummary(context.Context, *GetUserBetSummaryReq) (*GetUserBetSummaryRes, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetUserBetSummary not implemented")
 }
 func (UnimplementedGameServer) GetSyncTasks(context.Context, *GetSyncTasksReq) (*GetSyncTasksRes, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetSyncTasks not implemented")
@@ -367,6 +385,24 @@ func _Game_GetUserBetStats_Handler(srv interface{}, ctx context.Context, dec fun
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Game_GetUserBetSummary_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetUserBetSummaryReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(GameServer).GetUserBetSummary(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Game_GetUserBetSummary_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(GameServer).GetUserBetSummary(ctx, req.(*GetUserBetSummaryReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Game_GetSyncTasks_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(GetSyncTasksReq)
 	if err := dec(in); err != nil {
@@ -423,6 +459,10 @@ var Game_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetUserBetStats",
 			Handler:    _Game_GetUserBetStats_Handler,
+		},
+		{
+			MethodName: "GetUserBetSummary",
+			Handler:    _Game_GetUserBetSummary_Handler,
 		},
 		{
 			MethodName: "GetSyncTasks",

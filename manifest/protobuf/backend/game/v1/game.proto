@@ -19,9 +19,38 @@ service Game {
     
     // 用户注单统计（ClickHouse）
     rpc GetUserBetStats(GetUserBetStatsReq) returns (GetUserBetStatsRes) {}
+
+    // 用户时间范围注单汇总（有效投注/净输赢/打码倍数）
+    rpc GetUserBetSummary(GetUserBetSummaryReq) returns (GetUserBetSummaryRes) {}
     
     // 同步任务管理
     rpc GetSyncTasks(GetSyncTasksReq) returns (GetSyncTasksRes) {}
+}
+
+// 用户时间范围注单汇总请求
+message GetUserBetSummaryReq {
+    string start_time = 1;                // 开始时间 格式: 2006-01-02 15:04:05
+    string end_time = 2;                  // 结束时间 格式: 2006-01-02 15:04:05
+    string platform = 3;                  // 平台（可选）ONE、IG_JILI
+}
+
+// 用户时间范围注单汇总响应
+message GetUserBetSummaryRes {
+    bool success = 1;                     // 是否成功
+    string message = 2;                   // 消息
+    UserBetSummary summary = 3;           // 汇总信息
+}
+
+// 汇总信息
+message UserBetSummary {
+    string start_time = 1;                // 开始时间
+    string end_time = 2;                  // 结束时间
+    string bet_count = 3;                 // 注单数
+    string bet_amount = 4;                // 投注金额
+    string win_amount = 5;                // 派彩金额
+    string valid_amount = 6;              // 有效投注金额
+    string net_amount = 7;                // 净输赢
+    string turnover_multiple = 8;         // 打码倍数（预留）
 }
 
 message GetGamesReq {

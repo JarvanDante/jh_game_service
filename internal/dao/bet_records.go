@@ -31,6 +31,53 @@ func (d betRecordsDao) Ctx(ctx context.Context) *gdb.Model {
 
 // Add your custom methods and functionality below.
 
+// BetSummaryResult 用户注单汇总结果
+type BetSummaryResult struct {
+	BetCount    int64   `json:"bet_count"`
+	BetAmount   float64 `json:"bet_amount"`
+	WinAmount   float64 `json:"win_amount"`
+	ValidAmount float64 `json:"valid_amount"`
+	NetAmount   float64 `json:"net_amount"`
+}
+
+// QueryUserBetSummary 查询用户时间范围注单汇总（MySQL）
+func (d betRecordsDao) QueryUserBetSummary(
+	ctx context.Context,
+	siteId uint,
+	siteCode string,
+	userId uint,
+	startTime string,
+	endTime string,
+	platform string,
+) (*BetSummaryResult, error) {
+	query := d.Ctx(ctx).
+		Where("site_id = ?", siteId).
+		Where("site_code = ?", siteCode).
+		Where("user_id = ?", userId).
+		Where("status = ?", 1).
+		Where("valid_amount > ?", 0).
+		Where("bet_time >= ?", startTime).
+		Where("bet_time <= ?", endTime)
+
+	if platform != "" {
+		query = query.Where("platform = ?", platform)
+	}
+
+	var result BetSummaryResult
+	err := query.Fields(
+		"COALESCE(COUNT(1), 0) AS bet_count",
+		"COALESCE(SUM(bet_amount), 0) AS bet_amount",
+		"COALESCE(SUM(win_amount), 0) AS win_amount",
+		"COALESCE(SUM(valid_amount), 0) AS valid_amount",
+		"COALESCE(SUM(net_amount), 0) AS net_amount",
+	).Scan(&result)
+	if err != nil {
+		return nil, err
+	}
+
+	return &result, nil
+}
+
 func (d betRecordsDao) Test(ctx context.Context) int {
 	d.Ctx(ctx) // 使用 b 而不是 betRecordsDao
 	return 1
