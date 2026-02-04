@@ -603,8 +603,8 @@ func (p *OnePlatform) PullBetRecords(ctx context.Context, params *platform.PullR
 	}
 
 	// 格式化打印响应
-	resJson, _ := json.MarshalIndent(res, "", "  ")
-	g.Log().Infof(ctx, "ONE平台注单API响应:\n%s", string(resJson))
+	//resJson, _ := json.MarshalIndent(res, "", "  ")
+	//g.Log().Infof(ctx, "ONE平台注单API响应:\n%s", string(resJson))
 
 	// 3. 检查响应
 	status, ok := res["status"].(string)
@@ -1388,6 +1388,28 @@ func (p *OnePlatform) saveBetRecordsToMySQL(ctx context.Context, params *platfor
 			stats.MqFailed++
 		} else {
 			stats.MqSent++
+		}
+
+		// 同步到 Balance（用于流水消费）
+		if record.ValidAmount > 0 {
+			balanceMsg := &mq.SyncBetToBalanceMessage{
+				SiteID:      uint32(params.SiteId),
+				SiteCode:    params.SiteCode,
+				UserID:      userId,
+				Username:    record.Username,
+				Platform:    params.SiteGame.Platform,
+				GameType:    gameType,
+				OrderNo:     record.OrderNo,
+				ValidAmount: record.ValidAmount,
+				BetTime:     record.BetTime,
+				SettleTime:  record.SettleTime,
+				Status:      uint8(record.Status),
+			}
+			if err := mq.PublishBetToBalance(ctx, balanceMsg); err != nil {
+				g.Log().Errorf(ctx, "发送流水消费消息失败: order=%s, user_id=%d, site=%s, err=%v", record.OrderNo, userId, params.SiteCode, err)
+			} else {
+				g.Log().Infof(ctx, "发送流水消费消息成功: order=%s, user_id=%d, site=%s, valid_amount=%.4f", record.OrderNo, userId, params.SiteCode, record.ValidAmount)
+			}
 		}
 	}
 

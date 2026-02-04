@@ -52,6 +52,21 @@ type SyncBetToClickHouseMessage struct {
 	TaskId      int64   `json:"task_id"` // 同步任务ID
 }
 
+// SyncBetToBalanceMessage 同步注单到 Balance 服务消息（用于流水消费）
+type SyncBetToBalanceMessage struct {
+	SiteID      uint32  `json:"site_id"`
+	SiteCode    string  `json:"site_code"`
+	UserID      uint64  `json:"user_id"`
+	Username    string  `json:"username"`
+	Platform    string  `json:"platform"`
+	GameType    string  `json:"game_type"`
+	OrderNo     string  `json:"order_no"`
+	ValidAmount float64 `json:"valid_amount"`
+	BetTime     string  `json:"bet_time"`
+	SettleTime  string  `json:"settle_time"`
+	Status      uint8   `json:"status"`
+}
+
 // InitRabbitMQ 初始化RabbitMQ连接
 func InitRabbitMQ(ctx context.Context) error {
 	url := g.Cfg().MustGet(ctx, "rabbitmq.url").String()
@@ -253,6 +268,51 @@ func PublishBetToClickHouse(ctx context.Context, msg *SyncBetToClickHouseMessage
 	err = channel.Publish(
 		"bet.sync",               // exchange
 		"bet.sync_to_clickhouse", // routing key
+		false,                    // mandatory
+		false,                    // immediate
+		amqp.Publishing{
+			ContentType:  "application/json",
+			Body:         body,
+			DeliveryMode: amqp.Persistent, // 持久化消息
+		},
+	)
+	if err != nil {
+		return fmt.Errorf("发布消息失败: %v", err)
+	}
+
+	return nil
+}
+
+// PublishBetToBalance 发布注单同步到 Balance 的消息（用于流水消费）
+func PublishBetToBalance(ctx context.Context, msg *SyncBetToBalanceMessage) error {
+	if channel == nil {
+		return fmt.Errorf("RabbitMQ channel未初始化")
+	}
+
+	// 声明 exchange（幂等操作）
+	err := channel.ExchangeDeclare(
+		"bet.settled", // exchange name
+		"topic",       // exchange type
+		true,          // durable
+		false,         // auto-deleted
+		false,         // internal
+		false,         // no-wait
+		nil,           // arguments
+	)
+	if err != nil {
+		return fmt.Errorf("声明exchange失败: %v", err)
+	}
+
+	// 序列化消息
+	body, err := json.Marshal(msg)
+	if err != nil {
+		return fmt.Errorf("序列化消息失败: %v", err)
+	}
+
+	// 发布消息
+	err = channel.Publish(
+		"bet.settled",            // exchange
+		"bet.settled_to_balance", // routing key
 		false,                    // mandatory
 		false,                    // immediate
 		amqp.Publishing{
