@@ -18,6 +18,7 @@ import (
 	"jh_game_service/internal/model/entity"
 	"jh_game_service/internal/service/frontend"
 	"strings"
+	"time"
 )
 
 type (
@@ -682,4 +683,104 @@ func (s *sGame) GetUserBetHistory(ctx context.Context, req *v1.GetUserBetHistory
 	}
 
 	return domain.BuildUserBetHistoryRes(req.GetStartTime(), req.GetEndTime(), list, total), nil
+}
+
+// GetWashCodeQuota 获取当前用户可洗码额度
+func (s *sGame) GetWashCodeQuota(ctx context.Context, req *v1.GetWashCodeQuotaReq) (*v1.GetWashCodeQuotaRes, error) {
+	if req == nil {
+		req = &v1.GetWashCodeQuotaReq{}
+	}
+
+	siteCode, ok := middleware.GetSiteCodeFromContext(ctx)
+	if !ok || siteCode == "" {
+		return &v1.GetWashCodeQuotaRes{
+			Success: false,
+			Message: "获取站点信息失败",
+		}, nil
+	}
+
+	userId, siteId, err := middleware.GetUserInfoFromContext(ctx)
+	if err != nil {
+		return &v1.GetWashCodeQuotaRes{
+			Success: false,
+			Message: "获取用户信息失败",
+		}, nil
+	}
+
+	lastBetId := req.GetLastBetId()
+	lastRebateTime := ""
+	if lastBetId == 0 {
+		lastRebateTime, err = s.getLastRebateTimeFromBalance(ctx, siteId, userId, siteCode)
+		if err != nil {
+			g.Log().Errorf(ctx, "获取最近洗码时间失败: site_id=%d, user_id=%d, err=%v", siteId, userId, err)
+			return &v1.GetWashCodeQuotaRes{
+				Success: false,
+				Message: "获取最近洗码时间失败",
+			}, nil
+		}
+	}
+
+	quota, err := dao.BetRecords.QueryUserWashCodeQuota(
+		ctx,
+		uint(siteId),
+		siteCode,
+		uint64(userId),
+		lastBetId,
+		lastRebateTime,
+	)
+	if err != nil {
+		g.Log().Errorf(ctx, "查询可洗码额度失败: site_id=%d, user_id=%d, err=%v", siteId, userId, err)
+		return &v1.GetWashCodeQuotaRes{
+			Success: false,
+			Message: "查询可洗码额度失败",
+		}, nil
+	}
+
+	return &v1.GetWashCodeQuotaRes{
+		Success:        true,
+		Message:        "查询成功",
+		ValidBetAmount: quota.ValidAmount,
+		MaxBetId:       quota.MaxBetId,
+		LastRebateTime: lastRebateTime,
+	}, nil
+}
+
+func (s *sGame) getLastRebateTimeFromBalance(ctx context.Context, siteId int, userId uint, siteCode string) (string, error) {
+	balanceClient, conn, err := grpc_client.GetBalanceClient(ctx)
+	if err != nil {
+		return "", err
+	}
+	defer conn.Close()
+
+	mdMap := map[string]string{
+		"site_id": fmt.Sprintf("%d", siteId),
+		"user_id": fmt.Sprintf("%d", userId),
+	}
+	if siteCode != "" {
+		mdMap["site_code"] = siteCode
+	}
+	if username := middleware.GetUsernameFromContext(ctx); username != "" {
+		mdMap["username"] = username
+	}
+	if currency := middleware.GetCurrencyFromContext(ctx); currency != "" {
+		mdMap["currency"] = currency
+	}
+
+	ctxWithMeta := metadata.NewOutgoingContext(ctx, metadata.New(mdMap))
+	res, err := balanceClient.GetBalanceLog(ctxWithMeta, &balanceV1.GetBalanceLogReq{
+		Start:  "2000-01-01 00:00:00",
+		End:    time.Now().Format("2006-01-02 15:04:05"),
+		Type:   4, // 前台类型: 4=返水
+		Status: 3, // 成功
+		Page:   1,
+		Size:   1,
+	})
+	if err != nil {
+		return "", err
+	}
+	if res == nil || len(res.List) == 0 {
+		return "", nil
+	}
+
+	return strings.TrimSpace(res.List[0].GetTime()), nil
 }

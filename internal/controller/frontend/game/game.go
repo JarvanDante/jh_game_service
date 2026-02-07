@@ -70,3 +70,11 @@ func (*Controller) GetUserBetHistory(ctx context.Context, req *v1.GetUserBetHist
 
 	return frontend.Game().GetUserBetHistory(ctx, req)
 }
+
+// GetWashCodeQuota 获取当前用户可洗码额度
+func (*Controller) GetWashCodeQuota(ctx context.Context, req *v1.GetWashCodeQuotaReq) (res *v1.GetWashCodeQuotaRes, err error) {
+	if req == nil {
+		req = &v1.GetWashCodeQuotaReq{}
+	}
+	return frontend.Game().GetWashCodeQuota(ctx, req)
+}

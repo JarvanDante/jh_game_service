@@ -107,6 +107,14 @@ type UserBetIncrementResult struct {
 	BetCount      int64   `json:"bet_count"`
 }
 
+// UserWashCodeQuotaResult 用户可洗码额度统计结果
+type UserWashCodeQuotaResult struct {
+	ValidAmount   float64 `json:"valid_amount"`
+	MaxBetId      uint64  `json:"max_bet_id"`
+	MaxSettleTime string  `json:"max_settle_time"`
+	BetCount      int64   `json:"bet_count"`
+}
+
 // QueryUserBetIncrementBatch 批量查询用户注单增量（MySQL，基于用户游标）
 func (d betRecordsDao) QueryUserBetIncrementBatch(
 	ctx context.Context,
@@ -175,6 +183,41 @@ GROUP BY b.user_id
 	}
 
 	return rows, nil
+}
+
+// QueryUserWashCodeQuota 查询用户可洗码额度（MySQL）
+func (d betRecordsDao) QueryUserWashCodeQuota(
+	ctx context.Context,
+	siteId uint,
+	siteCode string,
+	userId uint64,
+	lastBetId uint64,
+	lastSettleTime string,
+) (*UserWashCodeQuotaResult, error) {
+	query := d.Ctx(ctx).
+		Where("site_id = ?", siteId).
+		Where("site_code = ?", siteCode).
+		Where("user_id = ?", userId).
+		Where("status = ?", 1).
+		Where("valid_amount > ?", 0)
+
+	if lastBetId > 0 {
+		query = query.Where("id > ?", lastBetId)
+	} else if strings.TrimSpace(lastSettleTime) != "" {
+		query = query.Where("settle_time > ?", lastSettleTime)
+	}
+
+	var result UserWashCodeQuotaResult
+	if err := query.Fields(
+		"COALESCE(SUM(valid_amount), 0) AS valid_amount",
+		"COALESCE(MAX(id), 0) AS max_bet_id",
+		"DATE_FORMAT(MAX(settle_time), '%Y-%m-%d %H:%i:%s') AS max_settle_time",
+		"COALESCE(COUNT(1), 0) AS bet_count",
+	).Scan(&result); err != nil {
+		return nil, err
+	}
+
+	return &result, nil
 }
 
 // QueryUserBetHistory 查询用户历史投注（时间倒序）
