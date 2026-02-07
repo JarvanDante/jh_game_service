@@ -14,7 +14,9 @@ import (
 	"jh_game_service/internal/registry"
 	"jh_game_service/internal/service/backend"
 	"jh_game_service/internal/tracing"
+	"sort"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/ClickHouse/clickhouse-go/v2/lib/column"
@@ -1076,6 +1078,117 @@ func (s *sGame) GetUserBetSummary(ctx context.Context, req *v1.GetUserBetSummary
 		Success: true,
 		Message: "查询成功",
 		Summary: summary,
+	}, nil
+}
+
+// GetUserBetIncrementBatch 批量获取用户注单增量（MySQL，基于用户游标）
+func (s *sGame) GetUserBetIncrementBatch(ctx context.Context, req *v1.GetUserBetIncrementBatchReq) (*v1.GetUserBetIncrementBatchRes, error) {
+	if req == nil {
+		return &v1.GetUserBetIncrementBatchRes{
+			Success: false,
+			Message: "请求参数不能为空",
+		}, nil
+	}
+
+	siteCode := strings.TrimSpace(req.GetSiteCode())
+	ctx, span := tracing.StartSpan(ctx, "game.GetUserBetIncrementBatch", trace.WithAttributes(
+		attribute.String("method", "GetUserBetIncrementBatch"),
+		attribute.Int("site_id", int(req.GetSiteId())),
+		attribute.String("site_code", siteCode),
+		attribute.Int("cursor_count", len(req.GetCursors())),
+	))
+	defer span.End()
+
+	if req.GetSiteId() <= 0 {
+		return &v1.GetUserBetIncrementBatchRes{
+			Success: false,
+			Message: "site_id 缺失或无效",
+		}, nil
+	}
+	if siteCode == "" {
+		return &v1.GetUserBetIncrementBatchRes{
+			Success: false,
+			Message: "site_code 缺失或无效",
+		}, nil
+	}
+	if len(req.GetCursors()) == 0 {
+		return &v1.GetUserBetIncrementBatchRes{
+			Success: true,
+			Message: "查询成功",
+			List:    []*v1.UserBetIncrementItem{},
+		}, nil
+	}
+
+	// 去重并保留每个用户最大的last_bet_id，避免重复用户游标影响统计。
+	cursorMap := make(map[uint64]uint64, len(req.GetCursors()))
+	for _, cursor := range req.GetCursors() {
+		if cursor == nil || cursor.GetUserId() <= 0 {
+			continue
+		}
+		userId := uint64(cursor.GetUserId())
+		lastBetId := cursor.GetLastBetId()
+		if exist, ok := cursorMap[userId]; !ok || lastBetId > exist {
+			cursorMap[userId] = lastBetId
+		}
+	}
+	if len(cursorMap) == 0 {
+		return &v1.GetUserBetIncrementBatchRes{
+			Success: true,
+			Message: "查询成功",
+			List:    []*v1.UserBetIncrementItem{},
+		}, nil
+	}
+
+	cursorList := make([]dao.UserBetCursor, 0, len(cursorMap))
+	for userId, lastBetId := range cursorMap {
+		cursorList = append(cursorList, dao.UserBetCursor{
+			UserId:    userId,
+			LastBetId: lastBetId,
+		})
+	}
+
+	const chunkSize = 500
+	rows := make([]dao.UserBetIncrementResult, 0, len(cursorList))
+	for i := 0; i < len(cursorList); i += chunkSize {
+		end := i + chunkSize
+		if end > len(cursorList) {
+			end = len(cursorList)
+		}
+		part, err := dao.BetRecords.QueryUserBetIncrementBatch(
+			ctx,
+			uint(req.GetSiteId()),
+			siteCode,
+			cursorList[i:end],
+		)
+		if err != nil {
+			g.Log().Errorf(ctx, "查询用户注单增量失败: %v", err)
+			return &v1.GetUserBetIncrementBatchRes{
+				Success: false,
+				Message: fmt.Sprintf("查询失败: %v", err),
+			}, nil
+		}
+		rows = append(rows, part...)
+	}
+
+	sort.Slice(rows, func(i, j int) bool {
+		return rows[i].UserId < rows[j].UserId
+	})
+
+	list := make([]*v1.UserBetIncrementItem, 0, len(rows))
+	for _, row := range rows {
+		list = append(list, &v1.UserBetIncrementItem{
+			UserId:        int64(row.UserId),
+			ValidAmount:   fmt.Sprintf("%.4f", row.ValidAmount),
+			MaxBetId:      row.MaxBetId,
+			MaxSettleTime: row.MaxSettleTime,
+			BetCount:      row.BetCount,
+		})
+	}
+
+	return &v1.GetUserBetIncrementBatchRes{
+		Success: true,
+		Message: "查询成功",
+		List:    list,
 	}, nil
 }
 

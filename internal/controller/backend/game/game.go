@@ -5,6 +5,7 @@ import (
 	v1 "jh_game_service/api/backend/game/v1"
 	"jh_game_service/internal/middleware"
 	"jh_game_service/internal/service/backend"
+	"strings"
 
 	"github.com/gogf/gf/contrib/rpc/grpcx/v2"
 )
@@ -97,6 +98,40 @@ func (*Controller) GetUserBetSummary(ctx context.Context, req *v1.GetUserBetSumm
 	}
 
 	return backend.Game().GetUserBetSummary(ctx, req)
+}
+
+// GetUserBetIncrementBatch 批量获取用户注单增量（MySQL，基于用户游标）
+func (*Controller) GetUserBetIncrementBatch(ctx context.Context, req *v1.GetUserBetIncrementBatchReq) (res *v1.GetUserBetIncrementBatchRes, err error) {
+	if req == nil {
+		return &v1.GetUserBetIncrementBatchRes{
+			Success: false,
+			Message: "请求参数不能为空",
+		}, nil
+	}
+
+	if req.GetSiteId() <= 0 {
+		return &v1.GetUserBetIncrementBatchRes{
+			Success: false,
+			Message: "site_id 缺失或无效",
+		}, nil
+	}
+	if strings.TrimSpace(req.GetSiteCode()) == "" {
+		return &v1.GetUserBetIncrementBatchRes{
+			Success: false,
+			Message: "site_code 缺失或无效",
+		}, nil
+	}
+	if len(req.GetCursors()) == 0 {
+		return &v1.GetUserBetIncrementBatchRes{
+			Success: true,
+			Message: "查询成功",
+		}, nil
+	}
+
+	// 兜底设置动态数据库路由，避免调用方未传metadata导致路由失败。
+	ctx = context.WithValue(ctx, "dynamic_db_group", "site_"+strings.TrimSpace(req.GetSiteCode()))
+
+	return backend.Game().GetUserBetIncrementBatch(ctx, req)
 }
 
 // GetSyncTasks 获取同步任务列表

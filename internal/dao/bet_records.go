@@ -7,8 +7,11 @@ package dao
 import (
 	"context"
 	"jh_game_service/internal/dao/internal"
+	"strings"
 
 	"github.com/gogf/gf/v2/database/gdb"
+	"github.com/gogf/gf/v2/frame/g"
+	"github.com/gogf/gf/v2/util/gconv"
 )
 
 // betRecordsDao is the data access object for the table bet_records.
@@ -87,6 +90,91 @@ type UserBetHistoryRow struct {
 	NetAmount   float64 `json:"net_amount"`
 	Status      int     `json:"status"`
 	OrderNo     string  `json:"order_no"`
+}
+
+// UserBetCursor 用户注单增量游标
+type UserBetCursor struct {
+	UserId    uint64 `json:"user_id"`
+	LastBetId uint64 `json:"last_bet_id"`
+}
+
+// UserBetIncrementResult 用户注单增量结果
+type UserBetIncrementResult struct {
+	UserId        uint64  `json:"user_id"`
+	ValidAmount   float64 `json:"valid_amount"`
+	MaxBetId      uint64  `json:"max_bet_id"`
+	MaxSettleTime string  `json:"max_settle_time"`
+	BetCount      int64   `json:"bet_count"`
+}
+
+// QueryUserBetIncrementBatch 批量查询用户注单增量（MySQL，基于用户游标）
+func (d betRecordsDao) QueryUserBetIncrementBatch(
+	ctx context.Context,
+	siteId uint,
+	siteCode string,
+	cursors []UserBetCursor,
+) ([]UserBetIncrementResult, error) {
+	if len(cursors) == 0 {
+		return []UserBetIncrementResult{}, nil
+	}
+
+	var sqlBuilder strings.Builder
+	args := make([]interface{}, 0, len(cursors)*2+2)
+
+	sqlBuilder.WriteString(`
+SELECT
+    b.user_id,
+    COALESCE(SUM(b.valid_amount), 0) AS valid_amount,
+    COALESCE(MAX(b.id), 0) AS max_bet_id,
+    DATE_FORMAT(MAX(b.settle_time), '%Y-%m-%d %H:%i:%s') AS max_settle_time,
+    COALESCE(COUNT(1), 0) AS bet_count
+FROM bet_records b
+INNER JOIN (
+`)
+	for i, cursor := range cursors {
+		if i > 0 {
+			sqlBuilder.WriteString(" UNION ALL ")
+		}
+		sqlBuilder.WriteString("SELECT ? AS user_id, ? AS last_bet_id")
+		args = append(args, cursor.UserId, cursor.LastBetId)
+	}
+	sqlBuilder.WriteString(`
+) c ON c.user_id = b.user_id
+WHERE b.site_id = ?
+  AND b.site_code = ?
+  AND b.status = 1
+  AND b.valid_amount > 0
+  AND b.id > c.last_bet_id
+GROUP BY b.user_id
+`)
+
+	args = append(args, siteId, siteCode)
+
+	// 优先使用动态数据库组，保证按站点路由到正确MySQL库。
+	db := d.DB()
+	if dbGroup := ctx.Value("dynamic_db_group"); dbGroup != nil {
+		if groupName, ok := dbGroup.(string); ok && groupName != "" && gdb.GetConfig(groupName) != nil {
+			db = g.DB(groupName)
+		}
+	}
+
+	result, err := db.GetAll(ctx, sqlBuilder.String(), args...)
+	if err != nil {
+		return nil, err
+	}
+
+	rows := make([]UserBetIncrementResult, 0, len(result))
+	for _, item := range result {
+		rows = append(rows, UserBetIncrementResult{
+			UserId:        gconv.Uint64(item["user_id"]),
+			ValidAmount:   gconv.Float64(item["valid_amount"]),
+			MaxBetId:      gconv.Uint64(item["max_bet_id"]),
+			MaxSettleTime: gconv.String(item["max_settle_time"]),
+			BetCount:      gconv.Int64(item["bet_count"]),
+		})
+	}
+
+	return rows, nil
 }
 
 // QueryUserBetHistory 查询用户历史投注（时间倒序）

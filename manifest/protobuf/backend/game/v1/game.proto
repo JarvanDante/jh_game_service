@@ -22,6 +22,9 @@ service Game {
 
     // 用户时间范围注单汇总（有效投注/净输赢/打码倍数）
     rpc GetUserBetSummary(GetUserBetSummaryReq) returns (GetUserBetSummaryRes) {}
+
+    // 批量用户注单增量汇总（MySQL，基于用户游标）
+    rpc GetUserBetIncrementBatch(GetUserBetIncrementBatchReq) returns (GetUserBetIncrementBatchRes) {}
     
     // 同步任务管理
     rpc GetSyncTasks(GetSyncTasksReq) returns (GetSyncTasksRes) {}
@@ -51,6 +54,35 @@ message UserBetSummary {
     string valid_amount = 6;              // 有效投注金额
     string net_amount = 7;                // 净输赢
     string turnover_multiple = 8;         // 打码倍数（预留）
+}
+
+// 批量用户注单增量汇总请求（MySQL）
+message GetUserBetIncrementBatchReq {
+    int32 site_id = 1;                               // 站点ID
+    string site_code = 2;                            // 站点代码
+    repeated UserBetCursorItem cursors = 3;          // 用户游标列表
+}
+
+// 用户游标项
+message UserBetCursorItem {
+    int64 user_id = 1;                               // 用户ID
+    uint64 last_bet_id = 2;                          // 上次已累计的注单ID游标
+}
+
+// 批量用户注单增量汇总响应
+message GetUserBetIncrementBatchRes {
+    bool success = 1;                                // 是否成功
+    string message = 2;                              // 消息
+    repeated UserBetIncrementItem list = 3;          // 增量结果
+}
+
+// 用户注单增量结果
+message UserBetIncrementItem {
+    int64 user_id = 1;                               // 用户ID
+    string valid_amount = 2;                         // 增量有效投注总额
+    uint64 max_bet_id = 3;                           // 本批次最大注单ID
+    string max_settle_time = 4;                      // 本批次最大结算时间
+    int64 bet_count = 5;                             // 增量注单数
 }
 
 message GetGamesReq {

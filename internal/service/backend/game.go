@@ -16,6 +16,7 @@ type (
 		GetGamePlatforms(ctx context.Context, req *v1.GetGamePlatformsReq) (*v1.GetGamePlatformsRes, error)
 		GetUserBetStats(ctx context.Context, req *v1.GetUserBetStatsReq) (*v1.GetUserBetStatsRes, error)
 		GetUserBetSummary(ctx context.Context, req *v1.GetUserBetSummaryReq) (*v1.GetUserBetSummaryRes, error)
+		GetUserBetIncrementBatch(ctx context.Context, req *v1.GetUserBetIncrementBatchReq) (*v1.GetUserBetIncrementBatchRes, error)
 		GetSyncTasks(ctx context.Context, req *v1.GetSyncTasksReq) (*v1.GetSyncTasksRes, error)
 	}
 )
