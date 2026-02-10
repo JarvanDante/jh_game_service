@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"github.com/gogf/gf/v2/database/gdb"
 	"github.com/gogf/gf/v2/frame/g"
 	balanceV1 "jh_game_service/api/grpc/balance/v1"
 	"jh_game_service/internal/consts"
@@ -1270,6 +1271,9 @@ func (p *OnePlatform) saveBetRecordsToMySQL(ctx context.Context, params *platfor
 
 	// 2. 批量插入注单到 MySQL
 	insertData := make([]g.Map, 0, len(records))
+	outboxData := make([]g.Map, 0, len(records))
+	balanceMessages := make([]*mq.SyncBetToBalanceMessage, 0, len(records))
+	syncMessages := make([]mq.SyncBetToClickHouseMessage, 0, len(records))
 	loc, _ := time.LoadLocation("Asia/Shanghai")
 
 	for _, record := range records {
@@ -1322,22 +1326,13 @@ func (p *OnePlatform) saveBetRecordsToMySQL(ctx context.Context, params *platfor
 		return stats, nil
 	}
 
-	// 批量插入到 bet_records 表
-	result, err := db.Model("bet_records").Data(insertData).InsertIgnore()
-	if err != nil {
-		return stats, fmt.Errorf("批量插入注单失败: %v", err)
+	// 3. 构建 Outbox 消息（只同步已结算且有user_id的注单）
+	g.Log().Infof(ctx, "开始写入Outbox消息: 总记录数=%d", len(records))
+
+	gameType := ""
+	if params.SiteGame.Type > 0 {
+		gameType = fmt.Sprintf("%d", params.SiteGame.Type)
 	}
-
-	// 获取实际插入的行数
-	rowsAffected, _ := result.RowsAffected()
-	stats.MysqlInserted = int(rowsAffected)
-	stats.MysqlDuplicated = len(insertData) - stats.MysqlInserted
-
-	g.Log().Infof(ctx, "批量入库MySQL成功: 站点=%s, 总数=%d, 新插入=%d, 重复跳过=%d",
-		params.SiteCode, len(insertData), stats.MysqlInserted, stats.MysqlDuplicated)
-
-	// 3. 批量发送 MQ 消息同步到 ClickHouse（只同步已结算且有user_id的注单）
-	g.Log().Infof(ctx, "开始发送MQ消息: 总记录数=%d", len(records))
 
 	for _, record := range records {
 		// 只同步已结算的注单 (status=1)
@@ -1354,14 +1349,8 @@ func (p *OnePlatform) saveBetRecordsToMySQL(ctx context.Context, params *platfor
 			continue
 		}
 
-		// 获取游戏类型（转为字符串）
-		gameType := ""
-		if params.SiteGame.Type > 0 {
-			gameType = fmt.Sprintf("%d", params.SiteGame.Type)
-		}
-
-		// 构建 MQ 消息
-		mqMsg := &mq.SyncBetToClickHouseMessage{
+		// 构建 Outbox 消息（先缓存）
+		syncMessages = append(syncMessages, mq.SyncBetToClickHouseMessage{
 			SiteID:      uint32(params.SiteId),
 			SiteCode:    params.SiteCode,
 			UserID:      userId,
@@ -1380,19 +1369,11 @@ func (p *OnePlatform) saveBetRecordsToMySQL(ctx context.Context, params *platfor
 			SettleTime:  record.SettleTime,
 			Status:      uint8(record.Status),
 			TaskId:      taskId, // 关联任务ID
-		}
-
-		// 发送 MQ 消息（同步发送，确保消息发送成功）
-		if err := mq.PublishBetToClickHouse(ctx, mqMsg); err != nil {
-			g.Log().Errorf(ctx, "发送注单同步消息失败: order=%s, err=%v", record.OrderNo, err)
-			stats.MqFailed++
-		} else {
-			stats.MqSent++
-		}
+		})
 
 		// 同步到 Balance（用于流水消费）
 		if record.ValidAmount > 0 {
-			balanceMsg := &mq.SyncBetToBalanceMessage{
+			balanceMessages = append(balanceMessages, &mq.SyncBetToBalanceMessage{
 				SiteID:      uint32(params.SiteId),
 				SiteCode:    params.SiteCode,
 				UserID:      userId,
@@ -1404,17 +1385,83 @@ func (p *OnePlatform) saveBetRecordsToMySQL(ctx context.Context, params *platfor
 				BetTime:     record.BetTime,
 				SettleTime:  record.SettleTime,
 				Status:      uint8(record.Status),
-			}
-			if err := mq.PublishBetToBalance(ctx, balanceMsg); err != nil {
-				g.Log().Errorf(ctx, "发送流水消费消息失败: order=%s, user_id=%d, site=%s, err=%v", record.OrderNo, userId, params.SiteCode, err)
-			} else {
-				g.Log().Infof(ctx, "发送流水消费消息成功: order=%s, user_id=%d, site=%s, valid_amount=%.4f", record.OrderNo, userId, params.SiteCode, record.ValidAmount)
-			}
+			})
 		}
 	}
 
-	g.Log().Infof(ctx, "MQ消息发送统计: 站点=%s, 成功=%d, 失败=%d, 跳过=%d",
-		params.SiteCode, stats.MqSent, stats.MqFailed, stats.MqSkipped)
+	// 4. 批量插入到 bet_records 表 & 写入 Outbox（事务保证一致）
+	outboxBatchCount := 0
+	if len(syncMessages) > 0 {
+		const outboxMessageBatchSize = 2000
+		batchIndex := 0
+		for i := 0; i < len(syncMessages); i += outboxMessageBatchSize {
+			end := i + outboxMessageBatchSize
+			if end > len(syncMessages) {
+				end = len(syncMessages)
+			}
+			batchIndex++
+
+			batch := syncMessages[i:end]
+			payload, err := json.Marshal(mq.SyncBetToClickHouseBatchMessage{Records: batch})
+			if err != nil {
+				return stats, fmt.Errorf("序列化Outbox消息失败: batch=%d, err=%v", batchIndex, err)
+			}
+
+			outboxData = append(outboxData, g.Map{
+				"event_type":     "bet_records_sync_clickhouse_batch",
+				"aggregate_type": "bet_records",
+				"aggregate_id":   fmt.Sprintf("%d_%d", taskId, batchIndex),
+				"site_code":      params.SiteCode,
+				"exchange":       "bet.sync",
+				"routing_key":    "bet.sync_to_clickhouse",
+				"payload":        string(payload),
+				"status":         0,
+				"retry_count":    0,
+			})
+		}
+		outboxBatchCount = len(outboxData)
+	}
+
+	err := db.Transaction(ctx, func(ctx context.Context, tx gdb.TX) error {
+		result, err := tx.Model("bet_records").Data(insertData).InsertIgnore()
+		if err != nil {
+			return fmt.Errorf("批量插入注单失败: %v", err)
+		}
+
+		// 获取实际插入的行数
+		rowsAffected, _ := result.RowsAffected()
+		stats.MysqlInserted = int(rowsAffected)
+		stats.MysqlDuplicated = len(insertData) - stats.MysqlInserted
+
+		if len(outboxData) > 0 {
+			if _, err := tx.Model("mq_outbox").Data(outboxData).Insert(); err != nil {
+				return fmt.Errorf("写入Outbox失败: %v", err)
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		return stats, err
+	}
+
+	stats.MqSent = len(syncMessages)
+
+	g.Log().Infof(ctx, "批量入库MySQL成功: 站点=%s, 总数=%d, 新插入=%d, 重复跳过=%d",
+		params.SiteCode, len(insertData), stats.MysqlInserted, stats.MysqlDuplicated)
+
+	// 5. 发送 Balance 消息（仅在事务成功后）
+	for _, balanceMsg := range balanceMessages {
+		if err := mq.PublishBetToBalance(ctx, balanceMsg); err != nil {
+			g.Log().Errorf(ctx, "发送流水消费消息失败: order=%s, user_id=%d, site=%s, err=%v",
+				balanceMsg.OrderNo, balanceMsg.UserID, balanceMsg.SiteCode, err)
+		} else {
+			g.Log().Infof(ctx, "发送流水消费消息成功: order=%s, user_id=%d, site=%s, valid_amount=%.4f",
+				balanceMsg.OrderNo, balanceMsg.UserID, balanceMsg.SiteCode, balanceMsg.ValidAmount)
+		}
+	}
+
+	g.Log().Infof(ctx, "Outbox消息写入统计: 站点=%s, 记录数=%d, 批次数=%d, 跳过=%d",
+		params.SiteCode, stats.MqSent, outboxBatchCount, stats.MqSkipped)
 
 	return stats, nil
 }

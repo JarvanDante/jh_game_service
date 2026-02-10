@@ -52,6 +52,11 @@ type SyncBetToClickHouseMessage struct {
 	TaskId      int64   `json:"task_id"` // 同步任务ID
 }
 
+// SyncBetToClickHouseBatchMessage 批量同步注单到 ClickHouse 消息
+type SyncBetToClickHouseBatchMessage struct {
+	Records []SyncBetToClickHouseMessage `json:"records"`
+}
+
 // SyncBetToBalanceMessage 同步注单到 Balance 服务消息（用于流水消费）
 type SyncBetToBalanceMessage struct {
 	SiteID      uint32  `json:"site_id"`
@@ -328,6 +333,45 @@ func PublishBetToBalance(ctx context.Context, msg *SyncBetToBalanceMessage) erro
 	return nil
 }
 
+// PublishRaw 通用发布消息（用于Outbox投递）
+func PublishRaw(ctx context.Context, exchange, routingKey string, body []byte) error {
+	if channel == nil {
+		return fmt.Errorf("RabbitMQ channel未初始化")
+	}
+	if exchange == "" || routingKey == "" {
+		return fmt.Errorf("exchange或routingKey不能为空")
+	}
+
+	// 声明 exchange（幂等操作）
+	if err := channel.ExchangeDeclare(
+		exchange,
+		"topic",
+		true,
+		false,
+		false,
+		false,
+		nil,
+	); err != nil {
+		return fmt.Errorf("声明exchange失败: %v", err)
+	}
+
+	if err := channel.Publish(
+		exchange,
+		routingKey,
+		false,
+		false,
+		amqp.Publishing{
+			ContentType:  "application/json",
+			Body:         body,
+			DeliveryMode: amqp.Persistent,
+		},
+	); err != nil {
+		return fmt.Errorf("发布消息失败: %v", err)
+	}
+
+	return nil
+}
+
 // StartSyncBetToClickHouseConsumer 启动同步注单到 ClickHouse 消费者
 func StartSyncBetToClickHouseConsumer(ctx context.Context) error {
 	if channel == nil {
@@ -414,7 +458,7 @@ func batchProcessSyncBetMessages(ctx context.Context, msgs <-chan amqp.Delivery)
 
 	var batch []*entity.ClickHouseBetRecord
 	var batchMsgs []amqp.Delivery
-	var batchTaskIds []int64 // 记录每条消息的task_id
+	var batchTaskIds []int64 // 记录每条记录的task_id
 	ticker := time.NewTicker(flushTimeout)
 	defer ticker.Stop()
 
@@ -485,17 +529,22 @@ func batchProcessSyncBetMessages(ctx context.Context, msgs <-chan amqp.Delivery)
 			}
 
 			// 解析消息
-			record, taskId, err := parseSyncBetMessage(ctx, msg)
+			records, taskIds, err := parseSyncBetMessage(ctx, msg)
 			if err != nil {
 				g.Log().Errorf(ctx, "解析消息失败: %v, body: %s", err, string(msg.Body))
 				msg.Nack(false, false) // 丢弃无效消息
 				continue
 			}
 
+			if len(records) == 0 {
+				msg.Ack(false)
+				continue
+			}
+
 			// 添加到批次
-			batch = append(batch, record)
+			batch = append(batch, records...)
 			batchMsgs = append(batchMsgs, msg)
-			batchTaskIds = append(batchTaskIds, taskId)
+			batchTaskIds = append(batchTaskIds, taskIds...)
 
 			// 达到批量大小，立即刷新
 			if len(batch) >= batchSize {
@@ -513,14 +562,30 @@ func batchProcessSyncBetMessages(ctx context.Context, msgs <-chan amqp.Delivery)
 	}
 }
 
-// parseSyncBetMessage 解析同步注单消息
-func parseSyncBetMessage(ctx context.Context, msg amqp.Delivery) (*entity.ClickHouseBetRecord, int64, error) {
-	var syncMsg SyncBetToClickHouseMessage
-	if err := json.Unmarshal(msg.Body, &syncMsg); err != nil {
-		return nil, 0, fmt.Errorf("解析JSON失败: %w", err)
+// parseSyncBetMessage 解析同步注单消息（支持单条和批量）
+func parseSyncBetMessage(ctx context.Context, msg amqp.Delivery) ([]*entity.ClickHouseBetRecord, []int64, error) {
+	var batchMsg SyncBetToClickHouseBatchMessage
+	if err := json.Unmarshal(msg.Body, &batchMsg); err == nil && len(batchMsg.Records) > 0 {
+		records := make([]*entity.ClickHouseBetRecord, 0, len(batchMsg.Records))
+		taskIds := make([]int64, 0, len(batchMsg.Records))
+		for _, syncMsg := range batchMsg.Records {
+			record := buildClickHouseRecordFromSyncMsg(syncMsg)
+			records = append(records, record)
+			taskIds = append(taskIds, syncMsg.TaskId)
+		}
+		return records, taskIds, nil
 	}
 
-	// 转换为 ClickHouse 记录
+	var syncMsg SyncBetToClickHouseMessage
+	if err := json.Unmarshal(msg.Body, &syncMsg); err != nil {
+		return nil, nil, fmt.Errorf("解析JSON失败: %w", err)
+	}
+
+	record := buildClickHouseRecordFromSyncMsg(syncMsg)
+	return []*entity.ClickHouseBetRecord{record}, []int64{syncMsg.TaskId}, nil
+}
+
+func buildClickHouseRecordFromSyncMsg(syncMsg SyncBetToClickHouseMessage) *entity.ClickHouseBetRecord {
 	record := &entity.ClickHouseBetRecord{
 		SiteID:      syncMsg.SiteID,
 		SiteCode:    syncMsg.SiteCode,
@@ -555,7 +620,7 @@ func parseSyncBetMessage(ctx context.Context, msg amqp.Delivery) (*entity.ClickH
 		}
 	}
 
-	return record, syncMsg.TaskId, nil
+	return record
 }
 
 // handleSyncBetToClickHouseMessage 处理同步注单到 ClickHouse 消息（已废弃，使用批量处理）
