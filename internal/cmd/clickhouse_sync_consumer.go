@@ -16,10 +16,11 @@ var (
 	ClickHouseSyncConsumer = &gcmd.Command{
 		Name:  "clickhouse-sync",
 		Usage: "clickhouse-sync",
-		Brief: "启动 ClickHouse 同步消费者，监听注单同步消息",
+		Brief: "启动 ClickHouse 同步消费者，监听注单与分析数据同步消息",
 		Description: `
 启动 ClickHouse 同步消费者，监听来自拉单服务的注单同步消息，
-并将注单数据同步到 ClickHouse 的 game_analytics.bet_records 表。
+以及来自 Outbox 的用户/资金日志同步消息，
+并将数据写入 ClickHouse 的 game_analytics 相关表。
 
 示例：
   ./jh_game_service clickhouse-sync
@@ -51,6 +52,9 @@ var (
 			// 启动消费者
 			if err := mq.StartSyncBetToClickHouseConsumer(ctx); err != nil {
 				g.Log().Fatalf(ctx, "Failed to start ClickHouse sync consumer: %v", err)
+			}
+			if err := mq.StartAnalyticsSyncConsumers(ctx); err != nil {
+				g.Log().Fatalf(ctx, "Failed to start ClickHouse analytics sync consumer: %v", err)
 			}
 
 			// 等待中断信号
