@@ -291,40 +291,6 @@ func (s *sGame) GetGameRecords(ctx context.Context, req *v1.GetGameRecordsReq) (
 		return nil, fmt.Errorf("获取游戏记录失败: %v", err)
 	}
 
-	// 计算当前平台总金额
-	totalAmountQuery := dao.BetRecords.Ctx(ctx).
-		Where("bet_time >= ?", startDate).
-		Where("bet_time <= ?", endDate)
-
-	// 如果指定了平台，添加平台过滤
-	if req.Platform != "" {
-		totalAmountQuery = totalAmountQuery.Where("platform = ?", req.Platform)
-	}
-
-	if req.Username != "" {
-		totalAmountQuery = totalAmountQuery.Where("username LIKE ?", "%"+req.Username+"%")
-	}
-	if req.Type > 0 {
-		if req.Type == 1 {
-			totalAmountQuery = totalAmountQuery.Where("bet_amount > 0")
-		} else if req.Type == 2 {
-			totalAmountQuery = totalAmountQuery.Where("win_amount > 0")
-		}
-	}
-	if req.Keywords != "" {
-		totalAmountQuery = totalAmountQuery.Where("(order_no LIKE ? OR round_id LIKE ? OR game_name LIKE ?)",
-			"%"+req.Keywords+"%", "%"+req.Keywords+"%", "%"+req.Keywords+"%")
-	}
-
-	var totalAmount float64
-	err = totalAmountQuery.Fields("COALESCE(SUM(bet_amount), 0)").Scan(&totalAmount)
-	if err != nil {
-		totalAmount = 0
-	}
-
-	// 计算所有游戏总金额（暂时写死，后续可以通过快照获取）
-	allGameTotalAmount := totalAmount * 1.2 // 模拟所有游戏总金额
-
 	// 转换为响应格式
 	records := make([]*v1.GameRecord, 0, len(betRecords))
 	for _, record := range betRecords {
@@ -375,13 +341,11 @@ func (s *sGame) GetGameRecords(ctx context.Context, req *v1.GetGameRecordsReq) (
 	}
 
 	return &v1.GetGameRecordsRes{
-		Data:               records,
-		Total:              int32(total),
-		CurrentPage:        req.Page,
-		PerPage:            req.Size,
-		LastPage:           lastPage,
-		TotalAmount:        fmt.Sprintf("%.2f", totalAmount),
-		AllGameTotalAmount: fmt.Sprintf("%.2f", allGameTotalAmount),
+		Data:        records,
+		Total:       int32(total),
+		CurrentPage: req.Page,
+		PerPage:     req.Size,
+		LastPage:    lastPage,
 	}, nil
 }
 

@@ -146,8 +146,6 @@ message GetGameRecordsRes {
     int32 current_page = 3;                // 当前页码
     int32 per_page = 4;                    // 每页数量
     int32 last_page = 5;                   // 最后一页
-    string total_amount = 6;               // 当前平台总金额
-    string all_game_total_amount = 7;      // 所有游戏总金额
 }
 
 message GameRecord {

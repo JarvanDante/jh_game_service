@@ -1027,16 +1027,14 @@ func (x *GetGameRecordsReq) GetKeywords() string {
 }
 
 type GetGameRecordsRes struct {
-	state              protoimpl.MessageState `protogen:"open.v1"`
-	Data               []*GameRecord          `protobuf:"bytes,1,rep,name=data,proto3" json:"data" dc:"游戏记录列表"`                                                            // 游戏记录列表
-	Total              int32                  `protobuf:"varint,2,opt,name=total,proto3" json:"total" dc:"总记录数"`                                                           // 总记录数
-	CurrentPage        int32                  `protobuf:"varint,3,opt,name=current_page,json=currentPage,proto3" json:"current_page" dc:"当前页码"`                            // 当前页码
-	PerPage            int32                  `protobuf:"varint,4,opt,name=per_page,json=perPage,proto3" json:"per_page" dc:"每页数量"`                                        // 每页数量
-	LastPage           int32                  `protobuf:"varint,5,opt,name=last_page,json=lastPage,proto3" json:"last_page" dc:"最后一页"`                                     // 最后一页
-	TotalAmount        string                 `protobuf:"bytes,6,opt,name=total_amount,json=totalAmount,proto3" json:"total_amount" dc:"当前平台总金额"`                          // 当前平台总金额
-	AllGameTotalAmount string                 `protobuf:"bytes,7,opt,name=all_game_total_amount,json=allGameTotalAmount,proto3" json:"all_game_total_amount" dc:"所有游戏总金额"` // 所有游戏总金额
-	unknownFields      protoimpl.UnknownFields
-	sizeCache          protoimpl.SizeCache
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Data          []*GameRecord          `protobuf:"bytes,1,rep,name=data,proto3" json:"data" dc:"游戏记录列表"`                                 // 游戏记录列表
+	Total         int32                  `protobuf:"varint,2,opt,name=total,proto3" json:"total" dc:"总记录数"`                                // 总记录数
+	CurrentPage   int32                  `protobuf:"varint,3,opt,name=current_page,json=currentPage,proto3" json:"current_page" dc:"当前页码"` // 当前页码
+	PerPage       int32                  `protobuf:"varint,4,opt,name=per_page,json=perPage,proto3" json:"per_page" dc:"每页数量"`             // 每页数量
+	LastPage      int32                  `protobuf:"varint,5,opt,name=last_page,json=lastPage,proto3" json:"last_page" dc:"最后一页"`          // 最后一页
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *GetGameRecordsRes) Reset() {
@@ -1102,20 +1100,6 @@ func (x *GetGameRecordsRes) GetLastPage() int32 {
 		return x.LastPage
 	}
 	return 0
-}
-
-func (x *GetGameRecordsRes) GetTotalAmount() string {
-	if x != nil {
-		return x.TotalAmount
-	}
-	return ""
-}
-
-func (x *GetGameRecordsRes) GetAllGameTotalAmount() string {
-	if x != nil {
-		return x.AllGameTotalAmount
-	}
-	return ""
 }
 
 type GameRecord struct {
@@ -2998,15 +2982,13 @@ const file_backend_game_v1_game_proto_rawDesc = "" +
 	"\x04size\x18\x06 \x01(\x05R\x04size\x12\x1a\n" +
 	"\busername\x18\a \x01(\tR\busername\x12\x12\n" +
 	"\x04type\x18\b \x01(\x05R\x04type\x12\x1a\n" +
-	"\bkeywords\x18\t \x01(\tR\bkeywords\"\x80\x02\n" +
+	"\bkeywords\x18\t \x01(\tR\bkeywords\"\xaa\x01\n" +
 	"\x11GetGameRecordsRes\x12$\n" +
 	"\x04data\x18\x01 \x03(\v2\x10.game.GameRecordR\x04data\x12\x14\n" +
 	"\x05total\x18\x02 \x01(\x05R\x05total\x12!\n" +
 	"\fcurrent_page\x18\x03 \x01(\x05R\vcurrentPage\x12\x19\n" +
 	"\bper_page\x18\x04 \x01(\x05R\aperPage\x12\x1b\n" +
-	"\tlast_page\x18\x05 \x01(\x05R\blastPage\x12!\n" +
-	"\ftotal_amount\x18\x06 \x01(\tR\vtotalAmount\x121\n" +
-	"\x15all_game_total_amount\x18\a \x01(\tR\x12allGameTotalAmount\"\xbb\x04\n" +
+	"\tlast_page\x18\x05 \x01(\x05R\blastPage\"\xbb\x04\n" +
 	"\n" +
 	"GameRecord\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\x04R\x02id\x12\x17\n" +
