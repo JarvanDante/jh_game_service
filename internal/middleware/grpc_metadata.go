@@ -44,16 +44,27 @@ func GetAdminIdFromGRPCMetadata(ctx context.Context) (uint, bool) {
  * @author : Carson
  */
 func GetSiteIdFromGRPCMetadata(ctx context.Context) (uint, bool) {
-
-	if md, ok := metadata.FromIncomingContext(ctx); ok {
-		if siteIDs := md.Get("site_id"); len(siteIDs) > 0 {
-			siteID, _ := strconv.ParseInt(siteIDs[0], 10, 64)
-			// 使用siteID
-			return uint(siteID), true
-		}
+	md, ok := metadata.FromIncomingContext(ctx)
+	if !ok {
+		return 0, false
 	}
 
-	return 0, true
+	siteIDs := md.Get("site_id")
+	if len(siteIDs) == 0 {
+		return 0, false
+	}
+
+	siteIDStr := strings.TrimSpace(siteIDs[0])
+	if siteIDStr == "" {
+		return 0, false
+	}
+
+	siteID, err := strconv.ParseInt(siteIDStr, 10, 64)
+	if err != nil || siteID <= 0 {
+		return 0, false
+	}
+
+	return uint(siteID), true
 }
 
 //GetSiteCodeFromGRPCMetadata
@@ -65,16 +76,22 @@ func GetSiteIdFromGRPCMetadata(ctx context.Context) (uint, bool) {
  * @author : Carson
  */
 func GetSiteCodeFromGRPCMetadata(ctx context.Context) (string, bool) {
-
-	if md, ok := metadata.FromIncomingContext(ctx); ok {
-		if siteCodes := md.Get("site_code"); len(siteCodes) > 0 {
-			siteCode := siteCodes[0]
-			// 使用siteID
-			return siteCode, true
-		}
+	md, ok := metadata.FromIncomingContext(ctx)
+	if !ok {
+		return "", false
 	}
 
-	return "", true
+	siteCodes := md.Get("site_code")
+	if len(siteCodes) == 0 {
+		return "", false
+	}
+
+	siteCode := strings.TrimSpace(siteCodes[0])
+	if siteCode == "" {
+		return "", false
+	}
+
+	return siteCode, true
 }
 
 //GetUserIdFromGRPCMetadata

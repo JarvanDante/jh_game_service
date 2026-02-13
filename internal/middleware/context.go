@@ -24,7 +24,7 @@ func GetAdminIdFromContext(ctx context.Context) (uint, bool) {
 	}
 
 	// 如果 gRPC metadata 中没有，尝试从 context 获取
-	if adminId, ok := ctx.Value(SiteIdContextKey).(uint); ok {
+	if adminId, ok := ctx.Value(AdminIdContextKey).(uint); ok {
 		return adminId, true
 	}
 	return 0, false
@@ -45,7 +45,7 @@ func GetSiteIdFromContext(ctx context.Context) (uint, bool) {
 	}
 
 	// 如果 gRPC metadata 中没有，尝试从 context 获取
-	if siteId, ok := ctx.Value(AdminIdContextKey).(uint); ok {
+	if siteId, ok := ctx.Value(SiteIdContextKey).(uint); ok {
 		return siteId, true
 	}
 	return 0, false
