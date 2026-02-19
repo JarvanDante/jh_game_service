@@ -30,11 +30,13 @@ func (s *sAgentSettlement) GetAgentDailyBetStats(ctx context.Context, req *v1.Ge
 
 	// 优先走 ClickHouse 聚合，性能更好；失败时回退 MySQL，保证可用性
 	if res, err := s.queryFromClickHouse(ctx, uint32(siteId), req); err == nil {
+		g.Log().Infof(ctx, "代理结算统计数据源: ClickHouse, site_id=%d, start=%s, end=%s, agent_id=%d", siteId, req.StartDate, req.EndDate, req.AgentId)
 		return res, nil
 	} else {
 		g.Log().Warningf(ctx, "ClickHouse代理结算统计失败，回退MySQL: %v", err)
 	}
 
+	g.Log().Infof(ctx, "代理结算统计数据源: MySQL(回退), site_id=%d, start=%s, end=%s, agent_id=%d", siteId, req.StartDate, req.EndDate, req.AgentId)
 	return s.queryFromMySQL(ctx, siteId, req)
 }
 
