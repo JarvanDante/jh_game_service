@@ -5,6 +5,7 @@
 package logic
 
 import (
+	_ "jh_game_service/internal/logic/backend/agent_settlement"
 	_ "jh_game_service/internal/logic/backend/game"
 	_ "jh_game_service/internal/logic/frontend/game"
 )

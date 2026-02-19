@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	"fmt"
+	agentSettlement "jh_game_service/internal/controller/backend/agent_settlement"
 	"jh_game_service/internal/controller/backend/game"
 	frontendGame "jh_game_service/internal/controller/frontend/game"
 	"jh_game_service/internal/mq"
@@ -119,6 +120,7 @@ var (
 				),
 			}...)
 			s := grpcx.Server.New(c)
+			agentSettlement.Register(s)
 			game.Register(s)
 			frontendGame.Register(s)
 
