@@ -10,6 +10,7 @@ import (
 	"jh_game_service/internal/model/do"
 	"jh_game_service/internal/model/entity"
 	"jh_game_service/internal/util"
+	"sync"
 	"time"
 
 	"github.com/gogf/gf/v2/frame/g"
@@ -18,8 +19,10 @@ import (
 )
 
 var (
-	conn    *amqp.Connection
-	channel *amqp.Channel
+	conn       *amqp.Connection
+	channel    *amqp.Channel
+	rabbitURL  string
+	rabbitMu   sync.Mutex
 )
 
 // SyncUserToGameMessage 同步用户到游戏服务消息
@@ -76,34 +79,87 @@ type SyncBetToBalanceMessage struct {
 
 // InitRabbitMQ 初始化RabbitMQ连接
 func InitRabbitMQ(ctx context.Context) error {
+	rabbitMu.Lock()
+	defer rabbitMu.Unlock()
+
 	url := g.Cfg().MustGet(ctx, "rabbitmq.url").String()
 	if url == "" {
 		g.Log().Warning(ctx, "RabbitMQ URL未配置，跳过初始化")
 		return fmt.Errorf("RabbitMQ URL未配置")
 	}
-
-	var err error
-	conn, err = amqp.Dial(url)
-	if err != nil {
-		return fmt.Errorf("连接RabbitMQ失败: %v", err)
-	}
-
-	channel, err = conn.Channel()
-	if err != nil {
-		return fmt.Errorf("创建RabbitMQ channel失败: %v", err)
-	}
-
-	g.Log().Info(ctx, "RabbitMQ初始化成功")
-	return nil
+	rabbitURL = url
+	return reconnectLocked(ctx)
 }
 
 // CloseRabbitMQ 关闭RabbitMQ连接
 func CloseRabbitMQ() {
+	rabbitMu.Lock()
+	defer rabbitMu.Unlock()
+	closeLocked()
+}
+
+// IsRabbitMQHealthy 返回当前连接是否健康
+func IsRabbitMQHealthy() bool {
+	rabbitMu.Lock()
+	defer rabbitMu.Unlock()
+	return conn != nil && !conn.IsClosed() && channel != nil && !channel.IsClosed()
+}
+
+// ReconnectRabbitMQ 手动触发重连
+func ReconnectRabbitMQ(ctx context.Context) error {
+	rabbitMu.Lock()
+	defer rabbitMu.Unlock()
+	if rabbitURL == "" {
+		rabbitURL = g.Cfg().MustGet(ctx, "rabbitmq.url").String()
+	}
+	if rabbitURL == "" {
+		return fmt.Errorf("RabbitMQ URL未配置")
+	}
+	return reconnectLocked(ctx)
+}
+
+func ensureRabbitMQConnected(ctx context.Context) error {
+	rabbitMu.Lock()
+	defer rabbitMu.Unlock()
+	if conn != nil && !conn.IsClosed() && channel != nil && !channel.IsClosed() {
+		return nil
+	}
+	if rabbitURL == "" {
+		rabbitURL = g.Cfg().MustGet(ctx, "rabbitmq.url").String()
+	}
+	if rabbitURL == "" {
+		return fmt.Errorf("RabbitMQ URL未配置")
+	}
+	g.Log().Warning(ctx, "检测到RabbitMQ连接断开，尝试自动重连...")
+	return reconnectLocked(ctx)
+}
+
+func reconnectLocked(ctx context.Context) error {
+	closeLocked()
+
+	var err error
+	conn, err = amqp.Dial(rabbitURL)
+	if err != nil {
+		return fmt.Errorf("连接RabbitMQ失败: %v", err)
+	}
+	channel, err = conn.Channel()
+	if err != nil {
+		_ = conn.Close()
+		conn = nil
+		return fmt.Errorf("创建RabbitMQ channel失败: %v", err)
+	}
+	g.Log().Info(ctx, "RabbitMQ连接已建立")
+	return nil
+}
+
+func closeLocked() {
 	if channel != nil {
-		channel.Close()
+		_ = channel.Close()
+		channel = nil
 	}
 	if conn != nil {
-		conn.Close()
+		_ = conn.Close()
+		conn = nil
 	}
 }
 
@@ -347,8 +403,8 @@ func PublishBetToBalance(ctx context.Context, msg *SyncBetToBalanceMessage) erro
 
 // PublishRaw 通用发布消息（用于Outbox投递）
 func PublishRaw(ctx context.Context, exchange, routingKey string, body []byte) error {
-	if channel == nil {
-		return fmt.Errorf("RabbitMQ channel未初始化")
+	if err := ensureRabbitMQConnected(ctx); err != nil {
+		return err
 	}
 	if exchange == "" || routingKey == "" {
 		return fmt.Errorf("exchange或routingKey不能为空")

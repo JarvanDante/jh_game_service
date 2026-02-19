@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/os/gcmd"
@@ -49,21 +50,51 @@ var (
 			}
 			defer mq.CloseRabbitMQ()
 
-			// 启动消费者
-			if err := mq.StartSyncBetToClickHouseConsumer(ctx); err != nil {
+			startConsumers := func() error {
+				if err := mq.StartSyncBetToClickHouseConsumer(ctx); err != nil {
+					return err
+				}
+				if err := mq.StartAnalyticsSyncConsumers(ctx); err != nil {
+					return err
+				}
+				g.Log().Info(ctx, "ClickHouse 消费者已启动")
+				return nil
+			}
+
+			// 首次启动消费者
+			if err := startConsumers(); err != nil {
 				g.Log().Fatalf(ctx, "Failed to start ClickHouse sync consumer: %v", err)
 			}
-			if err := mq.StartAnalyticsSyncConsumers(ctx); err != nil {
-				g.Log().Fatalf(ctx, "Failed to start ClickHouse analytics sync consumer: %v", err)
-			}
+
+			// 连接健康巡检：MQ断线后自动重连并恢复消费
+			healthTicker := time.NewTicker(5 * time.Second)
+			defer healthTicker.Stop()
 
 			// 等待中断信号
 			sigChan := make(chan os.Signal, 1)
 			signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
-			<-sigChan
 
-			g.Log().Info(ctx, "ClickHouse 同步消费者停止")
-			return nil
+			for {
+				select {
+				case <-healthTicker.C:
+					if mq.IsRabbitMQHealthy() {
+						continue
+					}
+					g.Log().Warning(ctx, "检测到MQ连接异常，开始重连并恢复消费者...")
+					if err := mq.ReconnectRabbitMQ(ctx); err != nil {
+						g.Log().Errorf(ctx, "MQ重连失败: %v", err)
+						continue
+					}
+					if err := startConsumers(); err != nil {
+						g.Log().Errorf(ctx, "重连后恢复消费者失败: %v", err)
+						continue
+					}
+					g.Log().Info(ctx, "MQ重连并恢复消费者成功")
+				case <-sigChan:
+					g.Log().Info(ctx, "ClickHouse 同步消费者停止")
+					return nil
+				}
+			}
 		},
 	}
 )
