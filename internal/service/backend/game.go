@@ -18,6 +18,7 @@ type (
 		GetUserBetSummary(ctx context.Context, req *v1.GetUserBetSummaryReq) (*v1.GetUserBetSummaryRes, error)
 		GetUserBetIncrementBatch(ctx context.Context, req *v1.GetUserBetIncrementBatchReq) (*v1.GetUserBetIncrementBatchRes, error)
 		GetSyncTasks(ctx context.Context, req *v1.GetSyncTasksReq) (*v1.GetSyncTasksRes, error)
+		GetAgentDailyBetStats(ctx context.Context, req *v1.GetAgentDailyBetStatsReq) (*v1.GetAgentDailyBetStatsRes, error)
 	}
 )
 

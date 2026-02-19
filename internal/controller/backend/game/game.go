@@ -138,3 +138,8 @@ func (*Controller) GetUserBetIncrementBatch(ctx context.Context, req *v1.GetUser
 func (*Controller) GetSyncTasks(ctx context.Context, req *v1.GetSyncTasksReq) (res *v1.GetSyncTasksRes, err error) {
 	return backend.Game().GetSyncTasks(ctx, req)
 }
+
+// GetAgentDailyBetStats 获取代理日统计（供结算）
+func (*Controller) GetAgentDailyBetStats(ctx context.Context, req *v1.GetAgentDailyBetStatsReq) (res *v1.GetAgentDailyBetStatsRes, err error) {
+	return backend.Game().GetAgentDailyBetStats(ctx, req)
+}

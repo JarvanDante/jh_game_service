@@ -7,12 +7,11 @@
 package v1
 
 import (
+	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
+	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
-
-	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
-	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 )
 
 const (
@@ -25,9 +24,9 @@ const (
 // 用户时间范围注单汇总请求
 type GetUserBetSummaryReq struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	StartTime     string                 `protobuf:"bytes,1,opt,name=start_time,json=startTime,proto3" json:"start_time" dc:"开始时间 格式: 2006-01-02 15:04:05"` // 开始时间 格式: 2006-01-02 15:04:05
-	EndTime       string                 `protobuf:"bytes,2,opt,name=end_time,json=endTime,proto3" json:"end_time" dc:"结束时间 格式: 2006-01-02 15:04:05"`       // 结束时间 格式: 2006-01-02 15:04:05
-	Platform      string                 `protobuf:"bytes,3,opt,name=platform,proto3" json:"platform" dc:"平台（可选）ONE、IG_JILI"`                               // 平台（可选）ONE、IG_JILI
+	StartTime     string                 `protobuf:"bytes,1,opt,name=start_time,json=startTime,proto3" json:"start_time,omitempty"` // 开始时间 格式: 2006-01-02 15:04:05
+	EndTime       string                 `protobuf:"bytes,2,opt,name=end_time,json=endTime,proto3" json:"end_time,omitempty"`       // 结束时间 格式: 2006-01-02 15:04:05
+	Platform      string                 `protobuf:"bytes,3,opt,name=platform,proto3" json:"platform,omitempty"`                    // 平台（可选）ONE、IG_JILI
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -86,9 +85,9 @@ func (x *GetUserBetSummaryReq) GetPlatform() string {
 // 用户时间范围注单汇总响应
 type GetUserBetSummaryRes struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Success       bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success" dc:"是否成功"` // 是否成功
-	Message       string                 `protobuf:"bytes,2,opt,name=message,proto3" json:"message" dc:"消息"`    // 消息
-	Summary       *UserBetSummary        `protobuf:"bytes,3,opt,name=summary,proto3" json:"summary" dc:"汇总信息"`  // 汇总信息
+	Success       bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"` // 是否成功
+	Message       string                 `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`  // 消息
+	Summary       *UserBetSummary        `protobuf:"bytes,3,opt,name=summary,proto3" json:"summary,omitempty"`  // 汇总信息
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -147,14 +146,14 @@ func (x *GetUserBetSummaryRes) GetSummary() *UserBetSummary {
 // 汇总信息
 type UserBetSummary struct {
 	state            protoimpl.MessageState `protogen:"open.v1"`
-	StartTime        string                 `protobuf:"bytes,1,opt,name=start_time,json=startTime,proto3" json:"start_time" dc:"开始时间"`                          // 开始时间
-	EndTime          string                 `protobuf:"bytes,2,opt,name=end_time,json=endTime,proto3" json:"end_time" dc:"结束时间"`                                // 结束时间
-	BetCount         string                 `protobuf:"bytes,3,opt,name=bet_count,json=betCount,proto3" json:"bet_count" dc:"注单数"`                              // 注单数
-	BetAmount        string                 `protobuf:"bytes,4,opt,name=bet_amount,json=betAmount,proto3" json:"bet_amount" dc:"投注金额"`                          // 投注金额
-	WinAmount        string                 `protobuf:"bytes,5,opt,name=win_amount,json=winAmount,proto3" json:"win_amount" dc:"派彩金额"`                          // 派彩金额
-	ValidAmount      string                 `protobuf:"bytes,6,opt,name=valid_amount,json=validAmount,proto3" json:"valid_amount" dc:"有效投注金额"`                  // 有效投注金额
-	NetAmount        string                 `protobuf:"bytes,7,opt,name=net_amount,json=netAmount,proto3" json:"net_amount" dc:"净输赢"`                           // 净输赢
-	TurnoverMultiple string                 `protobuf:"bytes,8,opt,name=turnover_multiple,json=turnoverMultiple,proto3" json:"turnover_multiple" dc:"打码倍数（预留）"` // 打码倍数（预留）
+	StartTime        string                 `protobuf:"bytes,1,opt,name=start_time,json=startTime,proto3" json:"start_time,omitempty"`                      // 开始时间
+	EndTime          string                 `protobuf:"bytes,2,opt,name=end_time,json=endTime,proto3" json:"end_time,omitempty"`                            // 结束时间
+	BetCount         string                 `protobuf:"bytes,3,opt,name=bet_count,json=betCount,proto3" json:"bet_count,omitempty"`                         // 注单数
+	BetAmount        string                 `protobuf:"bytes,4,opt,name=bet_amount,json=betAmount,proto3" json:"bet_amount,omitempty"`                      // 投注金额
+	WinAmount        string                 `protobuf:"bytes,5,opt,name=win_amount,json=winAmount,proto3" json:"win_amount,omitempty"`                      // 派彩金额
+	ValidAmount      string                 `protobuf:"bytes,6,opt,name=valid_amount,json=validAmount,proto3" json:"valid_amount,omitempty"`                // 有效投注金额
+	NetAmount        string                 `protobuf:"bytes,7,opt,name=net_amount,json=netAmount,proto3" json:"net_amount,omitempty"`                      // 净输赢
+	TurnoverMultiple string                 `protobuf:"bytes,8,opt,name=turnover_multiple,json=turnoverMultiple,proto3" json:"turnover_multiple,omitempty"` // 打码倍数（预留）
 	unknownFields    protoimpl.UnknownFields
 	sizeCache        protoimpl.SizeCache
 }
@@ -248,9 +247,9 @@ func (x *UserBetSummary) GetTurnoverMultiple() string {
 // 批量用户注单增量汇总请求（MySQL）
 type GetUserBetIncrementBatchReq struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	SiteId        int32                  `protobuf:"varint,1,opt,name=site_id,json=siteId,proto3" json:"site_id" dc:"站点ID"`      // 站点ID
-	SiteCode      string                 `protobuf:"bytes,2,opt,name=site_code,json=siteCode,proto3" json:"site_code" dc:"站点代码"` // 站点代码
-	Cursors       []*UserBetCursorItem   `protobuf:"bytes,3,rep,name=cursors,proto3" json:"cursors" dc:"用户游标列表"`                 // 用户游标列表
+	SiteId        int32                  `protobuf:"varint,1,opt,name=site_id,json=siteId,proto3" json:"site_id,omitempty"`      // 站点ID
+	SiteCode      string                 `protobuf:"bytes,2,opt,name=site_code,json=siteCode,proto3" json:"site_code,omitempty"` // 站点代码
+	Cursors       []*UserBetCursorItem   `protobuf:"bytes,3,rep,name=cursors,proto3" json:"cursors,omitempty"`                   // 用户游标列表
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -309,8 +308,8 @@ func (x *GetUserBetIncrementBatchReq) GetCursors() []*UserBetCursorItem {
 // 用户游标项
 type UserBetCursorItem struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	UserId        int64                  `protobuf:"varint,1,opt,name=user_id,json=userId,proto3" json:"user_id" dc:"用户ID"`                    // 用户ID
-	LastBetId     uint64                 `protobuf:"varint,2,opt,name=last_bet_id,json=lastBetId,proto3" json:"last_bet_id" dc:"上次已累计的注单ID游标"` // 上次已累计的注单ID游标
+	UserId        int64                  `protobuf:"varint,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`            // 用户ID
+	LastBetId     uint64                 `protobuf:"varint,2,opt,name=last_bet_id,json=lastBetId,proto3" json:"last_bet_id,omitempty"` // 上次已累计的注单ID游标
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -362,9 +361,9 @@ func (x *UserBetCursorItem) GetLastBetId() uint64 {
 // 批量用户注单增量汇总响应
 type GetUserBetIncrementBatchRes struct {
 	state         protoimpl.MessageState  `protogen:"open.v1"`
-	Success       bool                    `protobuf:"varint,1,opt,name=success,proto3" json:"success" dc:"是否成功"` // 是否成功
-	Message       string                  `protobuf:"bytes,2,opt,name=message,proto3" json:"message" dc:"消息"`    // 消息
-	List          []*UserBetIncrementItem `protobuf:"bytes,3,rep,name=list,proto3" json:"list" dc:"增量结果"`        // 增量结果
+	Success       bool                    `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"` // 是否成功
+	Message       string                  `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`  // 消息
+	List          []*UserBetIncrementItem `protobuf:"bytes,3,rep,name=list,proto3" json:"list,omitempty"`        // 增量结果
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -423,11 +422,11 @@ func (x *GetUserBetIncrementBatchRes) GetList() []*UserBetIncrementItem {
 // 用户注单增量结果
 type UserBetIncrementItem struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	UserId        int64                  `protobuf:"varint,1,opt,name=user_id,json=userId,proto3" json:"user_id" dc:"用户ID"`                            // 用户ID
-	ValidAmount   string                 `protobuf:"bytes,2,opt,name=valid_amount,json=validAmount,proto3" json:"valid_amount" dc:"增量有效投注总额"`          // 增量有效投注总额
-	MaxBetId      uint64                 `protobuf:"varint,3,opt,name=max_bet_id,json=maxBetId,proto3" json:"max_bet_id" dc:"本批次最大注单ID"`               // 本批次最大注单ID
-	MaxSettleTime string                 `protobuf:"bytes,4,opt,name=max_settle_time,json=maxSettleTime,proto3" json:"max_settle_time" dc:"本批次最大结算时间"` // 本批次最大结算时间
-	BetCount      int64                  `protobuf:"varint,5,opt,name=bet_count,json=betCount,proto3" json:"bet_count" dc:"增量注单数"`                     // 增量注单数
+	UserId        int64                  `protobuf:"varint,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`                       // 用户ID
+	ValidAmount   string                 `protobuf:"bytes,2,opt,name=valid_amount,json=validAmount,proto3" json:"valid_amount,omitempty"`         // 增量有效投注总额
+	MaxBetId      uint64                 `protobuf:"varint,3,opt,name=max_bet_id,json=maxBetId,proto3" json:"max_bet_id,omitempty"`               // 本批次最大注单ID
+	MaxSettleTime string                 `protobuf:"bytes,4,opt,name=max_settle_time,json=maxSettleTime,proto3" json:"max_settle_time,omitempty"` // 本批次最大结算时间
+	BetCount      int64                  `protobuf:"varint,5,opt,name=bet_count,json=betCount,proto3" json:"bet_count,omitempty"`                 // 增量注单数
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -499,8 +498,8 @@ func (x *UserBetIncrementItem) GetBetCount() int64 {
 
 type GetGamesReq struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	SiteId        int32                  `protobuf:"varint,1,opt,name=site_id,json=siteId,proto3" json:"site_id" dc:"站点ID"`                        // 站点ID
-	SearchBalance bool                   `protobuf:"varint,2,opt,name=search_balance,json=searchBalance,proto3" json:"search_balance" dc:"是否查询余额"` // 是否查询余额
+	SiteId        int32                  `protobuf:"varint,1,opt,name=site_id,json=siteId,proto3" json:"site_id,omitempty"`                      // 站点ID
+	SearchBalance bool                   `protobuf:"varint,2,opt,name=search_balance,json=searchBalance,proto3" json:"search_balance,omitempty"` // 是否查询余额
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -551,8 +550,8 @@ func (x *GetGamesReq) GetSearchBalance() bool {
 
 type GetGamesRes struct {
 	state         protoimpl.MessageState  `protogen:"open.v1"`
-	Data          map[int32]*GameTypeList `protobuf:"bytes,1,rep,name=data,proto3" json:"data" protobuf_key:"varint,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value" dc:"按游戏类型分组的游戏列表"` // 按游戏类型分组的游戏列表
-	Count         int32                   `protobuf:"varint,2,opt,name=count,proto3" json:"count" dc:"总数量"`                                                                                  // 总数量
+	Data          map[int32]*GameTypeList `protobuf:"bytes,1,rep,name=data,proto3" json:"data,omitempty" protobuf_key:"varint,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"` // 按游戏类型分组的游戏列表
+	Count         int32                   `protobuf:"varint,2,opt,name=count,proto3" json:"count,omitempty"`                                                                         // 总数量
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -603,7 +602,7 @@ func (x *GetGamesRes) GetCount() int32 {
 
 type GameTypeList struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Games         []*GameInfo            `protobuf:"bytes,1,rep,name=games,proto3" json:"games" dc:"游戏列表"` // 游戏列表
+	Games         []*GameInfo            `protobuf:"bytes,1,rep,name=games,proto3" json:"games,omitempty"` // 游戏列表
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -647,15 +646,15 @@ func (x *GameTypeList) GetGames() []*GameInfo {
 
 type GameInfo struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            int32                  `protobuf:"varint,1,opt,name=id,proto3" json:"id" dc:"游戏ID"`                                // 游戏ID
-	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name" dc:"游戏名称"`                             // 游戏名称
-	Status        int32                  `protobuf:"varint,3,opt,name=status,proto3" json:"status" dc:"状态 1=启用 0=禁用"`                // 状态 1=启用 0=禁用
-	Sort          int32                  `protobuf:"varint,4,opt,name=sort,proto3" json:"sort" dc:"排序"`                              // 排序
-	Type          int32                  `protobuf:"varint,5,opt,name=type,proto3" json:"type" dc:"游戏类型 1=体育 2=彩票 3=真人 4=电子游戏 5=棋牌"` // 游戏类型 1=体育 2=彩票 3=真人 4=电子游戏 5=棋牌
-	Platform      string                 `protobuf:"bytes,6,opt,name=platform,proto3" json:"platform" dc:"平台标识"`                     // 平台标识
-	Code          string                 `protobuf:"bytes,7,opt,name=code,proto3" json:"code" dc:"游戏标识"`                             // 游戏标识
-	ImageCode     string                 `protobuf:"bytes,8,opt,name=image_code,json=imageCode,proto3" json:"image_code" dc:"图片标识"`  // 图片标识
-	DbName        string                 `protobuf:"bytes,9,opt,name=db_name,json=dbName,proto3" json:"db_name" dc:"数据表名称"`          // 数据表名称
+	Id            int32                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`                               // 游戏ID
+	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`                            // 游戏名称
+	Status        int32                  `protobuf:"varint,3,opt,name=status,proto3" json:"status,omitempty"`                       // 状态 1=启用 0=禁用
+	Sort          int32                  `protobuf:"varint,4,opt,name=sort,proto3" json:"sort,omitempty"`                           // 排序
+	Type          int32                  `protobuf:"varint,5,opt,name=type,proto3" json:"type,omitempty"`                           // 游戏类型 1=体育 2=彩票 3=真人 4=电子游戏 5=棋牌
+	Platform      string                 `protobuf:"bytes,6,opt,name=platform,proto3" json:"platform,omitempty"`                    // 平台标识
+	Code          string                 `protobuf:"bytes,7,opt,name=code,proto3" json:"code,omitempty"`                            // 游戏标识
+	ImageCode     string                 `protobuf:"bytes,8,opt,name=image_code,json=imageCode,proto3" json:"image_code,omitempty"` // 图片标识
+	DbName        string                 `protobuf:"bytes,9,opt,name=db_name,json=dbName,proto3" json:"db_name,omitempty"`          // 数据表名称
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -755,8 +754,8 @@ func (x *GameInfo) GetDbName() string {
 
 type UpdateGamesReq struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	SiteId        int32                  `protobuf:"varint,1,opt,name=site_id,json=siteId,proto3" json:"site_id" dc:"站点ID"` // 站点ID
-	Data          []*GameUpdateInfo      `protobuf:"bytes,2,rep,name=data,proto3" json:"data" dc:"游戏更新数据"`                  // 游戏更新数据
+	SiteId        int32                  `protobuf:"varint,1,opt,name=site_id,json=siteId,proto3" json:"site_id,omitempty"` // 站点ID
+	Data          []*GameUpdateInfo      `protobuf:"bytes,2,rep,name=data,proto3" json:"data,omitempty"`                    // 游戏更新数据
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -807,9 +806,9 @@ func (x *UpdateGamesReq) GetData() []*GameUpdateInfo {
 
 type GameUpdateInfo struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            int32                  `protobuf:"varint,1,opt,name=id,proto3" json:"id" dc:"游戏ID"`                 // 游戏ID
-	Status        int32                  `protobuf:"varint,2,opt,name=status,proto3" json:"status" dc:"状态 1=启用 0=禁用"` // 状态 1=启用 0=禁用
-	Sort          int32                  `protobuf:"varint,3,opt,name=sort,proto3" json:"sort" dc:"排序"`               // 排序
+	Id            int32                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`         // 游戏ID
+	Status        int32                  `protobuf:"varint,2,opt,name=status,proto3" json:"status,omitempty"` // 状态 1=启用 0=禁用
+	Sort          int32                  `protobuf:"varint,3,opt,name=sort,proto3" json:"sort,omitempty"`     // 排序
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -867,8 +866,8 @@ func (x *GameUpdateInfo) GetSort() int32 {
 
 type UpdateGamesRes struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Success       bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success" dc:"是否成功"` // 是否成功
-	Message       string                 `protobuf:"bytes,2,opt,name=message,proto3" json:"message" dc:"响应消息"`  // 响应消息
+	Success       bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"` // 是否成功
+	Message       string                 `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`  // 响应消息
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -920,15 +919,15 @@ func (x *UpdateGamesRes) GetMessage() string {
 // 游戏记录相关消息
 type GetGameRecordsReq struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	SiteId        int32                  `protobuf:"varint,1,opt,name=site_id,json=siteId,proto3" json:"site_id" dc:"站点ID"`                         // 站点ID
-	Platform      string                 `protobuf:"bytes,2,opt,name=platform,proto3" json:"platform" dc:"游戏平台"`                                    // 游戏平台
-	StartDate     string                 `protobuf:"bytes,3,opt,name=start_date,json=startDate,proto3" json:"start_date" dc:"开始时间 格式: Y-m-d H:i:s"` // 开始时间 格式: Y-m-d H:i:s
-	EndDate       string                 `protobuf:"bytes,4,opt,name=end_date,json=endDate,proto3" json:"end_date" dc:"结束时间 格式: Y-m-d H:i:s"`       // 结束时间 格式: Y-m-d H:i:s
-	Page          int32                  `protobuf:"varint,5,opt,name=page,proto3" json:"page" dc:"页码"`                                             // 页码
-	Size          int32                  `protobuf:"varint,6,opt,name=size,proto3" json:"size" dc:"每页数量"`                                           // 每页数量
-	Username      string                 `protobuf:"bytes,7,opt,name=username,proto3" json:"username" dc:"用户名（可选）"`                                 // 用户名（可选）
-	Type          int32                  `protobuf:"varint,8,opt,name=type,proto3" json:"type" dc:"记录类型 1=投注记录 2=中奖记录（可选）"`                         // 记录类型 1=投注记录 2=中奖记录（可选）
-	Keywords      string                 `protobuf:"bytes,9,opt,name=keywords,proto3" json:"keywords" dc:"关键词搜索（可选）"`                               // 关键词搜索（可选）
+	SiteId        int32                  `protobuf:"varint,1,opt,name=site_id,json=siteId,proto3" json:"site_id,omitempty"`         // 站点ID
+	Platform      string                 `protobuf:"bytes,2,opt,name=platform,proto3" json:"platform,omitempty"`                    // 游戏平台
+	StartDate     string                 `protobuf:"bytes,3,opt,name=start_date,json=startDate,proto3" json:"start_date,omitempty"` // 开始时间 格式: Y-m-d H:i:s
+	EndDate       string                 `protobuf:"bytes,4,opt,name=end_date,json=endDate,proto3" json:"end_date,omitempty"`       // 结束时间 格式: Y-m-d H:i:s
+	Page          int32                  `protobuf:"varint,5,opt,name=page,proto3" json:"page,omitempty"`                           // 页码
+	Size          int32                  `protobuf:"varint,6,opt,name=size,proto3" json:"size,omitempty"`                           // 每页数量
+	Username      string                 `protobuf:"bytes,7,opt,name=username,proto3" json:"username,omitempty"`                    // 用户名（可选）
+	Type          int32                  `protobuf:"varint,8,opt,name=type,proto3" json:"type,omitempty"`                           // 记录类型 1=投注记录 2=中奖记录（可选）
+	Keywords      string                 `protobuf:"bytes,9,opt,name=keywords,proto3" json:"keywords,omitempty"`                    // 关键词搜索（可选）
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1028,11 +1027,11 @@ func (x *GetGameRecordsReq) GetKeywords() string {
 
 type GetGameRecordsRes struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Data          []*GameRecord          `protobuf:"bytes,1,rep,name=data,proto3" json:"data" dc:"游戏记录列表"`                                 // 游戏记录列表
-	Total         int32                  `protobuf:"varint,2,opt,name=total,proto3" json:"total" dc:"总记录数"`                                // 总记录数
-	CurrentPage   int32                  `protobuf:"varint,3,opt,name=current_page,json=currentPage,proto3" json:"current_page" dc:"当前页码"` // 当前页码
-	PerPage       int32                  `protobuf:"varint,4,opt,name=per_page,json=perPage,proto3" json:"per_page" dc:"每页数量"`             // 每页数量
-	LastPage      int32                  `protobuf:"varint,5,opt,name=last_page,json=lastPage,proto3" json:"last_page" dc:"最后一页"`          // 最后一页
+	Data          []*GameRecord          `protobuf:"bytes,1,rep,name=data,proto3" json:"data,omitempty"`                                   // 游戏记录列表
+	Total         int32                  `protobuf:"varint,2,opt,name=total,proto3" json:"total,omitempty"`                                // 总记录数
+	CurrentPage   int32                  `protobuf:"varint,3,opt,name=current_page,json=currentPage,proto3" json:"current_page,omitempty"` // 当前页码
+	PerPage       int32                  `protobuf:"varint,4,opt,name=per_page,json=perPage,proto3" json:"per_page,omitempty"`             // 每页数量
+	LastPage      int32                  `protobuf:"varint,5,opt,name=last_page,json=lastPage,proto3" json:"last_page,omitempty"`          // 最后一页
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1104,26 +1103,26 @@ func (x *GetGameRecordsRes) GetLastPage() int32 {
 
 type GameRecord struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            uint64                 `protobuf:"varint,1,opt,name=id,proto3" json:"id" dc:"自增主键"`                                                        // 自增主键
-	SiteId        int32                  `protobuf:"varint,2,opt,name=site_id,json=siteId,proto3" json:"site_id" dc:"站点ID"`                                  // 站点ID
-	UserId        int64                  `protobuf:"varint,3,opt,name=user_id,json=userId,proto3" json:"user_id" dc:"用户ID"`                                  // 用户ID
-	Username      string                 `protobuf:"bytes,4,opt,name=username,proto3" json:"username" dc:"用户名快照"`                                            // 用户名快照
-	PlatformCode  string                 `protobuf:"bytes,5,opt,name=platform_code,json=platformCode,proto3" json:"platform_code" dc:"游戏平台代码 egame/jili/pg"` // 游戏平台代码 egame/jili/pg
-	GameCode      string                 `protobuf:"bytes,6,opt,name=game_code,json=gameCode,proto3" json:"game_code" dc:"游戏代码"`                             // 游戏代码
-	GameName      string                 `protobuf:"bytes,7,opt,name=game_name,json=gameName,proto3" json:"game_name" dc:"游戏名称"`                             // 游戏名称
-	GameType      string                 `protobuf:"bytes,8,opt,name=game_type,json=gameType,proto3" json:"game_type" dc:"游戏类型"`                             // 游戏类型
-	OrderId       string                 `protobuf:"bytes,9,opt,name=order_id,json=orderId,proto3" json:"order_id" dc:"厂商注单号"`                               // 厂商注单号
-	RoundId       string                 `protobuf:"bytes,10,opt,name=round_id,json=roundId,proto3" json:"round_id" dc:"局号"`                                 // 局号
-	BetAmount     string                 `protobuf:"bytes,11,opt,name=bet_amount,json=betAmount,proto3" json:"bet_amount" dc:"投注金额"`                         // 投注金额
-	WinAmount     string                 `protobuf:"bytes,12,opt,name=win_amount,json=winAmount,proto3" json:"win_amount" dc:"中奖金额"`                         // 中奖金额
-	Currency      string                 `protobuf:"bytes,13,opt,name=currency,proto3" json:"currency" dc:"币种"`                                              // 币种
-	BetTime       string                 `protobuf:"bytes,14,opt,name=bet_time,json=betTime,proto3" json:"bet_time" dc:"投注时间"`                               // 投注时间
-	SettleTime    string                 `protobuf:"bytes,15,opt,name=settle_time,json=settleTime,proto3" json:"settle_time" dc:"结算时间"`                      // 结算时间
-	Status        int32                  `protobuf:"varint,16,opt,name=status,proto3" json:"status" dc:"状态 0=未结算 1=已结算 2=取消 3=回滚"`                           // 状态 0=未结算 1=已结算 2=取消 3=回滚
-	RawData       string                 `protobuf:"bytes,17,opt,name=raw_data,json=rawData,proto3" json:"raw_data" dc:"厂商原始注单数据"`                           // 厂商原始注单数据
-	Remark        string                 `protobuf:"bytes,18,opt,name=remark,proto3" json:"remark" dc:"备注"`                                                  // 备注
-	CreatedAt     string                 `protobuf:"bytes,19,opt,name=created_at,json=createdAt,proto3" json:"created_at" dc:"创建时间"`                         // 创建时间
-	UpdatedAt     string                 `protobuf:"bytes,20,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at" dc:"更新时间"`                         // 更新时间
+	Id            uint64                 `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`                                        // 自增主键
+	SiteId        int32                  `protobuf:"varint,2,opt,name=site_id,json=siteId,proto3" json:"site_id,omitempty"`                  // 站点ID
+	UserId        int64                  `protobuf:"varint,3,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`                  // 用户ID
+	Username      string                 `protobuf:"bytes,4,opt,name=username,proto3" json:"username,omitempty"`                             // 用户名快照
+	PlatformCode  string                 `protobuf:"bytes,5,opt,name=platform_code,json=platformCode,proto3" json:"platform_code,omitempty"` // 游戏平台代码 egame/jili/pg
+	GameCode      string                 `protobuf:"bytes,6,opt,name=game_code,json=gameCode,proto3" json:"game_code,omitempty"`             // 游戏代码
+	GameName      string                 `protobuf:"bytes,7,opt,name=game_name,json=gameName,proto3" json:"game_name,omitempty"`             // 游戏名称
+	GameType      string                 `protobuf:"bytes,8,opt,name=game_type,json=gameType,proto3" json:"game_type,omitempty"`             // 游戏类型
+	OrderId       string                 `protobuf:"bytes,9,opt,name=order_id,json=orderId,proto3" json:"order_id,omitempty"`                // 厂商注单号
+	RoundId       string                 `protobuf:"bytes,10,opt,name=round_id,json=roundId,proto3" json:"round_id,omitempty"`               // 局号
+	BetAmount     string                 `protobuf:"bytes,11,opt,name=bet_amount,json=betAmount,proto3" json:"bet_amount,omitempty"`         // 投注金额
+	WinAmount     string                 `protobuf:"bytes,12,opt,name=win_amount,json=winAmount,proto3" json:"win_amount,omitempty"`         // 中奖金额
+	Currency      string                 `protobuf:"bytes,13,opt,name=currency,proto3" json:"currency,omitempty"`                            // 币种
+	BetTime       string                 `protobuf:"bytes,14,opt,name=bet_time,json=betTime,proto3" json:"bet_time,omitempty"`               // 投注时间
+	SettleTime    string                 `protobuf:"bytes,15,opt,name=settle_time,json=settleTime,proto3" json:"settle_time,omitempty"`      // 结算时间
+	Status        int32                  `protobuf:"varint,16,opt,name=status,proto3" json:"status,omitempty"`                               // 状态 0=未结算 1=已结算 2=取消 3=回滚
+	RawData       string                 `protobuf:"bytes,17,opt,name=raw_data,json=rawData,proto3" json:"raw_data,omitempty"`               // 厂商原始注单数据
+	Remark        string                 `protobuf:"bytes,18,opt,name=remark,proto3" json:"remark,omitempty"`                                // 备注
+	CreatedAt     string                 `protobuf:"bytes,19,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`         // 创建时间
+	UpdatedAt     string                 `protobuf:"bytes,20,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`         // 更新时间
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1301,10 +1300,10 @@ func (x *GameRecord) GetUpdatedAt() string {
 // 补单请求
 type SupplementBetRecordsReq struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Platform      string                 `protobuf:"bytes,1,opt,name=platform,proto3" json:"platform" dc:"游戏平台（ONE、IG_JILI等）"`                              // 游戏平台（ONE、IG_JILI等）
-	StartTime     string                 `protobuf:"bytes,2,opt,name=start_time,json=startTime,proto3" json:"start_time" dc:"开始时间，格式: 2006-01-02 15:04:05"` // 开始时间，格式: 2006-01-02 15:04:05
-	EndTime       string                 `protobuf:"bytes,3,opt,name=end_time,json=endTime,proto3" json:"end_time" dc:"结束时间，格式: 2006-01-02 15:04:05"`       // 结束时间，格式: 2006-01-02 15:04:05
-	SiteCodes     []string               `protobuf:"bytes,4,rep,name=site_codes,json=siteCodes,proto3" json:"site_codes" dc:"站点代码列表（可选，为空则所有站点）"`           // 站点代码列表（可选，为空则所有站点）
+	Platform      string                 `protobuf:"bytes,1,opt,name=platform,proto3" json:"platform,omitempty"`                    // 游戏平台（ONE、IG_JILI等）
+	StartTime     string                 `protobuf:"bytes,2,opt,name=start_time,json=startTime,proto3" json:"start_time,omitempty"` // 开始时间，格式: 2006-01-02 15:04:05
+	EndTime       string                 `protobuf:"bytes,3,opt,name=end_time,json=endTime,proto3" json:"end_time,omitempty"`       // 结束时间，格式: 2006-01-02 15:04:05
+	SiteCodes     []string               `protobuf:"bytes,4,rep,name=site_codes,json=siteCodes,proto3" json:"site_codes,omitempty"` // 站点代码列表（可选，为空则所有站点）
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1370,9 +1369,9 @@ func (x *SupplementBetRecordsReq) GetSiteCodes() []string {
 // 补单响应
 type SupplementBetRecordsRes struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Success       bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success" dc:"是否成功"`                               // 是否成功
-	Message       string                 `protobuf:"bytes,2,opt,name=message,proto3" json:"message" dc:"消息"`                                  // 消息
-	TotalRecords  int32                  `protobuf:"varint,3,opt,name=total_records,json=totalRecords,proto3" json:"total_records" dc:"总记录数"` // 总记录数
+	Success       bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"`                               // 是否成功
+	Message       string                 `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`                                // 消息
+	TotalRecords  int32                  `protobuf:"varint,3,opt,name=total_records,json=totalRecords,proto3" json:"total_records,omitempty"` // 总记录数
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1431,18 +1430,18 @@ func (x *SupplementBetRecordsRes) GetTotalRecords() int32 {
 // 获取游戏列表请求
 type GetGameListReq struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	SiteId        int32                  `protobuf:"varint,1,opt,name=site_id,json=siteId,proto3" json:"site_id" dc:"站点ID"`                // 站点ID
-	Platform      string                 `protobuf:"bytes,2,opt,name=platform,proto3" json:"platform" dc:"平台（可选）ONE、IG_JILI"`              // 平台（可选）ONE、IG_JILI
-	Vendor        string                 `protobuf:"bytes,3,opt,name=vendor,proto3" json:"vendor" dc:"运营商（可选）PP、PGS、JL等"`                  // 运营商（可选）PP、PGS、JL等
-	Name          string                 `protobuf:"bytes,4,opt,name=name,proto3" json:"name" dc:"游戏名称（模糊搜索，可选）"`                          // 游戏名称（模糊搜索，可选）
-	Code          string                 `protobuf:"bytes,5,opt,name=code,proto3" json:"code" dc:"游戏代码（可选）"`                               // 游戏代码（可选）
-	Style         string                 `protobuf:"bytes,6,opt,name=style,proto3" json:"style" dc:"游戏类型（可选）SLOTS、LIVE等"`                  // 游戏类型（可选）SLOTS、LIVE等
-	Hot           int32                  `protobuf:"varint,7,opt,name=hot,proto3" json:"hot" dc:"是否热门（可选）-1=全部 0=否 1=是"`                   // 是否热门（可选）-1=全部 0=否 1=是
-	Recommend     int32                  `protobuf:"varint,8,opt,name=recommend,proto3" json:"recommend" dc:"是否推荐（可选）-1=全部 0=否 1=是"`       // 是否推荐（可选）-1=全部 0=否 1=是
-	IsNew         int32                  `protobuf:"varint,9,opt,name=is_new,json=isNew,proto3" json:"is_new" dc:"是否新游戏（可选）-1=全部 0=否 1=是"` // 是否新游戏（可选）-1=全部 0=否 1=是
-	Status        int32                  `protobuf:"varint,10,opt,name=status,proto3" json:"status" dc:"状态（可选）-1=全部 0=禁用 1=启用"`            // 状态（可选）-1=全部 0=禁用 1=启用
-	Page          int32                  `protobuf:"varint,11,opt,name=page,proto3" json:"page" dc:"页码"`                                   // 页码
-	Size          int32                  `protobuf:"varint,12,opt,name=size,proto3" json:"size" dc:"每页数量"`                                 // 每页数量
+	SiteId        int32                  `protobuf:"varint,1,opt,name=site_id,json=siteId,proto3" json:"site_id,omitempty"` // 站点ID
+	Platform      string                 `protobuf:"bytes,2,opt,name=platform,proto3" json:"platform,omitempty"`            // 平台（可选）ONE、IG_JILI
+	Vendor        string                 `protobuf:"bytes,3,opt,name=vendor,proto3" json:"vendor,omitempty"`                // 运营商（可选）PP、PGS、JL等
+	Name          string                 `protobuf:"bytes,4,opt,name=name,proto3" json:"name,omitempty"`                    // 游戏名称（模糊搜索，可选）
+	Code          string                 `protobuf:"bytes,5,opt,name=code,proto3" json:"code,omitempty"`                    // 游戏代码（可选）
+	Style         string                 `protobuf:"bytes,6,opt,name=style,proto3" json:"style,omitempty"`                  // 游戏类型（可选）SLOTS、LIVE等
+	Hot           int32                  `protobuf:"varint,7,opt,name=hot,proto3" json:"hot,omitempty"`                     // 是否热门（可选）-1=全部 0=否 1=是
+	Recommend     int32                  `protobuf:"varint,8,opt,name=recommend,proto3" json:"recommend,omitempty"`         // 是否推荐（可选）-1=全部 0=否 1=是
+	IsNew         int32                  `protobuf:"varint,9,opt,name=is_new,json=isNew,proto3" json:"is_new,omitempty"`    // 是否新游戏（可选）-1=全部 0=否 1=是
+	Status        int32                  `protobuf:"varint,10,opt,name=status,proto3" json:"status,omitempty"`              // 状态（可选）-1=全部 0=禁用 1=启用
+	Page          int32                  `protobuf:"varint,11,opt,name=page,proto3" json:"page,omitempty"`                  // 页码
+	Size          int32                  `protobuf:"varint,12,opt,name=size,proto3" json:"size,omitempty"`                  // 每页数量
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1564,10 +1563,10 @@ func (x *GetGameListReq) GetSize() int32 {
 // 获取游戏列表响应
 type GetGameListRes struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	List          []*GameListItem        `protobuf:"bytes,1,rep,name=list,proto3" json:"list" dc:"游戏列表"`    // 游戏列表
-	Total         int32                  `protobuf:"varint,2,opt,name=total,proto3" json:"total" dc:"总记录数"` // 总记录数
-	Page          int32                  `protobuf:"varint,3,opt,name=page,proto3" json:"page" dc:"当前页码"`   // 当前页码
-	Size          int32                  `protobuf:"varint,4,opt,name=size,proto3" json:"size" dc:"每页数量"`   // 每页数量
+	List          []*GameListItem        `protobuf:"bytes,1,rep,name=list,proto3" json:"list,omitempty"`    // 游戏列表
+	Total         int32                  `protobuf:"varint,2,opt,name=total,proto3" json:"total,omitempty"` // 总记录数
+	Page          int32                  `protobuf:"varint,3,opt,name=page,proto3" json:"page,omitempty"`   // 当前页码
+	Size          int32                  `protobuf:"varint,4,opt,name=size,proto3" json:"size,omitempty"`   // 每页数量
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1633,27 +1632,27 @@ func (x *GetGameListRes) GetSize() int32 {
 // 游戏列表项
 type GameListItem struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            int32                  `protobuf:"varint,1,opt,name=id,proto3" json:"id" dc:"自增ID"`                                    // 自增ID
-	SiteId        int32                  `protobuf:"varint,2,opt,name=site_id,json=siteId,proto3" json:"site_id" dc:"站点ID"`              // 站点ID
-	Platform      string                 `protobuf:"bytes,3,opt,name=platform,proto3" json:"platform" dc:"平台 ONE、IG_JILI"`               // 平台 ONE、IG_JILI
-	Code          string                 `protobuf:"bytes,4,opt,name=code,proto3" json:"code" dc:"游戏代码"`                                 // 游戏代码
-	Name          string                 `protobuf:"bytes,5,opt,name=name,proto3" json:"name" dc:"游戏名称"`                                 // 游戏名称
-	AliasName     string                 `protobuf:"bytes,6,opt,name=alias_name,json=aliasName,proto3" json:"alias_name" dc:"别名（后台自定义）"` // 别名（后台自定义）
-	Style         string                 `protobuf:"bytes,7,opt,name=style,proto3" json:"style" dc:"游戏类型 SLOTS、LIVE等"`                   // 游戏类型 SLOTS、LIVE等
-	Img           string                 `protobuf:"bytes,8,opt,name=img,proto3" json:"img" dc:"游戏图片"`                                   // 游戏图片
-	Img1          string                 `protobuf:"bytes,9,opt,name=img1,proto3" json:"img1" dc:"游戏图片2"`                                // 游戏图片2
-	Language      string                 `protobuf:"bytes,10,opt,name=language,proto3" json:"language" dc:"支持语言"`                        // 支持语言
-	Device        string                 `protobuf:"bytes,11,opt,name=device,proto3" json:"device" dc:"支持设备"`                            // 支持设备
-	Currency      string                 `protobuf:"bytes,12,opt,name=currency,proto3" json:"currency" dc:"支持货币"`                        // 支持货币
-	Vendor        string                 `protobuf:"bytes,13,opt,name=vendor,proto3" json:"vendor" dc:"运营商"`                             // 运营商
-	Hot           int32                  `protobuf:"varint,14,opt,name=hot,proto3" json:"hot" dc:"是否热门 0=否 1=是"`                         // 是否热门 0=否 1=是
-	Recommend     int32                  `protobuf:"varint,15,opt,name=recommend,proto3" json:"recommend" dc:"是否推荐 0=否 1=是"`             // 是否推荐 0=否 1=是
-	IsNew         int32                  `protobuf:"varint,16,opt,name=is_new,json=isNew,proto3" json:"is_new" dc:"是否新游戏 0=否 1=是"`       // 是否新游戏 0=否 1=是
-	Status        int32                  `protobuf:"varint,17,opt,name=status,proto3" json:"status" dc:"状态 0=禁用 1=启用"`                   // 状态 0=禁用 1=启用
-	Sort          int32                  `protobuf:"varint,18,opt,name=sort,proto3" json:"sort" dc:"排序"`                                 // 排序
-	LikeNum       int32                  `protobuf:"varint,19,opt,name=like_num,json=likeNum,proto3" json:"like_num" dc:"点赞数"`           // 点赞数
-	CreatedAt     string                 `protobuf:"bytes,20,opt,name=created_at,json=createdAt,proto3" json:"created_at" dc:"创建时间"`     // 创建时间
-	UpdatedAt     string                 `protobuf:"bytes,21,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at" dc:"更新时间"`     // 更新时间
+	Id            int32                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`                                // 自增ID
+	SiteId        int32                  `protobuf:"varint,2,opt,name=site_id,json=siteId,proto3" json:"site_id,omitempty"`          // 站点ID
+	Platform      string                 `protobuf:"bytes,3,opt,name=platform,proto3" json:"platform,omitempty"`                     // 平台 ONE、IG_JILI
+	Code          string                 `protobuf:"bytes,4,opt,name=code,proto3" json:"code,omitempty"`                             // 游戏代码
+	Name          string                 `protobuf:"bytes,5,opt,name=name,proto3" json:"name,omitempty"`                             // 游戏名称
+	AliasName     string                 `protobuf:"bytes,6,opt,name=alias_name,json=aliasName,proto3" json:"alias_name,omitempty"`  // 别名（后台自定义）
+	Style         string                 `protobuf:"bytes,7,opt,name=style,proto3" json:"style,omitempty"`                           // 游戏类型 SLOTS、LIVE等
+	Img           string                 `protobuf:"bytes,8,opt,name=img,proto3" json:"img,omitempty"`                               // 游戏图片
+	Img1          string                 `protobuf:"bytes,9,opt,name=img1,proto3" json:"img1,omitempty"`                             // 游戏图片2
+	Language      string                 `protobuf:"bytes,10,opt,name=language,proto3" json:"language,omitempty"`                    // 支持语言
+	Device        string                 `protobuf:"bytes,11,opt,name=device,proto3" json:"device,omitempty"`                        // 支持设备
+	Currency      string                 `protobuf:"bytes,12,opt,name=currency,proto3" json:"currency,omitempty"`                    // 支持货币
+	Vendor        string                 `protobuf:"bytes,13,opt,name=vendor,proto3" json:"vendor,omitempty"`                        // 运营商
+	Hot           int32                  `protobuf:"varint,14,opt,name=hot,proto3" json:"hot,omitempty"`                             // 是否热门 0=否 1=是
+	Recommend     int32                  `protobuf:"varint,15,opt,name=recommend,proto3" json:"recommend,omitempty"`                 // 是否推荐 0=否 1=是
+	IsNew         int32                  `protobuf:"varint,16,opt,name=is_new,json=isNew,proto3" json:"is_new,omitempty"`            // 是否新游戏 0=否 1=是
+	Status        int32                  `protobuf:"varint,17,opt,name=status,proto3" json:"status,omitempty"`                       // 状态 0=禁用 1=启用
+	Sort          int32                  `protobuf:"varint,18,opt,name=sort,proto3" json:"sort,omitempty"`                           // 排序
+	LikeNum       int32                  `protobuf:"varint,19,opt,name=like_num,json=likeNum,proto3" json:"like_num,omitempty"`      // 点赞数
+	CreatedAt     string                 `protobuf:"bytes,20,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"` // 创建时间
+	UpdatedAt     string                 `protobuf:"bytes,21,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"` // 更新时间
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1838,14 +1837,14 @@ func (x *GameListItem) GetUpdatedAt() string {
 // 更新游戏列表项请求
 type UpdateGameListItemReq struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	SiteId        int32                  `protobuf:"varint,1,opt,name=site_id,json=siteId,proto3" json:"site_id" dc:"站点ID"`                 // 站点ID
-	Id            int32                  `protobuf:"varint,2,opt,name=id,proto3" json:"id" dc:"游戏ID"`                                       // 游戏ID
-	AliasName     string                 `protobuf:"bytes,3,opt,name=alias_name,json=aliasName,proto3" json:"alias_name" dc:"别名（可选）"`       // 别名（可选）
-	Hot           int32                  `protobuf:"varint,4,opt,name=hot,proto3" json:"hot" dc:"是否热门（可选）-1=不修改 0=否 1=是"`                   // 是否热门（可选）-1=不修改 0=否 1=是
-	Recommend     int32                  `protobuf:"varint,5,opt,name=recommend,proto3" json:"recommend" dc:"是否推荐（可选）-1=不修改 0=否 1=是"`       // 是否推荐（可选）-1=不修改 0=否 1=是
-	IsNew         int32                  `protobuf:"varint,6,opt,name=is_new,json=isNew,proto3" json:"is_new" dc:"是否新游戏（可选）-1=不修改 0=否 1=是"` // 是否新游戏（可选）-1=不修改 0=否 1=是
-	Status        int32                  `protobuf:"varint,7,opt,name=status,proto3" json:"status" dc:"状态（可选）-1=不修改 0=禁用 1=启用"`             // 状态（可选）-1=不修改 0=禁用 1=启用
-	Sort          int32                  `protobuf:"varint,8,opt,name=sort,proto3" json:"sort" dc:"排序（可选）-1=不修改"`                           // 排序（可选）-1=不修改
+	SiteId        int32                  `protobuf:"varint,1,opt,name=site_id,json=siteId,proto3" json:"site_id,omitempty"`         // 站点ID
+	Id            int32                  `protobuf:"varint,2,opt,name=id,proto3" json:"id,omitempty"`                               // 游戏ID
+	AliasName     string                 `protobuf:"bytes,3,opt,name=alias_name,json=aliasName,proto3" json:"alias_name,omitempty"` // 别名（可选）
+	Hot           int32                  `protobuf:"varint,4,opt,name=hot,proto3" json:"hot,omitempty"`                             // 是否热门（可选）-1=不修改 0=否 1=是
+	Recommend     int32                  `protobuf:"varint,5,opt,name=recommend,proto3" json:"recommend,omitempty"`                 // 是否推荐（可选）-1=不修改 0=否 1=是
+	IsNew         int32                  `protobuf:"varint,6,opt,name=is_new,json=isNew,proto3" json:"is_new,omitempty"`            // 是否新游戏（可选）-1=不修改 0=否 1=是
+	Status        int32                  `protobuf:"varint,7,opt,name=status,proto3" json:"status,omitempty"`                       // 状态（可选）-1=不修改 0=禁用 1=启用
+	Sort          int32                  `protobuf:"varint,8,opt,name=sort,proto3" json:"sort,omitempty"`                           // 排序（可选）-1=不修改
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1939,8 +1938,8 @@ func (x *UpdateGameListItemReq) GetSort() int32 {
 // 更新游戏列表项响应
 type UpdateGameListItemRes struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Success       bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success" dc:"是否成功"` // 是否成功
-	Message       string                 `protobuf:"bytes,2,opt,name=message,proto3" json:"message" dc:"消息"`    // 消息
+	Success       bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"` // 是否成功
+	Message       string                 `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`  // 消息
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1992,8 +1991,8 @@ func (x *UpdateGameListItemRes) GetMessage() string {
 // 获取游戏平台列表请求
 type GetGamePlatformsReq struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	SiteId        int32                  `protobuf:"varint,1,opt,name=site_id,json=siteId,proto3" json:"site_id" dc:"站点ID（可选，0表示不过滤）"` // 站点ID（可选，0表示不过滤）
-	Type          int32                  `protobuf:"varint,2,opt,name=type,proto3" json:"type" dc:"游戏类型（可选，0表示不过滤）"`                   // 游戏类型（可选，0表示不过滤）
+	SiteId        int32                  `protobuf:"varint,1,opt,name=site_id,json=siteId,proto3" json:"site_id,omitempty"` // 站点ID（可选，0表示不过滤）
+	Type          int32                  `protobuf:"varint,2,opt,name=type,proto3" json:"type,omitempty"`                   // 游戏类型（可选，0表示不过滤）
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2045,7 +2044,7 @@ func (x *GetGamePlatformsReq) GetType() int32 {
 // 获取游戏平台列表响应
 type GetGamePlatformsRes struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Platforms     []*GamePlatform        `protobuf:"bytes,1,rep,name=platforms,proto3" json:"platforms" dc:"平台列表"` // 平台列表
+	Platforms     []*GamePlatform        `protobuf:"bytes,1,rep,name=platforms,proto3" json:"platforms,omitempty"` // 平台列表
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2090,14 +2089,14 @@ func (x *GetGamePlatformsRes) GetPlatforms() []*GamePlatform {
 // 游戏平台信息
 type GamePlatform struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	GameId        int32                  `protobuf:"varint,1,opt,name=game_id,json=gameId,proto3" json:"game_id" dc:"游戏ID"`          // 游戏ID
-	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name" dc:"游戏名称"`                             // 游戏名称
-	Platform      string                 `protobuf:"bytes,3,opt,name=platform,proto3" json:"platform" dc:"平台标识"`                     // 平台标识
-	Type          int32                  `protobuf:"varint,4,opt,name=type,proto3" json:"type" dc:"游戏类型 1=体育 2=彩票 3=真人 4=电子游戏 5=棋牌"` // 游戏类型 1=体育 2=彩票 3=真人 4=电子游戏 5=棋牌
-	ImageCode     string                 `protobuf:"bytes,5,opt,name=image_code,json=imageCode,proto3" json:"image_code" dc:"图片标识"`  // 图片标识
-	DbName        string                 `protobuf:"bytes,6,opt,name=db_name,json=dbName,proto3" json:"db_name" dc:"数据表名称"`          // 数据表名称
-	Sort          int32                  `protobuf:"varint,7,opt,name=sort,proto3" json:"sort" dc:"排序"`                              // 排序
-	Status        int32                  `protobuf:"varint,8,opt,name=status,proto3" json:"status" dc:"状态 1=启用 0=禁用"`                // 状态 1=启用 0=禁用
+	GameId        int32                  `protobuf:"varint,1,opt,name=game_id,json=gameId,proto3" json:"game_id,omitempty"`         // 游戏ID
+	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`                            // 游戏名称
+	Platform      string                 `protobuf:"bytes,3,opt,name=platform,proto3" json:"platform,omitempty"`                    // 平台标识
+	Type          int32                  `protobuf:"varint,4,opt,name=type,proto3" json:"type,omitempty"`                           // 游戏类型 1=体育 2=彩票 3=真人 4=电子游戏 5=棋牌
+	ImageCode     string                 `protobuf:"bytes,5,opt,name=image_code,json=imageCode,proto3" json:"image_code,omitempty"` // 图片标识
+	DbName        string                 `protobuf:"bytes,6,opt,name=db_name,json=dbName,proto3" json:"db_name,omitempty"`          // 数据表名称
+	Sort          int32                  `protobuf:"varint,7,opt,name=sort,proto3" json:"sort,omitempty"`                           // 排序
+	Status        int32                  `protobuf:"varint,8,opt,name=status,proto3" json:"status,omitempty"`                       // 状态 1=启用 0=禁用
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2191,12 +2190,12 @@ func (x *GamePlatform) GetStatus() int32 {
 // 获取用户注单统计请求
 type GetUserBetStatsReq struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	SiteId        int32                  `protobuf:"varint,1,opt,name=site_id,json=siteId,proto3" json:"site_id" dc:"站点ID"`                                 // 站点ID
-	SiteCode      string                 `protobuf:"bytes,2,opt,name=site_code,json=siteCode,proto3" json:"site_code" dc:"站点代码"`                            // 站点代码
-	UserId        int64                  `protobuf:"varint,3,opt,name=user_id,json=userId,proto3" json:"user_id" dc:"用户ID"`                                 // 用户ID
-	StartTime     string                 `protobuf:"bytes,4,opt,name=start_time,json=startTime,proto3" json:"start_time" dc:"开始时间 格式: 2006-01-02 15:04:05"` // 开始时间 格式: 2006-01-02 15:04:05
-	EndTime       string                 `protobuf:"bytes,5,opt,name=end_time,json=endTime,proto3" json:"end_time" dc:"结束时间 格式: 2006-01-02 15:04:05"`       // 结束时间 格式: 2006-01-02 15:04:05
-	Platform      string                 `protobuf:"bytes,6,opt,name=platform,proto3" json:"platform" dc:"平台（可选，为空则统计所有平台）"`                                // 平台（可选，为空则统计所有平台）
+	SiteId        int32                  `protobuf:"varint,1,opt,name=site_id,json=siteId,proto3" json:"site_id,omitempty"`         // 站点ID
+	SiteCode      string                 `protobuf:"bytes,2,opt,name=site_code,json=siteCode,proto3" json:"site_code,omitempty"`    // 站点代码
+	UserId        int64                  `protobuf:"varint,3,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`         // 用户ID
+	StartTime     string                 `protobuf:"bytes,4,opt,name=start_time,json=startTime,proto3" json:"start_time,omitempty"` // 开始时间 格式: 2006-01-02 15:04:05
+	EndTime       string                 `protobuf:"bytes,5,opt,name=end_time,json=endTime,proto3" json:"end_time,omitempty"`       // 结束时间 格式: 2006-01-02 15:04:05
+	Platform      string                 `protobuf:"bytes,6,opt,name=platform,proto3" json:"platform,omitempty"`                    // 平台（可选，为空则统计所有平台）
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2276,9 +2275,9 @@ func (x *GetUserBetStatsReq) GetPlatform() string {
 // 获取用户注单统计响应
 type GetUserBetStatsRes struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Success       bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success" dc:"是否成功"` // 是否成功
-	Message       string                 `protobuf:"bytes,2,opt,name=message,proto3" json:"message" dc:"消息"`    // 消息
-	Stats         *UserBetStats          `protobuf:"bytes,3,opt,name=stats,proto3" json:"stats" dc:"统计数据"`      // 统计数据
+	Success       bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"` // 是否成功
+	Message       string                 `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`  // 消息
+	Stats         *UserBetStats          `protobuf:"bytes,3,opt,name=stats,proto3" json:"stats,omitempty"`      // 统计数据
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2337,16 +2336,16 @@ func (x *GetUserBetStatsRes) GetStats() *UserBetStats {
 // 用户注单统计
 type UserBetStats struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	UserId        int64                  `protobuf:"varint,1,opt,name=user_id,json=userId,proto3" json:"user_id" dc:"用户ID"`                       // 用户ID
-	Username      string                 `protobuf:"bytes,2,opt,name=username,proto3" json:"username" dc:"用户名"`                                   // 用户名
-	BetCount      int64                  `protobuf:"varint,3,opt,name=bet_count,json=betCount,proto3" json:"bet_count" dc:"投注笔数"`                 // 投注笔数
-	BetAmount     string                 `protobuf:"bytes,4,opt,name=bet_amount,json=betAmount,proto3" json:"bet_amount" dc:"投注金额总和"`             // 投注金额总和
-	WinAmount     string                 `protobuf:"bytes,5,opt,name=win_amount,json=winAmount,proto3" json:"win_amount" dc:"赢取金额总和"`             // 赢取金额总和
-	ValidAmount   string                 `protobuf:"bytes,6,opt,name=valid_amount,json=validAmount,proto3" json:"valid_amount" dc:"有效投注总和"`       // 有效投注总和
-	NetAmount     string                 `protobuf:"bytes,7,opt,name=net_amount,json=netAmount,proto3" json:"net_amount" dc:"净输赢总和"`              // 净输赢总和
-	StartTime     string                 `protobuf:"bytes,8,opt,name=start_time,json=startTime,proto3" json:"start_time" dc:"统计开始时间"`             // 统计开始时间
-	EndTime       string                 `protobuf:"bytes,9,opt,name=end_time,json=endTime,proto3" json:"end_time" dc:"统计结束时间"`                   // 统计结束时间
-	PlatformStats []*PlatformStats       `protobuf:"bytes,10,rep,name=platform_stats,json=platformStats,proto3" json:"platform_stats" dc:"按平台统计"` // 按平台统计
+	UserId        int64                  `protobuf:"varint,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`                      // 用户ID
+	Username      string                 `protobuf:"bytes,2,opt,name=username,proto3" json:"username,omitempty"`                                 // 用户名
+	BetCount      int64                  `protobuf:"varint,3,opt,name=bet_count,json=betCount,proto3" json:"bet_count,omitempty"`                // 投注笔数
+	BetAmount     string                 `protobuf:"bytes,4,opt,name=bet_amount,json=betAmount,proto3" json:"bet_amount,omitempty"`              // 投注金额总和
+	WinAmount     string                 `protobuf:"bytes,5,opt,name=win_amount,json=winAmount,proto3" json:"win_amount,omitempty"`              // 赢取金额总和
+	ValidAmount   string                 `protobuf:"bytes,6,opt,name=valid_amount,json=validAmount,proto3" json:"valid_amount,omitempty"`        // 有效投注总和
+	NetAmount     string                 `protobuf:"bytes,7,opt,name=net_amount,json=netAmount,proto3" json:"net_amount,omitempty"`              // 净输赢总和
+	StartTime     string                 `protobuf:"bytes,8,opt,name=start_time,json=startTime,proto3" json:"start_time,omitempty"`              // 统计开始时间
+	EndTime       string                 `protobuf:"bytes,9,opt,name=end_time,json=endTime,proto3" json:"end_time,omitempty"`                    // 统计结束时间
+	PlatformStats []*PlatformStats       `protobuf:"bytes,10,rep,name=platform_stats,json=platformStats,proto3" json:"platform_stats,omitempty"` // 按平台统计
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2454,12 +2453,12 @@ func (x *UserBetStats) GetPlatformStats() []*PlatformStats {
 // 平台统计
 type PlatformStats struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Platform      string                 `protobuf:"bytes,1,opt,name=platform,proto3" json:"platform" dc:"平台"`                            // 平台
-	BetCount      int64                  `protobuf:"varint,2,opt,name=bet_count,json=betCount,proto3" json:"bet_count" dc:"投注笔数"`         // 投注笔数
-	BetAmount     string                 `protobuf:"bytes,3,opt,name=bet_amount,json=betAmount,proto3" json:"bet_amount" dc:"投注金额"`       // 投注金额
-	WinAmount     string                 `protobuf:"bytes,4,opt,name=win_amount,json=winAmount,proto3" json:"win_amount" dc:"赢取金额"`       // 赢取金额
-	ValidAmount   string                 `protobuf:"bytes,5,opt,name=valid_amount,json=validAmount,proto3" json:"valid_amount" dc:"有效投注"` // 有效投注
-	NetAmount     string                 `protobuf:"bytes,6,opt,name=net_amount,json=netAmount,proto3" json:"net_amount" dc:"净输赢"`        // 净输赢
+	Platform      string                 `protobuf:"bytes,1,opt,name=platform,proto3" json:"platform,omitempty"`                          // 平台
+	BetCount      int64                  `protobuf:"varint,2,opt,name=bet_count,json=betCount,proto3" json:"bet_count,omitempty"`         // 投注笔数
+	BetAmount     string                 `protobuf:"bytes,3,opt,name=bet_amount,json=betAmount,proto3" json:"bet_amount,omitempty"`       // 投注金额
+	WinAmount     string                 `protobuf:"bytes,4,opt,name=win_amount,json=winAmount,proto3" json:"win_amount,omitempty"`       // 赢取金额
+	ValidAmount   string                 `protobuf:"bytes,5,opt,name=valid_amount,json=validAmount,proto3" json:"valid_amount,omitempty"` // 有效投注
+	NetAmount     string                 `protobuf:"bytes,6,opt,name=net_amount,json=netAmount,proto3" json:"net_amount,omitempty"`       // 净输赢
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2536,23 +2535,211 @@ func (x *PlatformStats) GetNetAmount() string {
 	return ""
 }
 
+type GetAgentDailyBetStatsReq struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	StartDate     string                 `protobuf:"bytes,1,opt,name=start_date,json=startDate,proto3" json:"start_date,omitempty"` // 开始日期 格式: 2006-01-02
+	EndDate       string                 `protobuf:"bytes,2,opt,name=end_date,json=endDate,proto3" json:"end_date,omitempty"`       // 结束日期 格式: 2006-01-02
+	AgentId       int64                  `protobuf:"varint,3,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`      // 代理ID（可选，0=全部）
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetAgentDailyBetStatsReq) Reset() {
+	*x = GetAgentDailyBetStatsReq{}
+	mi := &file_backend_game_v1_game_proto_msgTypes[31]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetAgentDailyBetStatsReq) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetAgentDailyBetStatsReq) ProtoMessage() {}
+
+func (x *GetAgentDailyBetStatsReq) ProtoReflect() protoreflect.Message {
+	mi := &file_backend_game_v1_game_proto_msgTypes[31]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetAgentDailyBetStatsReq.ProtoReflect.Descriptor instead.
+func (*GetAgentDailyBetStatsReq) Descriptor() ([]byte, []int) {
+	return file_backend_game_v1_game_proto_rawDescGZIP(), []int{31}
+}
+
+func (x *GetAgentDailyBetStatsReq) GetStartDate() string {
+	if x != nil {
+		return x.StartDate
+	}
+	return ""
+}
+
+func (x *GetAgentDailyBetStatsReq) GetEndDate() string {
+	if x != nil {
+		return x.EndDate
+	}
+	return ""
+}
+
+func (x *GetAgentDailyBetStatsReq) GetAgentId() int64 {
+	if x != nil {
+		return x.AgentId
+	}
+	return 0
+}
+
+type AgentDailyBetStatItem struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	StatDate       string                 `protobuf:"bytes,1,opt,name=stat_date,json=statDate,proto3" json:"stat_date,omitempty"`                       // 统计日期
+	AgentId        int64                  `protobuf:"varint,2,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`                         // 代理ID
+	BetAmount      float64                `protobuf:"fixed64,3,opt,name=bet_amount,json=betAmount,proto3" json:"bet_amount,omitempty"`                  // 投注金额
+	ValidBetAmount float64                `protobuf:"fixed64,4,opt,name=valid_bet_amount,json=validBetAmount,proto3" json:"valid_bet_amount,omitempty"` // 有效投注
+	WinLoss        float64                `protobuf:"fixed64,5,opt,name=win_loss,json=winLoss,proto3" json:"win_loss,omitempty"`                        // 净输赢
+	MemberCount    int64                  `protobuf:"varint,6,opt,name=member_count,json=memberCount,proto3" json:"member_count,omitempty"`             // 会员数
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *AgentDailyBetStatItem) Reset() {
+	*x = AgentDailyBetStatItem{}
+	mi := &file_backend_game_v1_game_proto_msgTypes[32]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AgentDailyBetStatItem) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AgentDailyBetStatItem) ProtoMessage() {}
+
+func (x *AgentDailyBetStatItem) ProtoReflect() protoreflect.Message {
+	mi := &file_backend_game_v1_game_proto_msgTypes[32]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AgentDailyBetStatItem.ProtoReflect.Descriptor instead.
+func (*AgentDailyBetStatItem) Descriptor() ([]byte, []int) {
+	return file_backend_game_v1_game_proto_rawDescGZIP(), []int{32}
+}
+
+func (x *AgentDailyBetStatItem) GetStatDate() string {
+	if x != nil {
+		return x.StatDate
+	}
+	return ""
+}
+
+func (x *AgentDailyBetStatItem) GetAgentId() int64 {
+	if x != nil {
+		return x.AgentId
+	}
+	return 0
+}
+
+func (x *AgentDailyBetStatItem) GetBetAmount() float64 {
+	if x != nil {
+		return x.BetAmount
+	}
+	return 0
+}
+
+func (x *AgentDailyBetStatItem) GetValidBetAmount() float64 {
+	if x != nil {
+		return x.ValidBetAmount
+	}
+	return 0
+}
+
+func (x *AgentDailyBetStatItem) GetWinLoss() float64 {
+	if x != nil {
+		return x.WinLoss
+	}
+	return 0
+}
+
+func (x *AgentDailyBetStatItem) GetMemberCount() int64 {
+	if x != nil {
+		return x.MemberCount
+	}
+	return 0
+}
+
+type GetAgentDailyBetStatsRes struct {
+	state         protoimpl.MessageState   `protogen:"open.v1"`
+	List          []*AgentDailyBetStatItem `protobuf:"bytes,1,rep,name=list,proto3" json:"list,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetAgentDailyBetStatsRes) Reset() {
+	*x = GetAgentDailyBetStatsRes{}
+	mi := &file_backend_game_v1_game_proto_msgTypes[33]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetAgentDailyBetStatsRes) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetAgentDailyBetStatsRes) ProtoMessage() {}
+
+func (x *GetAgentDailyBetStatsRes) ProtoReflect() protoreflect.Message {
+	mi := &file_backend_game_v1_game_proto_msgTypes[33]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetAgentDailyBetStatsRes.ProtoReflect.Descriptor instead.
+func (*GetAgentDailyBetStatsRes) Descriptor() ([]byte, []int) {
+	return file_backend_game_v1_game_proto_rawDescGZIP(), []int{33}
+}
+
+func (x *GetAgentDailyBetStatsRes) GetList() []*AgentDailyBetStatItem {
+	if x != nil {
+		return x.List
+	}
+	return nil
+}
+
 // 获取同步任务列表请求
 type GetSyncTasksReq struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	SiteId        int32                  `protobuf:"varint,1,opt,name=site_id,json=siteId,proto3" json:"site_id" dc:"站点ID（可选，0表示不过滤）"`                  // 站点ID（可选，0表示不过滤）
-	SiteCode      string                 `protobuf:"bytes,2,opt,name=site_code,json=siteCode,proto3" json:"site_code" dc:"站点代码（可选）"`                    // 站点代码（可选）
-	Platform      string                 `protobuf:"bytes,3,opt,name=platform,proto3" json:"platform" dc:"平台（可选）"`                                      // 平台（可选）
-	TaskType      int32                  `protobuf:"varint,4,opt,name=task_type,json=taskType,proto3" json:"task_type" dc:"任务类型（可选）1=定时拉单 2=手动补单 0=全部"` // 任务类型（可选）1=定时拉单 2=手动补单 0=全部
-	Status        int32                  `protobuf:"varint,5,opt,name=status,proto3" json:"status" dc:"状态（可选）1=进行中 2=已完成 3=失败 0=全部"`                    // 状态（可选）1=进行中 2=已完成 3=失败 0=全部
-	Page          int32                  `protobuf:"varint,6,opt,name=page,proto3" json:"page" dc:"页码"`                                                 // 页码
-	Size          int32                  `protobuf:"varint,7,opt,name=size,proto3" json:"size" dc:"每页数量"`                                               // 每页数量
+	SiteId        int32                  `protobuf:"varint,1,opt,name=site_id,json=siteId,proto3" json:"site_id,omitempty"`       // 站点ID（可选，0表示不过滤）
+	SiteCode      string                 `protobuf:"bytes,2,opt,name=site_code,json=siteCode,proto3" json:"site_code,omitempty"`  // 站点代码（可选）
+	Platform      string                 `protobuf:"bytes,3,opt,name=platform,proto3" json:"platform,omitempty"`                  // 平台（可选）
+	TaskType      int32                  `protobuf:"varint,4,opt,name=task_type,json=taskType,proto3" json:"task_type,omitempty"` // 任务类型（可选）1=定时拉单 2=手动补单 0=全部
+	Status        int32                  `protobuf:"varint,5,opt,name=status,proto3" json:"status,omitempty"`                     // 状态（可选）1=进行中 2=已完成 3=失败 0=全部
+	Page          int32                  `protobuf:"varint,6,opt,name=page,proto3" json:"page,omitempty"`                         // 页码
+	Size          int32                  `protobuf:"varint,7,opt,name=size,proto3" json:"size,omitempty"`                         // 每页数量
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *GetSyncTasksReq) Reset() {
 	*x = GetSyncTasksReq{}
-	mi := &file_backend_game_v1_game_proto_msgTypes[31]
+	mi := &file_backend_game_v1_game_proto_msgTypes[34]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2564,7 +2751,7 @@ func (x *GetSyncTasksReq) String() string {
 func (*GetSyncTasksReq) ProtoMessage() {}
 
 func (x *GetSyncTasksReq) ProtoReflect() protoreflect.Message {
-	mi := &file_backend_game_v1_game_proto_msgTypes[31]
+	mi := &file_backend_game_v1_game_proto_msgTypes[34]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2577,7 +2764,7 @@ func (x *GetSyncTasksReq) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetSyncTasksReq.ProtoReflect.Descriptor instead.
 func (*GetSyncTasksReq) Descriptor() ([]byte, []int) {
-	return file_backend_game_v1_game_proto_rawDescGZIP(), []int{31}
+	return file_backend_game_v1_game_proto_rawDescGZIP(), []int{34}
 }
 
 func (x *GetSyncTasksReq) GetSiteId() int32 {
@@ -2632,17 +2819,17 @@ func (x *GetSyncTasksReq) GetSize() int32 {
 // 获取同步任务列表响应
 type GetSyncTasksRes struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	List          []*SyncTask            `protobuf:"bytes,1,rep,name=list,proto3" json:"list" dc:"任务列表"`    // 任务列表
-	Total         int32                  `protobuf:"varint,2,opt,name=total,proto3" json:"total" dc:"总记录数"` // 总记录数
-	Page          int32                  `protobuf:"varint,3,opt,name=page,proto3" json:"page" dc:"当前页码"`   // 当前页码
-	Size          int32                  `protobuf:"varint,4,opt,name=size,proto3" json:"size" dc:"每页数量"`   // 每页数量
+	List          []*SyncTask            `protobuf:"bytes,1,rep,name=list,proto3" json:"list,omitempty"`    // 任务列表
+	Total         int32                  `protobuf:"varint,2,opt,name=total,proto3" json:"total,omitempty"` // 总记录数
+	Page          int32                  `protobuf:"varint,3,opt,name=page,proto3" json:"page,omitempty"`   // 当前页码
+	Size          int32                  `protobuf:"varint,4,opt,name=size,proto3" json:"size,omitempty"`   // 每页数量
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *GetSyncTasksRes) Reset() {
 	*x = GetSyncTasksRes{}
-	mi := &file_backend_game_v1_game_proto_msgTypes[32]
+	mi := &file_backend_game_v1_game_proto_msgTypes[35]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2654,7 +2841,7 @@ func (x *GetSyncTasksRes) String() string {
 func (*GetSyncTasksRes) ProtoMessage() {}
 
 func (x *GetSyncTasksRes) ProtoReflect() protoreflect.Message {
-	mi := &file_backend_game_v1_game_proto_msgTypes[32]
+	mi := &file_backend_game_v1_game_proto_msgTypes[35]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2667,7 +2854,7 @@ func (x *GetSyncTasksRes) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetSyncTasksRes.ProtoReflect.Descriptor instead.
 func (*GetSyncTasksRes) Descriptor() ([]byte, []int) {
-	return file_backend_game_v1_game_proto_rawDescGZIP(), []int{32}
+	return file_backend_game_v1_game_proto_rawDescGZIP(), []int{35}
 }
 
 func (x *GetSyncTasksRes) GetList() []*SyncTask {
@@ -2701,33 +2888,33 @@ func (x *GetSyncTasksRes) GetSize() int32 {
 // 同步任务
 type SyncTask struct {
 	state           protoimpl.MessageState `protogen:"open.v1"`
-	Id              int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id" dc:"任务ID"`                                                         // 任务ID
-	SiteId          int32                  `protobuf:"varint,2,opt,name=site_id,json=siteId,proto3" json:"site_id" dc:"站点ID"`                                   // 站点ID
-	SiteCode        string                 `protobuf:"bytes,3,opt,name=site_code,json=siteCode,proto3" json:"site_code" dc:"站点代码"`                              // 站点代码
-	Platform        string                 `protobuf:"bytes,4,opt,name=platform,proto3" json:"platform" dc:"游戏平台"`                                              // 游戏平台
-	TaskType        int32                  `protobuf:"varint,5,opt,name=task_type,json=taskType,proto3" json:"task_type" dc:"任务类型 1=定时拉单 2=手动补单"`               // 任务类型 1=定时拉单 2=手动补单
-	StartTime       string                 `protobuf:"bytes,6,opt,name=start_time,json=startTime,proto3" json:"start_time" dc:"拉单开始时间"`                         // 拉单开始时间
-	EndTime         string                 `protobuf:"bytes,7,opt,name=end_time,json=endTime,proto3" json:"end_time" dc:"拉单结束时间"`                               // 拉单结束时间
-	MysqlTotal      int32                  `protobuf:"varint,8,opt,name=mysql_total,json=mysqlTotal,proto3" json:"mysql_total" dc:"MySQL总记录数"`                  // MySQL总记录数
-	MysqlInserted   int32                  `protobuf:"varint,9,opt,name=mysql_inserted,json=mysqlInserted,proto3" json:"mysql_inserted" dc:"MySQL新插入数"`         // MySQL新插入数
-	MysqlDuplicated int32                  `protobuf:"varint,10,opt,name=mysql_duplicated,json=mysqlDuplicated,proto3" json:"mysql_duplicated" dc:"MySQL重复跳过数"` // MySQL重复跳过数
-	MqSent          int32                  `protobuf:"varint,11,opt,name=mq_sent,json=mqSent,proto3" json:"mq_sent" dc:"MQ发送成功数"`                               // MQ发送成功数
-	MqFailed        int32                  `protobuf:"varint,12,opt,name=mq_failed,json=mqFailed,proto3" json:"mq_failed" dc:"MQ发送失败数"`                         // MQ发送失败数
-	MqSkipped       int32                  `protobuf:"varint,13,opt,name=mq_skipped,json=mqSkipped,proto3" json:"mq_skipped" dc:"MQ跳过数"`                        // MQ跳过数
-	ChSynced        int32                  `protobuf:"varint,14,opt,name=ch_synced,json=chSynced,proto3" json:"ch_synced" dc:"ClickHouse已同步数"`                  // ClickHouse已同步数
-	ChFailed        int32                  `protobuf:"varint,15,opt,name=ch_failed,json=chFailed,proto3" json:"ch_failed" dc:"ClickHouse同步失败数"`                 // ClickHouse同步失败数
-	Status          int32                  `protobuf:"varint,16,opt,name=status,proto3" json:"status" dc:"任务状态 1=进行中 2=已完成 3=失败"`                               // 任务状态 1=进行中 2=已完成 3=失败
-	ErrorMsg        string                 `protobuf:"bytes,17,opt,name=error_msg,json=errorMsg,proto3" json:"error_msg" dc:"错误信息"`                             // 错误信息
-	CreatedAt       string                 `protobuf:"bytes,18,opt,name=created_at,json=createdAt,proto3" json:"created_at" dc:"创建时间"`                          // 创建时间
-	UpdatedAt       string                 `protobuf:"bytes,19,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at" dc:"更新时间"`                          // 更新时间
-	CompletedAt     string                 `protobuf:"bytes,20,opt,name=completed_at,json=completedAt,proto3" json:"completed_at" dc:"完成时间"`                    // 完成时间
+	Id              int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`                                                   // 任务ID
+	SiteId          int32                  `protobuf:"varint,2,opt,name=site_id,json=siteId,proto3" json:"site_id,omitempty"`                             // 站点ID
+	SiteCode        string                 `protobuf:"bytes,3,opt,name=site_code,json=siteCode,proto3" json:"site_code,omitempty"`                        // 站点代码
+	Platform        string                 `protobuf:"bytes,4,opt,name=platform,proto3" json:"platform,omitempty"`                                        // 游戏平台
+	TaskType        int32                  `protobuf:"varint,5,opt,name=task_type,json=taskType,proto3" json:"task_type,omitempty"`                       // 任务类型 1=定时拉单 2=手动补单
+	StartTime       string                 `protobuf:"bytes,6,opt,name=start_time,json=startTime,proto3" json:"start_time,omitempty"`                     // 拉单开始时间
+	EndTime         string                 `protobuf:"bytes,7,opt,name=end_time,json=endTime,proto3" json:"end_time,omitempty"`                           // 拉单结束时间
+	MysqlTotal      int32                  `protobuf:"varint,8,opt,name=mysql_total,json=mysqlTotal,proto3" json:"mysql_total,omitempty"`                 // MySQL总记录数
+	MysqlInserted   int32                  `protobuf:"varint,9,opt,name=mysql_inserted,json=mysqlInserted,proto3" json:"mysql_inserted,omitempty"`        // MySQL新插入数
+	MysqlDuplicated int32                  `protobuf:"varint,10,opt,name=mysql_duplicated,json=mysqlDuplicated,proto3" json:"mysql_duplicated,omitempty"` // MySQL重复跳过数
+	MqSent          int32                  `protobuf:"varint,11,opt,name=mq_sent,json=mqSent,proto3" json:"mq_sent,omitempty"`                            // MQ发送成功数
+	MqFailed        int32                  `protobuf:"varint,12,opt,name=mq_failed,json=mqFailed,proto3" json:"mq_failed,omitempty"`                      // MQ发送失败数
+	MqSkipped       int32                  `protobuf:"varint,13,opt,name=mq_skipped,json=mqSkipped,proto3" json:"mq_skipped,omitempty"`                   // MQ跳过数
+	ChSynced        int32                  `protobuf:"varint,14,opt,name=ch_synced,json=chSynced,proto3" json:"ch_synced,omitempty"`                      // ClickHouse已同步数
+	ChFailed        int32                  `protobuf:"varint,15,opt,name=ch_failed,json=chFailed,proto3" json:"ch_failed,omitempty"`                      // ClickHouse同步失败数
+	Status          int32                  `protobuf:"varint,16,opt,name=status,proto3" json:"status,omitempty"`                                          // 任务状态 1=进行中 2=已完成 3=失败
+	ErrorMsg        string                 `protobuf:"bytes,17,opt,name=error_msg,json=errorMsg,proto3" json:"error_msg,omitempty"`                       // 错误信息
+	CreatedAt       string                 `protobuf:"bytes,18,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`                    // 创建时间
+	UpdatedAt       string                 `protobuf:"bytes,19,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`                    // 更新时间
+	CompletedAt     string                 `protobuf:"bytes,20,opt,name=completed_at,json=completedAt,proto3" json:"completed_at,omitempty"`              // 完成时间
 	unknownFields   protoimpl.UnknownFields
 	sizeCache       protoimpl.SizeCache
 }
 
 func (x *SyncTask) Reset() {
 	*x = SyncTask{}
-	mi := &file_backend_game_v1_game_proto_msgTypes[33]
+	mi := &file_backend_game_v1_game_proto_msgTypes[36]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2739,7 +2926,7 @@ func (x *SyncTask) String() string {
 func (*SyncTask) ProtoMessage() {}
 
 func (x *SyncTask) ProtoReflect() protoreflect.Message {
-	mi := &file_backend_game_v1_game_proto_msgTypes[33]
+	mi := &file_backend_game_v1_game_proto_msgTypes[36]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2752,7 +2939,7 @@ func (x *SyncTask) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SyncTask.ProtoReflect.Descriptor instead.
 func (*SyncTask) Descriptor() ([]byte, []int) {
-	return file_backend_game_v1_game_proto_rawDescGZIP(), []int{33}
+	return file_backend_game_v1_game_proto_rawDescGZIP(), []int{36}
 }
 
 func (x *SyncTask) GetId() int64 {
@@ -3138,7 +3325,22 @@ const file_backend_game_v1_game_proto_rawDesc = "" +
 	"win_amount\x18\x04 \x01(\tR\twinAmount\x12!\n" +
 	"\fvalid_amount\x18\x05 \x01(\tR\vvalidAmount\x12\x1d\n" +
 	"\n" +
-	"net_amount\x18\x06 \x01(\tR\tnetAmount\"\xc0\x01\n" +
+	"net_amount\x18\x06 \x01(\tR\tnetAmount\"o\n" +
+	"\x18GetAgentDailyBetStatsReq\x12\x1d\n" +
+	"\n" +
+	"start_date\x18\x01 \x01(\tR\tstartDate\x12\x19\n" +
+	"\bend_date\x18\x02 \x01(\tR\aendDate\x12\x19\n" +
+	"\bagent_id\x18\x03 \x01(\x03R\aagentId\"\xd6\x01\n" +
+	"\x15AgentDailyBetStatItem\x12\x1b\n" +
+	"\tstat_date\x18\x01 \x01(\tR\bstatDate\x12\x19\n" +
+	"\bagent_id\x18\x02 \x01(\x03R\aagentId\x12\x1d\n" +
+	"\n" +
+	"bet_amount\x18\x03 \x01(\x01R\tbetAmount\x12(\n" +
+	"\x10valid_bet_amount\x18\x04 \x01(\x01R\x0evalidBetAmount\x12\x19\n" +
+	"\bwin_loss\x18\x05 \x01(\x01R\awinLoss\x12!\n" +
+	"\fmember_count\x18\x06 \x01(\x03R\vmemberCount\"K\n" +
+	"\x18GetAgentDailyBetStatsRes\x12/\n" +
+	"\x04list\x18\x01 \x03(\v2\x1b.game.AgentDailyBetStatItemR\x04list\"\xc0\x01\n" +
 	"\x0fGetSyncTasksReq\x12\x17\n" +
 	"\asite_id\x18\x01 \x01(\x05R\x06siteId\x12\x1b\n" +
 	"\tsite_code\x18\x02 \x01(\tR\bsiteCode\x12\x1a\n" +
@@ -3178,7 +3380,7 @@ const file_backend_game_v1_game_proto_rawDesc = "" +
 	"created_at\x18\x12 \x01(\tR\tcreatedAt\x12\x1d\n" +
 	"\n" +
 	"updated_at\x18\x13 \x01(\tR\tupdatedAt\x12!\n" +
-	"\fcompleted_at\x18\x14 \x01(\tR\vcompletedAt2\xac\x06\n" +
+	"\fcompleted_at\x18\x14 \x01(\tR\vcompletedAt2\x87\a\n" +
 	"\x04Game\x122\n" +
 	"\bGetGames\x12\x11.game.GetGamesReq\x1a\x11.game.GetGamesRes\"\x00\x12;\n" +
 	"\vUpdateGames\x12\x14.game.UpdateGamesReq\x1a\x14.game.UpdateGamesRes\"\x00\x12D\n" +
@@ -3190,7 +3392,8 @@ const file_backend_game_v1_game_proto_rawDesc = "" +
 	"\x0fGetUserBetStats\x12\x18.game.GetUserBetStatsReq\x1a\x18.game.GetUserBetStatsRes\"\x00\x12M\n" +
 	"\x11GetUserBetSummary\x12\x1a.game.GetUserBetSummaryReq\x1a\x1a.game.GetUserBetSummaryRes\"\x00\x12b\n" +
 	"\x18GetUserBetIncrementBatch\x12!.game.GetUserBetIncrementBatchReq\x1a!.game.GetUserBetIncrementBatchRes\"\x00\x12>\n" +
-	"\fGetSyncTasks\x12\x15.game.GetSyncTasksReq\x1a\x15.game.GetSyncTasksRes\"\x00B%Z#jh_game_service/api/backend/game/v1b\x06proto3"
+	"\fGetSyncTasks\x12\x15.game.GetSyncTasksReq\x1a\x15.game.GetSyncTasksRes\"\x00\x12Y\n" +
+	"\x15GetAgentDailyBetStats\x12\x1e.game.GetAgentDailyBetStatsReq\x1a\x1e.game.GetAgentDailyBetStatsRes\"\x00B%Z#jh_game_service/api/backend/game/v1b\x06proto3"
 
 var (
 	file_backend_game_v1_game_proto_rawDescOnce sync.Once
@@ -3204,7 +3407,7 @@ func file_backend_game_v1_game_proto_rawDescGZIP() []byte {
 	return file_backend_game_v1_game_proto_rawDescData
 }
 
-var file_backend_game_v1_game_proto_msgTypes = make([]protoimpl.MessageInfo, 35)
+var file_backend_game_v1_game_proto_msgTypes = make([]protoimpl.MessageInfo, 38)
 var file_backend_game_v1_game_proto_goTypes = []any{
 	(*GetUserBetSummaryReq)(nil),        // 0: game.GetUserBetSummaryReq
 	(*GetUserBetSummaryRes)(nil),        // 1: game.GetUserBetSummaryRes
@@ -3237,16 +3440,19 @@ var file_backend_game_v1_game_proto_goTypes = []any{
 	(*GetUserBetStatsRes)(nil),          // 28: game.GetUserBetStatsRes
 	(*UserBetStats)(nil),                // 29: game.UserBetStats
 	(*PlatformStats)(nil),               // 30: game.PlatformStats
-	(*GetSyncTasksReq)(nil),             // 31: game.GetSyncTasksReq
-	(*GetSyncTasksRes)(nil),             // 32: game.GetSyncTasksRes
-	(*SyncTask)(nil),                    // 33: game.SyncTask
-	nil,                                 // 34: game.GetGamesRes.DataEntry
+	(*GetAgentDailyBetStatsReq)(nil),    // 31: game.GetAgentDailyBetStatsReq
+	(*AgentDailyBetStatItem)(nil),       // 32: game.AgentDailyBetStatItem
+	(*GetAgentDailyBetStatsRes)(nil),    // 33: game.GetAgentDailyBetStatsRes
+	(*GetSyncTasksReq)(nil),             // 34: game.GetSyncTasksReq
+	(*GetSyncTasksRes)(nil),             // 35: game.GetSyncTasksRes
+	(*SyncTask)(nil),                    // 36: game.SyncTask
+	nil,                                 // 37: game.GetGamesRes.DataEntry
 }
 var file_backend_game_v1_game_proto_depIdxs = []int32{
 	2,  // 0: game.GetUserBetSummaryRes.summary:type_name -> game.UserBetSummary
 	4,  // 1: game.GetUserBetIncrementBatchReq.cursors:type_name -> game.UserBetCursorItem
 	6,  // 2: game.GetUserBetIncrementBatchRes.list:type_name -> game.UserBetIncrementItem
-	34, // 3: game.GetGamesRes.data:type_name -> game.GetGamesRes.DataEntry
+	37, // 3: game.GetGamesRes.data:type_name -> game.GetGamesRes.DataEntry
 	10, // 4: game.GameTypeList.games:type_name -> game.GameInfo
 	12, // 5: game.UpdateGamesReq.data:type_name -> game.GameUpdateInfo
 	16, // 6: game.GetGameRecordsRes.data:type_name -> game.GameRecord
@@ -3254,35 +3460,38 @@ var file_backend_game_v1_game_proto_depIdxs = []int32{
 	26, // 8: game.GetGamePlatformsRes.platforms:type_name -> game.GamePlatform
 	29, // 9: game.GetUserBetStatsRes.stats:type_name -> game.UserBetStats
 	30, // 10: game.UserBetStats.platform_stats:type_name -> game.PlatformStats
-	33, // 11: game.GetSyncTasksRes.list:type_name -> game.SyncTask
-	9,  // 12: game.GetGamesRes.DataEntry.value:type_name -> game.GameTypeList
-	7,  // 13: game.Game.GetGames:input_type -> game.GetGamesReq
-	11, // 14: game.Game.UpdateGames:input_type -> game.UpdateGamesReq
-	14, // 15: game.Game.GetGameRecords:input_type -> game.GetGameRecordsReq
-	17, // 16: game.Game.SupplementBetRecords:input_type -> game.SupplementBetRecordsReq
-	19, // 17: game.Game.GetGameList:input_type -> game.GetGameListReq
-	22, // 18: game.Game.UpdateGameListItem:input_type -> game.UpdateGameListItemReq
-	24, // 19: game.Game.GetGamePlatforms:input_type -> game.GetGamePlatformsReq
-	27, // 20: game.Game.GetUserBetStats:input_type -> game.GetUserBetStatsReq
-	0,  // 21: game.Game.GetUserBetSummary:input_type -> game.GetUserBetSummaryReq
-	3,  // 22: game.Game.GetUserBetIncrementBatch:input_type -> game.GetUserBetIncrementBatchReq
-	31, // 23: game.Game.GetSyncTasks:input_type -> game.GetSyncTasksReq
-	8,  // 24: game.Game.GetGames:output_type -> game.GetGamesRes
-	13, // 25: game.Game.UpdateGames:output_type -> game.UpdateGamesRes
-	15, // 26: game.Game.GetGameRecords:output_type -> game.GetGameRecordsRes
-	18, // 27: game.Game.SupplementBetRecords:output_type -> game.SupplementBetRecordsRes
-	20, // 28: game.Game.GetGameList:output_type -> game.GetGameListRes
-	23, // 29: game.Game.UpdateGameListItem:output_type -> game.UpdateGameListItemRes
-	25, // 30: game.Game.GetGamePlatforms:output_type -> game.GetGamePlatformsRes
-	28, // 31: game.Game.GetUserBetStats:output_type -> game.GetUserBetStatsRes
-	1,  // 32: game.Game.GetUserBetSummary:output_type -> game.GetUserBetSummaryRes
-	5,  // 33: game.Game.GetUserBetIncrementBatch:output_type -> game.GetUserBetIncrementBatchRes
-	32, // 34: game.Game.GetSyncTasks:output_type -> game.GetSyncTasksRes
-	24, // [24:35] is the sub-list for method output_type
-	13, // [13:24] is the sub-list for method input_type
-	13, // [13:13] is the sub-list for extension type_name
-	13, // [13:13] is the sub-list for extension extendee
-	0,  // [0:13] is the sub-list for field type_name
+	32, // 11: game.GetAgentDailyBetStatsRes.list:type_name -> game.AgentDailyBetStatItem
+	36, // 12: game.GetSyncTasksRes.list:type_name -> game.SyncTask
+	9,  // 13: game.GetGamesRes.DataEntry.value:type_name -> game.GameTypeList
+	7,  // 14: game.Game.GetGames:input_type -> game.GetGamesReq
+	11, // 15: game.Game.UpdateGames:input_type -> game.UpdateGamesReq
+	14, // 16: game.Game.GetGameRecords:input_type -> game.GetGameRecordsReq
+	17, // 17: game.Game.SupplementBetRecords:input_type -> game.SupplementBetRecordsReq
+	19, // 18: game.Game.GetGameList:input_type -> game.GetGameListReq
+	22, // 19: game.Game.UpdateGameListItem:input_type -> game.UpdateGameListItemReq
+	24, // 20: game.Game.GetGamePlatforms:input_type -> game.GetGamePlatformsReq
+	27, // 21: game.Game.GetUserBetStats:input_type -> game.GetUserBetStatsReq
+	0,  // 22: game.Game.GetUserBetSummary:input_type -> game.GetUserBetSummaryReq
+	3,  // 23: game.Game.GetUserBetIncrementBatch:input_type -> game.GetUserBetIncrementBatchReq
+	34, // 24: game.Game.GetSyncTasks:input_type -> game.GetSyncTasksReq
+	31, // 25: game.Game.GetAgentDailyBetStats:input_type -> game.GetAgentDailyBetStatsReq
+	8,  // 26: game.Game.GetGames:output_type -> game.GetGamesRes
+	13, // 27: game.Game.UpdateGames:output_type -> game.UpdateGamesRes
+	15, // 28: game.Game.GetGameRecords:output_type -> game.GetGameRecordsRes
+	18, // 29: game.Game.SupplementBetRecords:output_type -> game.SupplementBetRecordsRes
+	20, // 30: game.Game.GetGameList:output_type -> game.GetGameListRes
+	23, // 31: game.Game.UpdateGameListItem:output_type -> game.UpdateGameListItemRes
+	25, // 32: game.Game.GetGamePlatforms:output_type -> game.GetGamePlatformsRes
+	28, // 33: game.Game.GetUserBetStats:output_type -> game.GetUserBetStatsRes
+	1,  // 34: game.Game.GetUserBetSummary:output_type -> game.GetUserBetSummaryRes
+	5,  // 35: game.Game.GetUserBetIncrementBatch:output_type -> game.GetUserBetIncrementBatchRes
+	35, // 36: game.Game.GetSyncTasks:output_type -> game.GetSyncTasksRes
+	33, // 37: game.Game.GetAgentDailyBetStats:output_type -> game.GetAgentDailyBetStatsRes
+	26, // [26:38] is the sub-list for method output_type
+	14, // [14:26] is the sub-list for method input_type
+	14, // [14:14] is the sub-list for extension type_name
+	14, // [14:14] is the sub-list for extension extendee
+	0,  // [0:14] is the sub-list for field type_name
 }
 
 func init() { file_backend_game_v1_game_proto_init() }
@@ -3296,7 +3505,7 @@ func file_backend_game_v1_game_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_backend_game_v1_game_proto_rawDesc), len(file_backend_game_v1_game_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   35,
+			NumMessages:   38,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
