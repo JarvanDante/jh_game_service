@@ -6,7 +6,10 @@ import (
 	v1 "jh_game_service/api/backend/game/v1"
 	"jh_game_service/internal/dao"
 	"jh_game_service/internal/middleware"
+	"jh_game_service/internal/registry"
 	"jh_game_service/internal/service/backend"
+
+	"github.com/gogf/gf/v2/frame/g"
 )
 
 type sAgentSettlement struct{}
@@ -25,6 +28,61 @@ func (s *sAgentSettlement) GetAgentDailyBetStats(ctx context.Context, req *v1.Ge
 		return nil, fmt.Errorf("开始日期不能大于结束日期")
 	}
 
+	// 优先走 ClickHouse 聚合，性能更好；失败时回退 MySQL，保证可用性
+	if res, err := s.queryFromClickHouse(ctx, uint32(siteId), req); err == nil {
+		return res, nil
+	} else {
+		g.Log().Warningf(ctx, "ClickHouse代理结算统计失败，回退MySQL: %v", err)
+	}
+
+	return s.queryFromMySQL(ctx, siteId, req)
+}
+
+func (s *sAgentSettlement) queryFromClickHouse(ctx context.Context, siteId uint32, req *v1.GetAgentDailyBetStatsReq) (*v1.GetAgentDailyBetStatsRes, error) {
+	chManager := registry.GetClickHouseManager()
+	conn := chManager.GetConn()
+	if conn == nil {
+		return nil, fmt.Errorf("ClickHouse连接未初始化")
+	}
+
+	query := `
+		SELECT
+			toString(toDate(bet_time)) AS stat_date,
+			agent_id,
+			toFloat64(sum(bet_amount)) AS bet_amount,
+			toFloat64(sum(valid_amount)) AS valid_bet_amount,
+			toFloat64(sum(net_amount)) AS win_loss,
+			toInt64(uniqExact(user_id)) AS member_count
+		FROM game_analytics.bet_records
+		WHERE site_id = ?
+		  AND toDate(bet_time) >= toDate(?)
+		  AND toDate(bet_time) <= toDate(?)
+	`
+	args := []interface{}{siteId, req.StartDate, req.EndDate}
+	if req.AgentId > 0 {
+		query += " AND agent_id = ?"
+		args = append(args, req.AgentId)
+	}
+	query += " GROUP BY toDate(bet_time), agent_id ORDER BY toDate(bet_time) ASC, agent_id ASC"
+
+	rows, err := conn.Query(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	res := &v1.GetAgentDailyBetStatsRes{List: make([]*v1.AgentDailyBetStatItem, 0)}
+	for rows.Next() {
+		var row v1.AgentDailyBetStatItem
+		if err = rows.Scan(&row.StatDate, &row.AgentId, &row.BetAmount, &row.ValidBetAmount, &row.WinLoss, &row.MemberCount); err != nil {
+			return nil, err
+		}
+		res.List = append(res.List, &row)
+	}
+	return res, nil
+}
+
+func (s *sAgentSettlement) queryFromMySQL(ctx context.Context, siteId uint, req *v1.GetAgentDailyBetStatsReq) (*v1.GetAgentDailyBetStatsRes, error) {
 	query := dao.BetRecords.Ctx(ctx).
 		Where("site_id", siteId).
 		Where("DATE(bet_time) >= ?", req.StartDate).
