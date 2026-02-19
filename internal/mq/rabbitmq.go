@@ -1145,6 +1145,7 @@ func handleSyncBetToClickHouseMessage(ctx context.Context, msg amqp.Delivery) er
 	record := &entity.ClickHouseBetRecord{
 		SiteID:      syncMsg.SiteID,
 		SiteCode:    syncMsg.SiteCode,
+		AgentID:     syncMsg.AgentID,
 		UserID:      syncMsg.UserID,
 		Username:    syncMsg.Username,
 		Platform:    syncMsg.Platform,
