@@ -16,6 +16,7 @@ type ClickHouseBetRecord struct {
 	// =====================
 	// 用户信息
 	// =====================
+	AgentID  uint64 `ch:"agent_id" json:"agent_id"`
 	UserID   uint64 `ch:"user_id" json:"user_id"`
 	Username string `ch:"username" json:"username"`
 

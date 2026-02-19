@@ -35,6 +35,7 @@ type SyncUserToGameMessage struct {
 type SyncBetToClickHouseMessage struct {
 	SiteID      uint32  `json:"site_id"`
 	SiteCode    string  `json:"site_code"`
+	AgentID     uint64  `json:"agent_id"`
 	UserID      uint64  `json:"user_id"`
 	Username    string  `json:"username"`
 	Platform    string  `json:"platform"`
@@ -1093,6 +1094,7 @@ func buildClickHouseRecordFromSyncMsg(syncMsg SyncBetToClickHouseMessage) *entit
 	record := &entity.ClickHouseBetRecord{
 		SiteID:      syncMsg.SiteID,
 		SiteCode:    syncMsg.SiteCode,
+		AgentID:     syncMsg.AgentID,
 		UserID:      syncMsg.UserID,
 		Username:    syncMsg.Username,
 		Platform:    syncMsg.Platform,

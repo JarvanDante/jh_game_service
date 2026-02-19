@@ -41,7 +41,7 @@ func InsertBetRecordToCH(ctx context.Context, record *entity.ClickHouseBetRecord
 	query := `
 		INSERT INTO game_analytics.bet_records (
 			site_id, site_code,
-			user_id, username,
+			agent_id, user_id, username,
 			platform, game_id, game_name, game_type,
 			order_no, round_id,
 			bet_amount, win_amount, valid_amount, net_amount,
@@ -49,7 +49,7 @@ func InsertBetRecordToCH(ctx context.Context, record *entity.ClickHouseBetRecord
 			status, updated_at
 		) VALUES (
 			?, ?,
-			?, ?,
+			?, ?, ?,
 			?, ?, ?, ?,
 			?, ?,
 			?, ?, ?, ?,
@@ -60,7 +60,7 @@ func InsertBetRecordToCH(ctx context.Context, record *entity.ClickHouseBetRecord
 
 	err := conn.Exec(ctx, query,
 		record.SiteID, record.SiteCode,
-		record.UserID, record.Username,
+		record.AgentID, record.UserID, record.Username,
 		record.Platform, record.GameID, record.GameName, record.GameType,
 		record.OrderNo, record.RoundID,
 		betAmount, winAmount, validAmount, netAmount,
@@ -158,7 +158,7 @@ func BatchInsertBetRecordsToCH(ctx context.Context, records []*entity.ClickHouse
 	batch, err := conn.PrepareBatch(ctx, `
 		INSERT INTO game_analytics.bet_records (
 			site_id, site_code,
-			user_id, username,
+			agent_id, user_id, username,
 			platform, game_id, game_name, game_type,
 			order_no, round_id,
 			bet_amount, win_amount, valid_amount, net_amount,
@@ -187,7 +187,7 @@ func BatchInsertBetRecordsToCH(ctx context.Context, records []*entity.ClickHouse
 
 		err = batch.Append(
 			record.SiteID, record.SiteCode,
-			record.UserID, record.Username,
+			record.AgentID, record.UserID, record.Username,
 			record.Platform, record.GameID, record.GameName, record.GameType,
 			record.OrderNo, record.RoundID,
 			betAmount, winAmount, validAmount, netAmount,

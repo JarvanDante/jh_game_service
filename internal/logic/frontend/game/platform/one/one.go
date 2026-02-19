@@ -1248,22 +1248,27 @@ func (p *OnePlatform) saveBetRecordsToMySQL(ctx context.Context, params *platfor
 	}
 
 	// 查询用户映射
-	userMappings := make(map[string]uint64) // username -> user_id
+	type userMapInfo struct {
+		UserId  uint64
+		AgentId int64
+	}
+	userMappings := make(map[string]userMapInfo) // username -> {user_id, agent_id}
 	if len(usernames) > 0 {
 		var mappings []struct {
 			Username string `json:"username"`
 			UserId   uint64 `json:"user_id"`
+			AgentId  int64  `json:"agent_id"`
 		}
 		err := db.Model("user_mapping").
 			Where("site_id", params.SiteId).
 			WhereIn("username", usernames).
-			Fields("username, user_id").
+			Fields("username, user_id, agent_id").
 			Scan(&mappings)
 		if err != nil {
 			g.Log().Warningf(ctx, "查询用户映射失败: %v", err)
 		} else {
 			for _, m := range mappings {
-				userMappings[m.Username] = m.UserId
+				userMappings[m.Username] = userMapInfo{UserId: m.UserId, AgentId: m.AgentId}
 			}
 			g.Log().Infof(ctx, "查询到 %d 个用户映射", len(userMappings))
 		}
@@ -1284,8 +1289,10 @@ func (p *OnePlatform) saveBetRecordsToMySQL(ctx context.Context, params *platfor
 		// 计算净输赢
 		netAmount := record.WinAmount - record.BetAmount
 
-		// 从映射表获取 user_id
-		userId := userMappings[record.Username]
+		// 从映射表获取 user_id / agent_id
+		mapping := userMappings[record.Username]
+		userId := mapping.UserId
+		agentId := mapping.AgentId
 		if userId == 0 {
 			g.Log().Warningf(ctx, "用户 %s 未找到映射，user_id 设为 0", record.Username)
 		}
@@ -1299,6 +1306,7 @@ func (p *OnePlatform) saveBetRecordsToMySQL(ctx context.Context, params *platfor
 		insertData = append(insertData, g.Map{
 			"site_id":        params.SiteId,
 			"site_code":      params.SiteCode,
+			"agent_id":       agentId,
 			"user_id":        userId, // 使用映射的 user_id
 			"username":       record.Username,
 			"platform":       params.SiteGame.Platform,
@@ -1341,7 +1349,9 @@ func (p *OnePlatform) saveBetRecordsToMySQL(ctx context.Context, params *platfor
 			continue
 		}
 
-		userId := userMappings[record.Username]
+		mapping := userMappings[record.Username]
+		userId := mapping.UserId
+		agentId := mapping.AgentId
 		if userId == 0 {
 			// 没有映射的用户跳过同步
 			g.Log().Warningf(ctx, "用户 %s 没有映射，跳过同步", record.Username)
@@ -1353,6 +1363,7 @@ func (p *OnePlatform) saveBetRecordsToMySQL(ctx context.Context, params *platfor
 		syncMessages = append(syncMessages, mq.SyncBetToClickHouseMessage{
 			SiteID:      uint32(params.SiteId),
 			SiteCode:    params.SiteCode,
+			AgentID:     uint64(agentId),
 			UserID:      userId,
 			Username:    record.Username,
 			Platform:    params.SiteGame.Platform,
