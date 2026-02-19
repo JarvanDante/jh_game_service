@@ -75,11 +75,25 @@ func (s *sAgentSettlement) queryFromClickHouse(ctx context.Context, siteId uint3
 
 	res := &v1.GetAgentDailyBetStatsRes{List: make([]*v1.AgentDailyBetStatItem, 0)}
 	for rows.Next() {
-		var row v1.AgentDailyBetStatItem
-		if err = rows.Scan(&row.StatDate, &row.AgentId, &row.BetAmount, &row.ValidBetAmount, &row.WinLoss, &row.MemberCount); err != nil {
+		var (
+			statDate       string
+			agentIDUint64  uint64
+			betAmount      float64
+			validBetAmount float64
+			winLoss        float64
+			memberCount    int64
+		)
+		if err = rows.Scan(&statDate, &agentIDUint64, &betAmount, &validBetAmount, &winLoss, &memberCount); err != nil {
 			return nil, err
 		}
-		res.List = append(res.List, &row)
+		res.List = append(res.List, &v1.AgentDailyBetStatItem{
+			StatDate:       statDate,
+			AgentId:        int64(agentIDUint64),
+			BetAmount:      betAmount,
+			ValidBetAmount: validBetAmount,
+			WinLoss:        winLoss,
+			MemberCount:    memberCount,
+		})
 	}
 	return res, nil
 }
