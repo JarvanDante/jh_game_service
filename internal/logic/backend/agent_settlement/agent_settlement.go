@@ -3,7 +3,7 @@ package agent_settlement
 import (
 	"context"
 	"fmt"
-	v1 "jh_game_service/api/grpc/agent_settlement/v1"
+	v1 "jh_game_service/api/backend/game/v1"
 	"jh_game_service/internal/dao"
 	"jh_game_service/internal/middleware"
 	"jh_game_service/internal/service/backend"

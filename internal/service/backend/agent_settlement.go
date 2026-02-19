@@ -2,7 +2,7 @@ package backend
 
 import (
 	"context"
-	v1 "jh_game_service/api/grpc/agent_settlement/v1"
+	v1 "jh_game_service/api/backend/game/v1"
 )
 
 type IAgentSettlement interface {

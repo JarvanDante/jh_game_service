@@ -2,7 +2,7 @@ package agent_settlement
 
 import (
 	"context"
-	v1 "jh_game_service/api/grpc/agent_settlement/v1"
+	v1 "jh_game_service/api/backend/game/v1"
 	"jh_game_service/internal/service/backend"
 
 	"github.com/gogf/gf/contrib/rpc/grpcx/v2"

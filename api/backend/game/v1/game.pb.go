@@ -2535,194 +2535,6 @@ func (x *PlatformStats) GetNetAmount() string {
 	return ""
 }
 
-type GetAgentDailyBetStatsReq struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	StartDate     string                 `protobuf:"bytes,1,opt,name=start_date,json=startDate,proto3" json:"start_date,omitempty"` // 开始日期 格式: 2006-01-02
-	EndDate       string                 `protobuf:"bytes,2,opt,name=end_date,json=endDate,proto3" json:"end_date,omitempty"`       // 结束日期 格式: 2006-01-02
-	AgentId       int64                  `protobuf:"varint,3,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`      // 代理ID（可选，0=全部）
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *GetAgentDailyBetStatsReq) Reset() {
-	*x = GetAgentDailyBetStatsReq{}
-	mi := &file_backend_game_v1_game_proto_msgTypes[31]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *GetAgentDailyBetStatsReq) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*GetAgentDailyBetStatsReq) ProtoMessage() {}
-
-func (x *GetAgentDailyBetStatsReq) ProtoReflect() protoreflect.Message {
-	mi := &file_backend_game_v1_game_proto_msgTypes[31]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use GetAgentDailyBetStatsReq.ProtoReflect.Descriptor instead.
-func (*GetAgentDailyBetStatsReq) Descriptor() ([]byte, []int) {
-	return file_backend_game_v1_game_proto_rawDescGZIP(), []int{31}
-}
-
-func (x *GetAgentDailyBetStatsReq) GetStartDate() string {
-	if x != nil {
-		return x.StartDate
-	}
-	return ""
-}
-
-func (x *GetAgentDailyBetStatsReq) GetEndDate() string {
-	if x != nil {
-		return x.EndDate
-	}
-	return ""
-}
-
-func (x *GetAgentDailyBetStatsReq) GetAgentId() int64 {
-	if x != nil {
-		return x.AgentId
-	}
-	return 0
-}
-
-type AgentDailyBetStatItem struct {
-	state          protoimpl.MessageState `protogen:"open.v1"`
-	StatDate       string                 `protobuf:"bytes,1,opt,name=stat_date,json=statDate,proto3" json:"stat_date,omitempty"`                       // 统计日期
-	AgentId        int64                  `protobuf:"varint,2,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`                         // 代理ID
-	BetAmount      float64                `protobuf:"fixed64,3,opt,name=bet_amount,json=betAmount,proto3" json:"bet_amount,omitempty"`                  // 投注金额
-	ValidBetAmount float64                `protobuf:"fixed64,4,opt,name=valid_bet_amount,json=validBetAmount,proto3" json:"valid_bet_amount,omitempty"` // 有效投注
-	WinLoss        float64                `protobuf:"fixed64,5,opt,name=win_loss,json=winLoss,proto3" json:"win_loss,omitempty"`                        // 净输赢
-	MemberCount    int64                  `protobuf:"varint,6,opt,name=member_count,json=memberCount,proto3" json:"member_count,omitempty"`             // 会员数
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
-}
-
-func (x *AgentDailyBetStatItem) Reset() {
-	*x = AgentDailyBetStatItem{}
-	mi := &file_backend_game_v1_game_proto_msgTypes[32]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *AgentDailyBetStatItem) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*AgentDailyBetStatItem) ProtoMessage() {}
-
-func (x *AgentDailyBetStatItem) ProtoReflect() protoreflect.Message {
-	mi := &file_backend_game_v1_game_proto_msgTypes[32]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use AgentDailyBetStatItem.ProtoReflect.Descriptor instead.
-func (*AgentDailyBetStatItem) Descriptor() ([]byte, []int) {
-	return file_backend_game_v1_game_proto_rawDescGZIP(), []int{32}
-}
-
-func (x *AgentDailyBetStatItem) GetStatDate() string {
-	if x != nil {
-		return x.StatDate
-	}
-	return ""
-}
-
-func (x *AgentDailyBetStatItem) GetAgentId() int64 {
-	if x != nil {
-		return x.AgentId
-	}
-	return 0
-}
-
-func (x *AgentDailyBetStatItem) GetBetAmount() float64 {
-	if x != nil {
-		return x.BetAmount
-	}
-	return 0
-}
-
-func (x *AgentDailyBetStatItem) GetValidBetAmount() float64 {
-	if x != nil {
-		return x.ValidBetAmount
-	}
-	return 0
-}
-
-func (x *AgentDailyBetStatItem) GetWinLoss() float64 {
-	if x != nil {
-		return x.WinLoss
-	}
-	return 0
-}
-
-func (x *AgentDailyBetStatItem) GetMemberCount() int64 {
-	if x != nil {
-		return x.MemberCount
-	}
-	return 0
-}
-
-type GetAgentDailyBetStatsRes struct {
-	state         protoimpl.MessageState   `protogen:"open.v1"`
-	List          []*AgentDailyBetStatItem `protobuf:"bytes,1,rep,name=list,proto3" json:"list,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *GetAgentDailyBetStatsRes) Reset() {
-	*x = GetAgentDailyBetStatsRes{}
-	mi := &file_backend_game_v1_game_proto_msgTypes[33]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *GetAgentDailyBetStatsRes) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*GetAgentDailyBetStatsRes) ProtoMessage() {}
-
-func (x *GetAgentDailyBetStatsRes) ProtoReflect() protoreflect.Message {
-	mi := &file_backend_game_v1_game_proto_msgTypes[33]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use GetAgentDailyBetStatsRes.ProtoReflect.Descriptor instead.
-func (*GetAgentDailyBetStatsRes) Descriptor() ([]byte, []int) {
-	return file_backend_game_v1_game_proto_rawDescGZIP(), []int{33}
-}
-
-func (x *GetAgentDailyBetStatsRes) GetList() []*AgentDailyBetStatItem {
-	if x != nil {
-		return x.List
-	}
-	return nil
-}
-
 // 获取同步任务列表请求
 type GetSyncTasksReq struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -2739,7 +2551,7 @@ type GetSyncTasksReq struct {
 
 func (x *GetSyncTasksReq) Reset() {
 	*x = GetSyncTasksReq{}
-	mi := &file_backend_game_v1_game_proto_msgTypes[34]
+	mi := &file_backend_game_v1_game_proto_msgTypes[31]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2751,7 +2563,7 @@ func (x *GetSyncTasksReq) String() string {
 func (*GetSyncTasksReq) ProtoMessage() {}
 
 func (x *GetSyncTasksReq) ProtoReflect() protoreflect.Message {
-	mi := &file_backend_game_v1_game_proto_msgTypes[34]
+	mi := &file_backend_game_v1_game_proto_msgTypes[31]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2764,7 +2576,7 @@ func (x *GetSyncTasksReq) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetSyncTasksReq.ProtoReflect.Descriptor instead.
 func (*GetSyncTasksReq) Descriptor() ([]byte, []int) {
-	return file_backend_game_v1_game_proto_rawDescGZIP(), []int{34}
+	return file_backend_game_v1_game_proto_rawDescGZIP(), []int{31}
 }
 
 func (x *GetSyncTasksReq) GetSiteId() int32 {
@@ -2829,7 +2641,7 @@ type GetSyncTasksRes struct {
 
 func (x *GetSyncTasksRes) Reset() {
 	*x = GetSyncTasksRes{}
-	mi := &file_backend_game_v1_game_proto_msgTypes[35]
+	mi := &file_backend_game_v1_game_proto_msgTypes[32]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2841,7 +2653,7 @@ func (x *GetSyncTasksRes) String() string {
 func (*GetSyncTasksRes) ProtoMessage() {}
 
 func (x *GetSyncTasksRes) ProtoReflect() protoreflect.Message {
-	mi := &file_backend_game_v1_game_proto_msgTypes[35]
+	mi := &file_backend_game_v1_game_proto_msgTypes[32]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2854,7 +2666,7 @@ func (x *GetSyncTasksRes) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetSyncTasksRes.ProtoReflect.Descriptor instead.
 func (*GetSyncTasksRes) Descriptor() ([]byte, []int) {
-	return file_backend_game_v1_game_proto_rawDescGZIP(), []int{35}
+	return file_backend_game_v1_game_proto_rawDescGZIP(), []int{32}
 }
 
 func (x *GetSyncTasksRes) GetList() []*SyncTask {
@@ -2914,7 +2726,7 @@ type SyncTask struct {
 
 func (x *SyncTask) Reset() {
 	*x = SyncTask{}
-	mi := &file_backend_game_v1_game_proto_msgTypes[36]
+	mi := &file_backend_game_v1_game_proto_msgTypes[33]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2926,7 +2738,7 @@ func (x *SyncTask) String() string {
 func (*SyncTask) ProtoMessage() {}
 
 func (x *SyncTask) ProtoReflect() protoreflect.Message {
-	mi := &file_backend_game_v1_game_proto_msgTypes[36]
+	mi := &file_backend_game_v1_game_proto_msgTypes[33]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2939,7 +2751,7 @@ func (x *SyncTask) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SyncTask.ProtoReflect.Descriptor instead.
 func (*SyncTask) Descriptor() ([]byte, []int) {
-	return file_backend_game_v1_game_proto_rawDescGZIP(), []int{36}
+	return file_backend_game_v1_game_proto_rawDescGZIP(), []int{33}
 }
 
 func (x *SyncTask) GetId() int64 {
@@ -3325,22 +3137,7 @@ const file_backend_game_v1_game_proto_rawDesc = "" +
 	"win_amount\x18\x04 \x01(\tR\twinAmount\x12!\n" +
 	"\fvalid_amount\x18\x05 \x01(\tR\vvalidAmount\x12\x1d\n" +
 	"\n" +
-	"net_amount\x18\x06 \x01(\tR\tnetAmount\"o\n" +
-	"\x18GetAgentDailyBetStatsReq\x12\x1d\n" +
-	"\n" +
-	"start_date\x18\x01 \x01(\tR\tstartDate\x12\x19\n" +
-	"\bend_date\x18\x02 \x01(\tR\aendDate\x12\x19\n" +
-	"\bagent_id\x18\x03 \x01(\x03R\aagentId\"\xd6\x01\n" +
-	"\x15AgentDailyBetStatItem\x12\x1b\n" +
-	"\tstat_date\x18\x01 \x01(\tR\bstatDate\x12\x19\n" +
-	"\bagent_id\x18\x02 \x01(\x03R\aagentId\x12\x1d\n" +
-	"\n" +
-	"bet_amount\x18\x03 \x01(\x01R\tbetAmount\x12(\n" +
-	"\x10valid_bet_amount\x18\x04 \x01(\x01R\x0evalidBetAmount\x12\x19\n" +
-	"\bwin_loss\x18\x05 \x01(\x01R\awinLoss\x12!\n" +
-	"\fmember_count\x18\x06 \x01(\x03R\vmemberCount\"K\n" +
-	"\x18GetAgentDailyBetStatsRes\x12/\n" +
-	"\x04list\x18\x01 \x03(\v2\x1b.game.AgentDailyBetStatItemR\x04list\"\xc0\x01\n" +
+	"net_amount\x18\x06 \x01(\tR\tnetAmount\"\xc0\x01\n" +
 	"\x0fGetSyncTasksReq\x12\x17\n" +
 	"\asite_id\x18\x01 \x01(\x05R\x06siteId\x12\x1b\n" +
 	"\tsite_code\x18\x02 \x01(\tR\bsiteCode\x12\x1a\n" +
@@ -3380,7 +3177,7 @@ const file_backend_game_v1_game_proto_rawDesc = "" +
 	"created_at\x18\x12 \x01(\tR\tcreatedAt\x12\x1d\n" +
 	"\n" +
 	"updated_at\x18\x13 \x01(\tR\tupdatedAt\x12!\n" +
-	"\fcompleted_at\x18\x14 \x01(\tR\vcompletedAt2\x87\a\n" +
+	"\fcompleted_at\x18\x14 \x01(\tR\vcompletedAt2\xac\x06\n" +
 	"\x04Game\x122\n" +
 	"\bGetGames\x12\x11.game.GetGamesReq\x1a\x11.game.GetGamesRes\"\x00\x12;\n" +
 	"\vUpdateGames\x12\x14.game.UpdateGamesReq\x1a\x14.game.UpdateGamesRes\"\x00\x12D\n" +
@@ -3392,8 +3189,7 @@ const file_backend_game_v1_game_proto_rawDesc = "" +
 	"\x0fGetUserBetStats\x12\x18.game.GetUserBetStatsReq\x1a\x18.game.GetUserBetStatsRes\"\x00\x12M\n" +
 	"\x11GetUserBetSummary\x12\x1a.game.GetUserBetSummaryReq\x1a\x1a.game.GetUserBetSummaryRes\"\x00\x12b\n" +
 	"\x18GetUserBetIncrementBatch\x12!.game.GetUserBetIncrementBatchReq\x1a!.game.GetUserBetIncrementBatchRes\"\x00\x12>\n" +
-	"\fGetSyncTasks\x12\x15.game.GetSyncTasksReq\x1a\x15.game.GetSyncTasksRes\"\x00\x12Y\n" +
-	"\x15GetAgentDailyBetStats\x12\x1e.game.GetAgentDailyBetStatsReq\x1a\x1e.game.GetAgentDailyBetStatsRes\"\x00B%Z#jh_game_service/api/backend/game/v1b\x06proto3"
+	"\fGetSyncTasks\x12\x15.game.GetSyncTasksReq\x1a\x15.game.GetSyncTasksRes\"\x00B%Z#jh_game_service/api/backend/game/v1b\x06proto3"
 
 var (
 	file_backend_game_v1_game_proto_rawDescOnce sync.Once
@@ -3407,7 +3203,7 @@ func file_backend_game_v1_game_proto_rawDescGZIP() []byte {
 	return file_backend_game_v1_game_proto_rawDescData
 }
 
-var file_backend_game_v1_game_proto_msgTypes = make([]protoimpl.MessageInfo, 38)
+var file_backend_game_v1_game_proto_msgTypes = make([]protoimpl.MessageInfo, 35)
 var file_backend_game_v1_game_proto_goTypes = []any{
 	(*GetUserBetSummaryReq)(nil),        // 0: game.GetUserBetSummaryReq
 	(*GetUserBetSummaryRes)(nil),        // 1: game.GetUserBetSummaryRes
@@ -3440,19 +3236,16 @@ var file_backend_game_v1_game_proto_goTypes = []any{
 	(*GetUserBetStatsRes)(nil),          // 28: game.GetUserBetStatsRes
 	(*UserBetStats)(nil),                // 29: game.UserBetStats
 	(*PlatformStats)(nil),               // 30: game.PlatformStats
-	(*GetAgentDailyBetStatsReq)(nil),    // 31: game.GetAgentDailyBetStatsReq
-	(*AgentDailyBetStatItem)(nil),       // 32: game.AgentDailyBetStatItem
-	(*GetAgentDailyBetStatsRes)(nil),    // 33: game.GetAgentDailyBetStatsRes
-	(*GetSyncTasksReq)(nil),             // 34: game.GetSyncTasksReq
-	(*GetSyncTasksRes)(nil),             // 35: game.GetSyncTasksRes
-	(*SyncTask)(nil),                    // 36: game.SyncTask
-	nil,                                 // 37: game.GetGamesRes.DataEntry
+	(*GetSyncTasksReq)(nil),             // 31: game.GetSyncTasksReq
+	(*GetSyncTasksRes)(nil),             // 32: game.GetSyncTasksRes
+	(*SyncTask)(nil),                    // 33: game.SyncTask
+	nil,                                 // 34: game.GetGamesRes.DataEntry
 }
 var file_backend_game_v1_game_proto_depIdxs = []int32{
 	2,  // 0: game.GetUserBetSummaryRes.summary:type_name -> game.UserBetSummary
 	4,  // 1: game.GetUserBetIncrementBatchReq.cursors:type_name -> game.UserBetCursorItem
 	6,  // 2: game.GetUserBetIncrementBatchRes.list:type_name -> game.UserBetIncrementItem
-	37, // 3: game.GetGamesRes.data:type_name -> game.GetGamesRes.DataEntry
+	34, // 3: game.GetGamesRes.data:type_name -> game.GetGamesRes.DataEntry
 	10, // 4: game.GameTypeList.games:type_name -> game.GameInfo
 	12, // 5: game.UpdateGamesReq.data:type_name -> game.GameUpdateInfo
 	16, // 6: game.GetGameRecordsRes.data:type_name -> game.GameRecord
@@ -3460,38 +3253,35 @@ var file_backend_game_v1_game_proto_depIdxs = []int32{
 	26, // 8: game.GetGamePlatformsRes.platforms:type_name -> game.GamePlatform
 	29, // 9: game.GetUserBetStatsRes.stats:type_name -> game.UserBetStats
 	30, // 10: game.UserBetStats.platform_stats:type_name -> game.PlatformStats
-	32, // 11: game.GetAgentDailyBetStatsRes.list:type_name -> game.AgentDailyBetStatItem
-	36, // 12: game.GetSyncTasksRes.list:type_name -> game.SyncTask
-	9,  // 13: game.GetGamesRes.DataEntry.value:type_name -> game.GameTypeList
-	7,  // 14: game.Game.GetGames:input_type -> game.GetGamesReq
-	11, // 15: game.Game.UpdateGames:input_type -> game.UpdateGamesReq
-	14, // 16: game.Game.GetGameRecords:input_type -> game.GetGameRecordsReq
-	17, // 17: game.Game.SupplementBetRecords:input_type -> game.SupplementBetRecordsReq
-	19, // 18: game.Game.GetGameList:input_type -> game.GetGameListReq
-	22, // 19: game.Game.UpdateGameListItem:input_type -> game.UpdateGameListItemReq
-	24, // 20: game.Game.GetGamePlatforms:input_type -> game.GetGamePlatformsReq
-	27, // 21: game.Game.GetUserBetStats:input_type -> game.GetUserBetStatsReq
-	0,  // 22: game.Game.GetUserBetSummary:input_type -> game.GetUserBetSummaryReq
-	3,  // 23: game.Game.GetUserBetIncrementBatch:input_type -> game.GetUserBetIncrementBatchReq
-	34, // 24: game.Game.GetSyncTasks:input_type -> game.GetSyncTasksReq
-	31, // 25: game.Game.GetAgentDailyBetStats:input_type -> game.GetAgentDailyBetStatsReq
-	8,  // 26: game.Game.GetGames:output_type -> game.GetGamesRes
-	13, // 27: game.Game.UpdateGames:output_type -> game.UpdateGamesRes
-	15, // 28: game.Game.GetGameRecords:output_type -> game.GetGameRecordsRes
-	18, // 29: game.Game.SupplementBetRecords:output_type -> game.SupplementBetRecordsRes
-	20, // 30: game.Game.GetGameList:output_type -> game.GetGameListRes
-	23, // 31: game.Game.UpdateGameListItem:output_type -> game.UpdateGameListItemRes
-	25, // 32: game.Game.GetGamePlatforms:output_type -> game.GetGamePlatformsRes
-	28, // 33: game.Game.GetUserBetStats:output_type -> game.GetUserBetStatsRes
-	1,  // 34: game.Game.GetUserBetSummary:output_type -> game.GetUserBetSummaryRes
-	5,  // 35: game.Game.GetUserBetIncrementBatch:output_type -> game.GetUserBetIncrementBatchRes
-	35, // 36: game.Game.GetSyncTasks:output_type -> game.GetSyncTasksRes
-	33, // 37: game.Game.GetAgentDailyBetStats:output_type -> game.GetAgentDailyBetStatsRes
-	26, // [26:38] is the sub-list for method output_type
-	14, // [14:26] is the sub-list for method input_type
-	14, // [14:14] is the sub-list for extension type_name
-	14, // [14:14] is the sub-list for extension extendee
-	0,  // [0:14] is the sub-list for field type_name
+	33, // 11: game.GetSyncTasksRes.list:type_name -> game.SyncTask
+	9,  // 12: game.GetGamesRes.DataEntry.value:type_name -> game.GameTypeList
+	7,  // 13: game.Game.GetGames:input_type -> game.GetGamesReq
+	11, // 14: game.Game.UpdateGames:input_type -> game.UpdateGamesReq
+	14, // 15: game.Game.GetGameRecords:input_type -> game.GetGameRecordsReq
+	17, // 16: game.Game.SupplementBetRecords:input_type -> game.SupplementBetRecordsReq
+	19, // 17: game.Game.GetGameList:input_type -> game.GetGameListReq
+	22, // 18: game.Game.UpdateGameListItem:input_type -> game.UpdateGameListItemReq
+	24, // 19: game.Game.GetGamePlatforms:input_type -> game.GetGamePlatformsReq
+	27, // 20: game.Game.GetUserBetStats:input_type -> game.GetUserBetStatsReq
+	0,  // 21: game.Game.GetUserBetSummary:input_type -> game.GetUserBetSummaryReq
+	3,  // 22: game.Game.GetUserBetIncrementBatch:input_type -> game.GetUserBetIncrementBatchReq
+	31, // 23: game.Game.GetSyncTasks:input_type -> game.GetSyncTasksReq
+	8,  // 24: game.Game.GetGames:output_type -> game.GetGamesRes
+	13, // 25: game.Game.UpdateGames:output_type -> game.UpdateGamesRes
+	15, // 26: game.Game.GetGameRecords:output_type -> game.GetGameRecordsRes
+	18, // 27: game.Game.SupplementBetRecords:output_type -> game.SupplementBetRecordsRes
+	20, // 28: game.Game.GetGameList:output_type -> game.GetGameListRes
+	23, // 29: game.Game.UpdateGameListItem:output_type -> game.UpdateGameListItemRes
+	25, // 30: game.Game.GetGamePlatforms:output_type -> game.GetGamePlatformsRes
+	28, // 31: game.Game.GetUserBetStats:output_type -> game.GetUserBetStatsRes
+	1,  // 32: game.Game.GetUserBetSummary:output_type -> game.GetUserBetSummaryRes
+	5,  // 33: game.Game.GetUserBetIncrementBatch:output_type -> game.GetUserBetIncrementBatchRes
+	32, // 34: game.Game.GetSyncTasks:output_type -> game.GetSyncTasksRes
+	24, // [24:35] is the sub-list for method output_type
+	13, // [13:24] is the sub-list for method input_type
+	13, // [13:13] is the sub-list for extension type_name
+	13, // [13:13] is the sub-list for extension extendee
+	0,  // [0:13] is the sub-list for field type_name
 }
 
 func init() { file_backend_game_v1_game_proto_init() }
@@ -3505,7 +3295,7 @@ func file_backend_game_v1_game_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_backend_game_v1_game_proto_rawDesc), len(file_backend_game_v1_game_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   38,
+			NumMessages:   35,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

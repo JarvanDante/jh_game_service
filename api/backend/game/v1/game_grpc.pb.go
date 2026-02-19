@@ -30,7 +30,6 @@ const (
 	Game_GetUserBetSummary_FullMethodName        = "/game.Game/GetUserBetSummary"
 	Game_GetUserBetIncrementBatch_FullMethodName = "/game.Game/GetUserBetIncrementBatch"
 	Game_GetSyncTasks_FullMethodName             = "/game.Game/GetSyncTasks"
-	Game_GetAgentDailyBetStats_FullMethodName    = "/game.Game/GetAgentDailyBetStats"
 )
 
 // GameClient is the client API for Game service.
@@ -54,8 +53,6 @@ type GameClient interface {
 	GetUserBetIncrementBatch(ctx context.Context, in *GetUserBetIncrementBatchReq, opts ...grpc.CallOption) (*GetUserBetIncrementBatchRes, error)
 	// 同步任务管理
 	GetSyncTasks(ctx context.Context, in *GetSyncTasksReq, opts ...grpc.CallOption) (*GetSyncTasksRes, error)
-	// 代理日统计（供结算使用）
-	GetAgentDailyBetStats(ctx context.Context, in *GetAgentDailyBetStatsReq, opts ...grpc.CallOption) (*GetAgentDailyBetStatsRes, error)
 }
 
 type gameClient struct {
@@ -176,16 +173,6 @@ func (c *gameClient) GetSyncTasks(ctx context.Context, in *GetSyncTasksReq, opts
 	return out, nil
 }
 
-func (c *gameClient) GetAgentDailyBetStats(ctx context.Context, in *GetAgentDailyBetStatsReq, opts ...grpc.CallOption) (*GetAgentDailyBetStatsRes, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(GetAgentDailyBetStatsRes)
-	err := c.cc.Invoke(ctx, Game_GetAgentDailyBetStats_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 // GameServer is the server API for Game service.
 // All implementations must embed UnimplementedGameServer
 // for forward compatibility.
@@ -207,8 +194,6 @@ type GameServer interface {
 	GetUserBetIncrementBatch(context.Context, *GetUserBetIncrementBatchReq) (*GetUserBetIncrementBatchRes, error)
 	// 同步任务管理
 	GetSyncTasks(context.Context, *GetSyncTasksReq) (*GetSyncTasksRes, error)
-	// 代理日统计（供结算使用）
-	GetAgentDailyBetStats(context.Context, *GetAgentDailyBetStatsReq) (*GetAgentDailyBetStatsRes, error)
 	mustEmbedUnimplementedGameServer()
 }
 
@@ -251,9 +236,6 @@ func (UnimplementedGameServer) GetUserBetIncrementBatch(context.Context, *GetUse
 }
 func (UnimplementedGameServer) GetSyncTasks(context.Context, *GetSyncTasksReq) (*GetSyncTasksRes, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetSyncTasks not implemented")
-}
-func (UnimplementedGameServer) GetAgentDailyBetStats(context.Context, *GetAgentDailyBetStatsReq) (*GetAgentDailyBetStatsRes, error) {
-	return nil, status.Error(codes.Unimplemented, "method GetAgentDailyBetStats not implemented")
 }
 func (UnimplementedGameServer) mustEmbedUnimplementedGameServer() {}
 func (UnimplementedGameServer) testEmbeddedByValue()              {}
@@ -474,24 +456,6 @@ func _Game_GetSyncTasks_Handler(srv interface{}, ctx context.Context, dec func(i
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Game_GetAgentDailyBetStats_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetAgentDailyBetStatsReq)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(GameServer).GetAgentDailyBetStats(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: Game_GetAgentDailyBetStats_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(GameServer).GetAgentDailyBetStats(ctx, req.(*GetAgentDailyBetStatsReq))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 // Game_ServiceDesc is the grpc.ServiceDesc for Game service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -542,10 +506,6 @@ var Game_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetSyncTasks",
 			Handler:    _Game_GetSyncTasks_Handler,
-		},
-		{
-			MethodName: "GetAgentDailyBetStats",
-			Handler:    _Game_GetAgentDailyBetStats_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
