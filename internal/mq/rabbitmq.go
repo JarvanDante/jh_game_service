@@ -27,6 +27,7 @@ type SyncUserToGameMessage struct {
 	SiteID   int32  `json:"site_id"`
 	SiteCode string `json:"site_code"`
 	UserID   int64  `json:"user_id"`
+	AgentID  int64  `json:"agent_id"`
 	Username string `json:"username"`
 }
 
@@ -199,8 +200,8 @@ func handleSyncUserMessage(ctx context.Context, msg amqp.Delivery) error {
 		return err
 	}
 
-	g.Log().Infof(ctx, "收到同步用户消息: site_id=%d, site_code=%s, user_id=%d, username=%s",
-		syncMsg.SiteID, syncMsg.SiteCode, syncMsg.UserID, syncMsg.Username)
+	g.Log().Infof(ctx, "收到同步用户消息: site_id=%d, site_code=%s, user_id=%d, agent_id=%d, username=%s",
+		syncMsg.SiteID, syncMsg.SiteCode, syncMsg.UserID, syncMsg.AgentID, syncMsg.Username)
 
 	// 创建带站点信息的 context
 	dbGroup := fmt.Sprintf("site_%s", syncMsg.SiteCode)
@@ -217,7 +218,16 @@ func handleSyncUserMessage(ctx context.Context, msg amqp.Delivery) error {
 	}
 
 	if count > 0 {
-		g.Log().Infof(siteCtx, "用户映射已存在，跳过: user_id=%d", syncMsg.UserID)
+		// 已存在时同步更新 agent_id，保证代理归属可追踪
+		_, err = dao.UserMapping.Ctx(siteCtx).
+			Where("site_id", syncMsg.SiteID).
+			Where("user_id", syncMsg.UserID).
+			Data(g.Map{"agent_id": syncMsg.AgentID, "updated_at": gtime.Now()}).
+			Update()
+		if err != nil {
+			return fmt.Errorf("更新用户映射agent_id失败: %w", err)
+		}
+		g.Log().Infof(siteCtx, "用户映射已存在，已更新agent_id: user_id=%d, agent_id=%d", syncMsg.UserID, syncMsg.AgentID)
 		return nil
 	}
 
@@ -227,6 +237,7 @@ func handleSyncUserMessage(ctx context.Context, msg amqp.Delivery) error {
 		SiteId:    syncMsg.SiteID,
 		SiteCode:  syncMsg.SiteCode,
 		UserId:    syncMsg.UserID,
+		AgentId:   syncMsg.AgentID,
 		Username:  buildUsername,
 		CreatedAt: gtime.Now(),
 		UpdatedAt: gtime.Now(),
