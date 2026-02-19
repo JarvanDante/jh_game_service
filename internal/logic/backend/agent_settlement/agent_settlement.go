@@ -27,8 +27,8 @@ func (s *sAgentSettlement) GetAgentDailyBetStats(ctx context.Context, req *v1.Ge
 
 	query := dao.BetRecords.Ctx(ctx).
 		Where("site_id", siteId).
-		WhereGTE("DATE(bet_time)", req.StartDate).
-		WhereLTE("DATE(bet_time)", req.EndDate)
+		Where("DATE(bet_time) >= ?", req.StartDate).
+		Where("DATE(bet_time) <= ?", req.EndDate)
 	if req.AgentId > 0 {
 		query = query.Where("agent_id", req.AgentId)
 	}
