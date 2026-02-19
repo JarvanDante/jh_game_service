@@ -221,6 +221,7 @@ DIRS_TO_DELETE=(
     "internal/controller/balance"
     "internal/controller/game"
     "internal/controller/user"
+    "internal/controller/jh_game_service"
     # 如果有其他需要删除的目录，在这里添加
     # "internal/controller/other_dir"
 )
