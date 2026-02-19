@@ -16,6 +16,7 @@ type UserMapping struct {
 	SiteId    any         // 站点ID
 	SiteCode  any         // 站点code
 	Username  any         // 游戏用户名（含site前缀）
+	AgentId   any         // 代理id
 	UserId    any         // 主系统用户ID
 	CreatedAt *gtime.Time //
 	UpdatedAt *gtime.Time //

@@ -25,6 +25,7 @@ type UserMappingColumns struct {
 	SiteId    string // 站点ID
 	SiteCode  string // 站点code
 	Username  string // 游戏用户名（含site前缀）
+	AgentId   string // 代理id
 	UserId    string // 主系统用户ID
 	CreatedAt string //
 	UpdatedAt string //
@@ -36,6 +37,7 @@ var userMappingColumns = UserMappingColumns{
 	SiteId:    "site_id",
 	SiteCode:  "site_code",
 	Username:  "username",
+	AgentId:   "agent_id",
 	UserId:    "user_id",
 	CreatedAt: "created_at",
 	UpdatedAt: "updated_at",

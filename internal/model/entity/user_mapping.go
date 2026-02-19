@@ -14,6 +14,7 @@ type UserMapping struct {
 	SiteId    int         `json:"siteId"    orm:"site_id"    description:"站点ID"`
 	SiteCode  string      `json:"siteCode"  orm:"site_code"  description:"站点code"`
 	Username  string      `json:"username"  orm:"username"   description:"游戏用户名（含site前缀）"`
+	AgentId   int         `json:"agentId"   orm:"agent_id"   description:"代理id"`
 	UserId    uint64      `json:"userId"    orm:"user_id"    description:"主系统用户ID"`
 	CreatedAt *gtime.Time `json:"createdAt" orm:"created_at" description:""`
 	UpdatedAt *gtime.Time `json:"updatedAt" orm:"updated_at" description:""`
