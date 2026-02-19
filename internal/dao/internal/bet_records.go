@@ -24,12 +24,13 @@ type BetRecordsColumns struct {
 	Id           string // 主键ID
 	SiteId       string // 站点ID
 	SiteCode     string // 站点代码
+	AgentId      string // 代理id
 	UserId       string // 用户ID
 	Username     string // 用户名
 	Platform     string // 游戏平台
 	Currency     string // 币种
 	GameId       string // 游戏ID
-	GameName     string // 游戏名称
+	GameName     string //
 	GameType     string // 游戏类型
 	OrderNo      string // 订单号
 	RoundId      string // 局号/回合号
@@ -54,6 +55,7 @@ var betRecordsColumns = BetRecordsColumns{
 	Id:           "id",
 	SiteId:       "site_id",
 	SiteCode:     "site_code",
+	AgentId:      "agent_id",
 	UserId:       "user_id",
 	Username:     "username",
 	Platform:     "platform",

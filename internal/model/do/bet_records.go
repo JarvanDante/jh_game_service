@@ -15,12 +15,13 @@ type BetRecords struct {
 	Id           any         // 主键ID
 	SiteId       any         // 站点ID
 	SiteCode     any         // 站点代码
+	AgentId      any         // 代理id
 	UserId       any         // 用户ID
 	Username     any         // 用户名
 	Platform     any         // 游戏平台
 	Currency     any         // 币种
 	GameId       any         // 游戏ID
-	GameName     any         // 游戏名称
+	GameName     any         //
 	GameType     any         // 游戏类型
 	OrderNo      any         // 订单号
 	RoundId      any         // 局号/回合号

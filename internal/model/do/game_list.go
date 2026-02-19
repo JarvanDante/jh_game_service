@@ -23,7 +23,7 @@ type GameList struct {
 	Img1      any         // 游戏图片1
 	Device    any         // 设备
 	Vendor    any         // 提供方
-	Code      any         // 游戏代码
+	Code      any         //
 	Language  any         // 语言
 	Hot       any         // 热门
 	Recommend any         // 推荐

@@ -32,7 +32,7 @@ type GameListColumns struct {
 	Img1      string // 游戏图片1
 	Device    string // 设备
 	Vendor    string // 提供方
-	Code      string // 游戏代码
+	Code      string //
 	Language  string // 语言
 	Hot       string // 热门
 	Recommend string // 推荐

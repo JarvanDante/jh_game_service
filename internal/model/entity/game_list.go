@@ -21,7 +21,7 @@ type GameList struct {
 	Img1      string      `json:"img1"      orm:"img1"       description:"游戏图片1"`
 	Device    string      `json:"device"    orm:"device"     description:"设备"`
 	Vendor    string      `json:"vendor"    orm:"vendor"     description:"提供方"`
-	Code      string      `json:"code"      orm:"code"       description:"游戏代码"`
+	Code      string      `json:"code"      orm:"code"       description:""`
 	Language  string      `json:"language"  orm:"language"   description:"语言"`
 	Hot       int         `json:"hot"       orm:"hot"        description:"热门"`
 	Recommend int         `json:"recommend" orm:"recommend"  description:"推荐"`

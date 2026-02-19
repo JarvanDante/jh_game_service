@@ -13,12 +13,13 @@ type BetRecords struct {
 	Id           uint64      `json:"id"           orm:"id"             description:"主键ID"`
 	SiteId       int         `json:"siteId"       orm:"site_id"        description:"站点ID"`
 	SiteCode     string      `json:"siteCode"     orm:"site_code"      description:"站点代码"`
+	AgentId      int         `json:"agentId"      orm:"agent_id"       description:"代理id"`
 	UserId       uint64      `json:"userId"       orm:"user_id"        description:"用户ID"`
 	Username     string      `json:"username"     orm:"username"       description:"用户名"`
 	Platform     string      `json:"platform"     orm:"platform"       description:"游戏平台"`
 	Currency     string      `json:"currency"     orm:"currency"       description:"币种"`
 	GameId       int         `json:"gameId"       orm:"game_id"        description:"游戏ID"`
-	GameName     string      `json:"gameName"     orm:"game_name"      description:"游戏名称"`
+	GameName     string      `json:"gameName"     orm:"game_name"      description:""`
 	GameType     string      `json:"gameType"     orm:"game_type"      description:"游戏类型"`
 	OrderNo      string      `json:"orderNo"      orm:"order_no"       description:"订单号"`
 	RoundId      string      `json:"roundId"      orm:"round_id"       description:"局号/回合号"`
