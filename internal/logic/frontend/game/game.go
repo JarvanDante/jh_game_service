@@ -442,11 +442,12 @@ func (s *sGame) GetFavoriteGameList(ctx context.Context, req *v1.GetFavoriteGame
 	var rows []struct {
 		Platform string `json:"platform"`
 		GameCode string `json:"game_code"`
+		GameId   int32  `json:"game_id"`
 	}
 	err := dao.UserGameFavorite.Ctx(ctx).
 		Where("site_id", siteId).
 		Where("user_id", userId).
-		Fields("platform, game_code").
+		Fields("platform, game_code, game_id").
 		Order("id DESC").
 		Scan(&rows)
 	if err != nil {
@@ -459,10 +460,15 @@ func (s *sGame) GetFavoriteGameList(ctx context.Context, req *v1.GetFavoriteGame
 	platformSet := map[string]struct{}{}
 	codeSet := map[string]struct{}{}
 	favMap := map[string]bool{}
+	favGameIDMap := map[string]int32{}
 	for _, r := range rows {
+		key := r.Platform + "|" + r.GameCode
 		platformSet[r.Platform] = struct{}{}
 		codeSet[r.GameCode] = struct{}{}
-		favMap[r.Platform+"|"+r.GameCode] = true
+		favMap[key] = true
+		if r.GameId > 0 {
+			favGameIDMap[key] = r.GameId
+		}
 	}
 	platforms := make([]string, 0, len(platformSet))
 	codes := make([]string, 0, len(codeSet))
@@ -499,6 +505,7 @@ func (s *sGame) GetFavoriteGameList(ctx context.Context, req *v1.GetFavoriteGame
 			IsNew:      int32(game.IsNew),
 			Status:     int32(game.Status),
 			Sort:       int32(game.Sort),
+			GameId:     favGameIDMap[game.Platform+"|"+game.Code],
 			IsFavorite: 1,
 		}
 		list = append(list, item)
