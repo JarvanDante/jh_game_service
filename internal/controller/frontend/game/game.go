@@ -32,6 +32,19 @@ func (*Controller) GetGameList(ctx context.Context, req *v1.GetGameListReq) (res
 	return frontend.Game().GetGameList(ctx, req)
 }
 
+// ToggleFavoriteGame 收藏/取消收藏游戏
+func (*Controller) ToggleFavoriteGame(ctx context.Context, req *v1.ToggleFavoriteGameReq) (res *v1.ToggleFavoriteGameRes, err error) {
+	return frontend.Game().ToggleFavoriteGame(ctx, req)
+}
+
+// GetFavoriteGameList 获取我的收藏游戏列表
+func (*Controller) GetFavoriteGameList(ctx context.Context, req *v1.GetFavoriteGameListReq) (res *v1.GetFavoriteGameListRes, err error) {
+	if req == nil {
+		req = &v1.GetFavoriteGameListReq{}
+	}
+	return frontend.Game().GetFavoriteGameList(ctx, req)
+}
+
 // GetGameBalance 获取游戏余额
 func (*Controller) GetGameBalance(ctx context.Context, req *v1.GetGameBalanceReq) (res *v1.GetGameBalanceRes, err error) {
 	return frontend.Game().GetGameBalance(ctx, req)

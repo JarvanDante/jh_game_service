@@ -8,6 +8,8 @@ service Game {
     rpc RedirectToGame(RedirectToGameReq) returns (RedirectToGameRes) {}
     rpc GetGameCategories(GetGameCategoriesReq) returns (GetGameCategoriesRes) {}
     rpc GetGameList(GetGameListReq) returns (GetGameListRes) {}
+    rpc ToggleFavoriteGame(ToggleFavoriteGameReq) returns (ToggleFavoriteGameRes) {}
+    rpc GetFavoriteGameList(GetFavoriteGameListReq) returns (GetFavoriteGameListRes) {}
     rpc GetGameBalance(GetGameBalanceReq) returns (GetGameBalanceRes) {}
     rpc RecallGameBalance(RecallGameBalanceReq) returns (RecallGameBalanceRes) {}
     rpc GetUserBetHistory(GetUserBetHistoryReq) returns (GetUserBetHistoryRes) {}
@@ -74,6 +76,30 @@ message GameItem {
     int32 status = 13;             // 状态
     int32 sort = 14;               // 排序
     int32 game_id = 15;            // 游戏ID（从site_game表获取）
+    int32 is_favorite = 16;        // 是否收藏 0否 1是
+}
+
+message ToggleFavoriteGameReq {
+    string platform = 1;           // 平台
+    string game_code = 2;          // 游戏代码
+    int32 game_id = 3;             // 游戏ID（冗余）
+    string game_name = 4;          // 游戏名称（冗余）
+    string vendor = 5;             // 厂商（冗余）
+    string style = 6;              // 类型（冗余）
+    string game_img = 7;           // 图片（冗余）
+}
+
+message ToggleFavoriteGameRes {
+    bool success = 1;
+    string message = 2;
+    int32 is_favorite = 3;         // 最新收藏状态 0否 1是
+}
+
+message GetFavoriteGameListReq {}
+
+message GetFavoriteGameListRes {
+    repeated GameItem list = 1;
+    int32 total = 2;
 }
 
 message GetGameBalanceReq {

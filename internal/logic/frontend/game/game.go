@@ -19,6 +19,8 @@ import (
 	"jh_game_service/internal/service/frontend"
 	"strings"
 	"time"
+
+	"github.com/gogf/gf/v2/database/gdb"
 )
 
 type (
@@ -29,6 +31,15 @@ func init() {
 	frontend.RegisterGame(&sGame{})
 	// 注入获取游戏配置的函数，避免循环导入
 	platform.GetGameConfigFunc = GetGameConfigById
+}
+
+func getSiteDBByCtx(ctx context.Context) gdb.DB {
+	if dbGroup := ctx.Value("dynamic_db_group"); dbGroup != nil {
+		if groupName, ok := dbGroup.(string); ok && groupName != "" {
+			return g.DB(groupName)
+		}
+	}
+	return g.DB()
 }
 
 //RedirectToGame
@@ -315,25 +326,43 @@ func (s *sGame) GetGameList(ctx context.Context, req *v1.GetGameListReq) (*v1.Ge
 		return nil, fmt.Errorf("获取游戏列表失败: %v", err)
 	}
 
+	// 登录用户附带收藏标记
+	favoriteMap := map[string]bool{}
+	if userId, ok := middleware.GetUserIdFromContext(ctx); ok && userId > 0 {
+		var favRows []struct {
+			Platform string `json:"platform"`
+			GameCode string `json:"game_code"`
+		}
+		_ = getSiteDBByCtx(ctx).Model("user_game_favorite").
+			Where("site_id", siteId).
+			Where("user_id", userId).
+			Fields("platform, game_code").
+			Scan(&favRows)
+		for _, f := range favRows {
+			favoriteMap[f.Platform+"|"+f.GameCode] = true
+		}
+	}
+
 	// 转换为响应格式
 	list := make([]*v1.GameItem, 0, len(gameList))
 	for _, game := range gameList {
 		gameItem := &v1.GameItem{
-			Id:        int32(game.Id),
-			SiteId:    int32(game.SiteId),
-			Platform:  game.Platform,
-			Vendor:    game.Vendor,
-			Code:      game.Code,
-			Name:      game.Name,
-			Style:     game.Style,
-			Img:       game.Img,
-			Img1:      game.Img1,
-			Hot:       int32(game.Hot),
-			Recommend: int32(game.Recommend),
-			IsNew:     int32(game.IsNew),
-			Status:    int32(game.Status),
-			Sort:      int32(game.Sort),
-			GameId:    0, // 默认值
+			Id:         int32(game.Id),
+			SiteId:     int32(game.SiteId),
+			Platform:   game.Platform,
+			Vendor:     game.Vendor,
+			Code:       game.Code,
+			Name:       game.Name,
+			Style:      game.Style,
+			Img:        game.Img,
+			Img1:       game.Img1,
+			Hot:        int32(game.Hot),
+			Recommend:  int32(game.Recommend),
+			IsNew:      int32(game.IsNew),
+			Status:     int32(game.Status),
+			Sort:       int32(game.Sort),
+			GameId:     0, // 默认值
+			IsFavorite: 0,
 		}
 
 		// 通过 platform 和 site_id 查询 site_game 表获取 game_id
@@ -348,6 +377,10 @@ func (s *sGame) GetGameList(ctx context.Context, req *v1.GetGameListReq) (*v1.Ge
 			gameItem.GameId = int32(siteGame.GameId)
 		}
 
+		if favoriteMap[game.Platform+"|"+game.Code] {
+			gameItem.IsFavorite = 1
+		}
+
 		list = append(list, gameItem)
 	}
 
@@ -355,6 +388,133 @@ func (s *sGame) GetGameList(ctx context.Context, req *v1.GetGameListReq) (*v1.Ge
 		List:  list,
 		Total: int32(total),
 	}, nil
+}
+
+// ToggleFavoriteGame 收藏/取消收藏
+func (s *sGame) ToggleFavoriteGame(ctx context.Context, req *v1.ToggleFavoriteGameReq) (*v1.ToggleFavoriteGameRes, error) {
+	if req == nil || req.Platform == "" || req.GameCode == "" {
+		return &v1.ToggleFavoriteGameRes{Success: false, Message: "参数不能为空"}, nil
+	}
+
+	siteId, ok := middleware.GetSiteIdFromContext(ctx)
+	if !ok || siteId == 0 {
+		return &v1.ToggleFavoriteGameRes{Success: false, Message: "获取站点信息失败"}, nil
+	}
+	userId, ok := middleware.GetUserIdFromContext(ctx)
+	if !ok || userId == 0 {
+		return &v1.ToggleFavoriteGameRes{Success: false, Message: "请先登录"}, nil
+	}
+
+	db := getSiteDBByCtx(ctx).Model("user_game_favorite").Where("site_id", siteId).Where("user_id", userId).Where("platform", req.Platform).Where("game_code", req.GameCode)
+	count, err := db.Count()
+	if err != nil {
+		return nil, fmt.Errorf("查询收藏状态失败: %v", err)
+	}
+
+	if count > 0 {
+		_, err = db.Delete()
+		if err != nil {
+			return nil, fmt.Errorf("取消收藏失败: %v", err)
+		}
+		return &v1.ToggleFavoriteGameRes{Success: true, Message: "已取消收藏", IsFavorite: 0}, nil
+	}
+
+	_, err = getSiteDBByCtx(ctx).Model("user_game_favorite").Data(g.Map{
+		"site_id":    siteId,
+		"user_id":    userId,
+		"platform":   req.Platform,
+		"game_code":  req.GameCode,
+		"game_id":    req.GameId,
+		"game_name":  req.GameName,
+		"vendor":     req.Vendor,
+		"style":      req.Style,
+		"game_img":   req.GameImg,
+		"created_at": time.Now(),
+		"updated_at": time.Now(),
+	}).InsertIgnore()
+	if err != nil {
+		return nil, fmt.Errorf("收藏失败: %v", err)
+	}
+	return &v1.ToggleFavoriteGameRes{Success: true, Message: "已添加到收藏", IsFavorite: 1}, nil
+}
+
+// GetFavoriteGameList 获取我的收藏游戏列表
+func (s *sGame) GetFavoriteGameList(ctx context.Context, req *v1.GetFavoriteGameListReq) (*v1.GetFavoriteGameListRes, error) {
+	siteId, ok := middleware.GetSiteIdFromContext(ctx)
+	if !ok || siteId == 0 {
+		return nil, fmt.Errorf("获取站点信息失败")
+	}
+	userId, ok := middleware.GetUserIdFromContext(ctx)
+	if !ok || userId == 0 {
+		return &v1.GetFavoriteGameListRes{List: []*v1.GameItem{}, Total: 0}, nil
+	}
+
+	var rows []struct {
+		Platform string `json:"platform"`
+		GameCode string `json:"game_code"`
+	}
+	err := getSiteDBByCtx(ctx).Model("user_game_favorite").
+		Where("site_id", siteId).
+		Where("user_id", userId).
+		Fields("platform, game_code").
+		Order("id DESC").
+		Scan(&rows)
+	if err != nil {
+		return nil, fmt.Errorf("查询收藏列表失败: %v", err)
+	}
+	if len(rows) == 0 {
+		return &v1.GetFavoriteGameListRes{List: []*v1.GameItem{}, Total: 0}, nil
+	}
+
+	platformSet := map[string]struct{}{}
+	codeSet := map[string]struct{}{}
+	favMap := map[string]bool{}
+	for _, r := range rows {
+		platformSet[r.Platform] = struct{}{}
+		codeSet[r.GameCode] = struct{}{}
+		favMap[r.Platform+"|"+r.GameCode] = true
+	}
+	platforms := make([]string, 0, len(platformSet))
+	codes := make([]string, 0, len(codeSet))
+	for p := range platformSet { platforms = append(platforms, p) }
+	for c := range codeSet { codes = append(codes, c) }
+
+	var gameList []entity.GameList
+	err = dao.GameList.Ctx(ctx).
+		Where("site_id", siteId).
+		WhereIn("platform", platforms).
+		WhereIn("code", codes).
+		Where("status", 1).
+		Order("sort DESC").
+		Scan(&gameList)
+	if err != nil {
+		return nil, fmt.Errorf("查询收藏游戏失败: %v", err)
+	}
+
+	list := make([]*v1.GameItem, 0, len(gameList))
+	for _, game := range gameList {
+		if !favMap[game.Platform+"|"+game.Code] { continue }
+		item := &v1.GameItem{
+			Id:         int32(game.Id),
+			SiteId:     int32(game.SiteId),
+			Platform:   game.Platform,
+			Vendor:     game.Vendor,
+			Code:       game.Code,
+			Name:       game.Name,
+			Style:      game.Style,
+			Img:        game.Img,
+			Img1:       game.Img1,
+			Hot:        int32(game.Hot),
+			Recommend:  int32(game.Recommend),
+			IsNew:      int32(game.IsNew),
+			Status:     int32(game.Status),
+			Sort:       int32(game.Sort),
+			IsFavorite: 1,
+		}
+		list = append(list, item)
+	}
+
+	return &v1.GetFavoriteGameListRes{List: list, Total: int32(len(list))}, nil
 }
 
 //GetGameBalance
