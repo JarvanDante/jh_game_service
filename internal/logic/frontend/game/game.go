@@ -20,7 +20,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gogf/gf/v2/database/gdb"
 )
 
 type (
@@ -31,15 +30,6 @@ func init() {
 	frontend.RegisterGame(&sGame{})
 	// 注入获取游戏配置的函数，避免循环导入
 	platform.GetGameConfigFunc = GetGameConfigById
-}
-
-func getSiteDBByCtx(ctx context.Context) gdb.DB {
-	if dbGroup := ctx.Value("dynamic_db_group"); dbGroup != nil {
-		if groupName, ok := dbGroup.(string); ok && groupName != "" {
-			return g.DB(groupName)
-		}
-	}
-	return g.DB()
 }
 
 //RedirectToGame
@@ -333,7 +323,7 @@ func (s *sGame) GetGameList(ctx context.Context, req *v1.GetGameListReq) (*v1.Ge
 			Platform string `json:"platform"`
 			GameCode string `json:"game_code"`
 		}
-		_ = getSiteDBByCtx(ctx).Model("user_game_favorite").
+		_ = dao.UserGameFavorite.Ctx(ctx).
 			Where("site_id", siteId).
 			Where("user_id", userId).
 			Fields("platform, game_code").
@@ -405,7 +395,7 @@ func (s *sGame) ToggleFavoriteGame(ctx context.Context, req *v1.ToggleFavoriteGa
 		return &v1.ToggleFavoriteGameRes{Success: false, Message: "请先登录"}, nil
 	}
 
-	db := getSiteDBByCtx(ctx).Model("user_game_favorite").Where("site_id", siteId).Where("user_id", userId).Where("platform", req.Platform).Where("game_code", req.GameCode)
+	db := dao.UserGameFavorite.Ctx(ctx).Where("site_id", siteId).Where("user_id", userId).Where("platform", req.Platform).Where("game_code", req.GameCode)
 	count, err := db.Count()
 	if err != nil {
 		return nil, fmt.Errorf("查询收藏状态失败: %v", err)
@@ -419,7 +409,7 @@ func (s *sGame) ToggleFavoriteGame(ctx context.Context, req *v1.ToggleFavoriteGa
 		return &v1.ToggleFavoriteGameRes{Success: true, Message: "已取消收藏", IsFavorite: 0}, nil
 	}
 
-	_, err = getSiteDBByCtx(ctx).Model("user_game_favorite").Data(g.Map{
+	_, err = dao.UserGameFavorite.Ctx(ctx).Data(g.Map{
 		"site_id":    siteId,
 		"user_id":    userId,
 		"platform":   req.Platform,
@@ -453,7 +443,7 @@ func (s *sGame) GetFavoriteGameList(ctx context.Context, req *v1.GetFavoriteGame
 		Platform string `json:"platform"`
 		GameCode string `json:"game_code"`
 	}
-	err := getSiteDBByCtx(ctx).Model("user_game_favorite").
+	err := dao.UserGameFavorite.Ctx(ctx).
 		Where("site_id", siteId).
 		Where("user_id", userId).
 		Fields("platform, game_code").
