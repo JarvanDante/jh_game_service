@@ -406,7 +406,7 @@ func (s *sGame) ToggleFavoriteGame(ctx context.Context, req *v1.ToggleFavoriteGa
 		if err != nil {
 			return nil, fmt.Errorf("取消收藏失败: %v", err)
 		}
-		return &v1.ToggleFavoriteGameRes{Success: true, Message: "已取消收藏", IsFavorite: 0}, nil
+		return &v1.ToggleFavoriteGameRes{Success: true, Message: "Removed from favorites", IsFavorite: 0}, nil
 	}
 
 	_, err = dao.UserGameFavorite.Ctx(ctx).Data(g.Map{
@@ -425,7 +425,7 @@ func (s *sGame) ToggleFavoriteGame(ctx context.Context, req *v1.ToggleFavoriteGa
 	if err != nil {
 		return nil, fmt.Errorf("收藏失败: %v", err)
 	}
-	return &v1.ToggleFavoriteGameRes{Success: true, Message: "已添加到收藏", IsFavorite: 1}, nil
+	return &v1.ToggleFavoriteGameRes{Success: true, Message: "Added to favorites", IsFavorite: 1}, nil
 }
 
 // GetFavoriteGameList 获取我的收藏游戏列表
