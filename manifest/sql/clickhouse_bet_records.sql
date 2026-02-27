@@ -30,6 +30,9 @@ PRIMARY KEY (site_id, order_no)
 TTL bet_time + INTERVAL 1 YEAR
 SETTINGS index_granularity = 8192;
 
+#添加agent_id字段
+ALTER TABLE game_analytics.bet_records ADD COLUMN IF NOT EXISTS agent_id UInt32 DEFAULT 0 AFTER site_code;
+
 -- 字段说明：
 -- site_id: 站点ID
 -- site_code: 站点代码
