@@ -34,17 +34,21 @@ spec:
       port: 4317
       targetPort: 4317
 ---
-apiVersion: v1
-kind: Endpoints
+apiVersion: discovery.k8s.io/v1
+kind: EndpointSlice
 metadata:
   name: jaeger
   namespace: jh-test
-subsets:
+  labels:
+    kubernetes.io/service-name: jaeger
+addressType: IPv4
+ports:
+  - name: otlp-grpc
+    port: 4317
+    protocol: TCP
+endpoints:
   - addresses:
-      - ip: 192.168.65.254
-    ports:
-      - name: otlp-grpc
-        port: 4317
+      - 192.168.65.254
 ---
 apiVersion: v1
 kind: Service
@@ -66,17 +70,21 @@ spec:
       port: 9000
       targetPort: 9081
 ---
-apiVersion: v1
-kind: Endpoints
+apiVersion: discovery.k8s.io/v1
+kind: EndpointSlice
 metadata:
   name: clickhouse
   namespace: jh-test
-subsets:
+  labels:
+    kubernetes.io/service-name: clickhouse
+addressType: IPv4
+ports:
+  - name: native
+    port: 9081
+    protocol: TCP
+endpoints:
   - addresses:
-      - ip: 192.168.65.254
-    ports:
-      - name: native
-        port: 9081
+      - 192.168.65.254
 ---
 apiVersion: v1
 kind: Service
@@ -114,17 +122,21 @@ spec:
       port: 4317
       targetPort: 4317
 ---
-apiVersion: v1
-kind: Endpoints
+apiVersion: discovery.k8s.io/v1
+kind: EndpointSlice
 metadata:
   name: jaeger
   namespace: jh-prod
-subsets:
+  labels:
+    kubernetes.io/service-name: jaeger
+addressType: IPv4
+ports:
+  - name: otlp-grpc
+    port: 4317
+    protocol: TCP
+endpoints:
   - addresses:
-      - ip: 192.168.65.254
-    ports:
-      - name: otlp-grpc
-        port: 4317
+      - 192.168.65.254
 ---
 apiVersion: v1
 kind: Service
@@ -146,14 +158,18 @@ spec:
       port: 9000
       targetPort: 9081
 ---
-apiVersion: v1
-kind: Endpoints
+apiVersion: discovery.k8s.io/v1
+kind: EndpointSlice
 metadata:
   name: clickhouse
   namespace: jh-prod
-subsets:
+  labels:
+    kubernetes.io/service-name: clickhouse
+addressType: IPv4
+ports:
+  - name: native
+    port: 9081
+    protocol: TCP
+endpoints:
   - addresses:
-      - ip: 192.168.65.254
-    ports:
-      - name: native
-        port: 9081
+      - 192.168.65.254
