@@ -6,12 +6,13 @@ import (
 
 	"github.com/gogf/gf/v2/frame/g"
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/exporters/jaeger"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/sdk/resource"
 	tracesdk "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 	"go.opentelemetry.io/otel/trace"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 // StartSpan 开始一个新的span
@@ -37,15 +38,18 @@ func InitJaeger() (func(), error) {
 		return func() {}, nil
 	}
 
-	endpoint := g.Cfg().MustGet(ctx, "jaeger.endpoint", "http://jaeger:14268/api/traces").String()
+	endpoint := g.Cfg().MustGet(ctx, "jaeger.endpoint", "jaeger:4317").String()
 	serviceName := g.Cfg().MustGet(ctx, "jaeger.serviceName", "jh_game_service").String()
 	serviceVersion := g.Cfg().MustGet(ctx, "jaeger.serviceVersion", "1.0.0").String()
 	environment := g.Cfg().MustGet(ctx, "jaeger.environment", "development").String()
 
 	g.Log().Infof(ctx, "初始化Jaeger追踪: endpoint=%s, service=%s", endpoint, serviceName)
 
-	// 创建Jaeger导出器
-	exp, err := jaeger.New(jaeger.WithCollectorEndpoint(jaeger.WithEndpoint(endpoint)))
+	exp, err := otlptracegrpc.New(
+		ctx,
+		otlptracegrpc.WithEndpoint(endpoint),
+		otlptracegrpc.WithTLSCredentials(insecure.NewCredentials()),
+	)
 	if err != nil {
 		return nil, fmt.Errorf("创建Jaeger导出器失败: %w", err)
 	}
