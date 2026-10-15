@@ -1,0 +1,73 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jh-game-service
+  namespace: jh-test
+  labels:
+    app: jh-game-service
+    env: test
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: jh-game-service
+  template:
+    metadata:
+      labels:
+        app: jh-game-service
+        env: test
+    spec:
+      containers:
+        - name: jh-game-service
+          image: jh_game_service:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: grpc
+              containerPort: 8005
+          readinessProbe:
+            tcpSocket:
+              port: grpc
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          livenessProbe:
+            tcpSocket:
+              port: grpc
+            initialDelaySeconds: 15
+            periodSeconds: 10
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jh-game-service
+  namespace: jh-prod
+  labels:
+    app: jh-game-service
+    env: prod
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: jh-game-service
+  template:
+    metadata:
+      labels:
+        app: jh-game-service
+        env: prod
+    spec:
+      containers:
+        - name: jh-game-service
+          image: jh_game_service:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: grpc
+              containerPort: 8005
+          readinessProbe:
+            tcpSocket:
+              port: grpc
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          livenessProbe:
+            tcpSocket:
+              port: grpc
+            initialDelaySeconds: 15
+            periodSeconds: 10

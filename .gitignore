@@ -12,6 +12,8 @@ log/
 composer.lock
 gitpush.sh
 pkg/
+/jh_game_service
+/jh_game_service.orig
 bin/
 cbuild
 */.DS_Store

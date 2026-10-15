@@ -1,0 +1,85 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: jh-game-service
+  namespace: jh-test
+  labels:
+    app: jh-game-service
+    env: test
+spec:
+  selector:
+    app: jh-game-service
+  ports:
+    - name: grpc
+      port: 8005
+      targetPort: grpc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: consul
+  namespace: jh-test
+spec:
+  type: ExternalName
+  externalName: host.docker.internal
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: jaeger
+  namespace: jh-test
+spec:
+  type: ExternalName
+  externalName: host.docker.internal
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rabbitmq
+  namespace: jh-test
+spec:
+  type: ExternalName
+  externalName: host.docker.internal
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: jh-game-service
+  namespace: jh-prod
+  labels:
+    app: jh-game-service
+    env: prod
+spec:
+  selector:
+    app: jh-game-service
+  ports:
+    - name: grpc
+      port: 8005
+      targetPort: grpc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: consul
+  namespace: jh-prod
+spec:
+  type: ExternalName
+  externalName: host.docker.internal
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: jaeger
+  namespace: jh-prod
+spec:
+  type: ExternalName
+  externalName: host.docker.internal
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rabbitmq
+  namespace: jh-prod
+spec:
+  type: ExternalName
+  externalName: host.docker.internal
