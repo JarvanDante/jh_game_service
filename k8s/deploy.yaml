@@ -71,3 +71,78 @@ spec:
               port: grpc
             initialDelaySeconds: 15
             periodSeconds: 10
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jh-game-outbox-relay
+  namespace: jh-prod
+  labels:
+    app: jh-game-outbox-relay
+    env: prod
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: jh-game-outbox-relay
+  template:
+    metadata:
+      labels:
+        app: jh-game-outbox-relay
+        env: prod
+    spec:
+      containers:
+        - name: outbox-relay
+          image: jh_game_service:latest
+          imagePullPolicy: IfNotPresent
+          command: ["/app/jh_game_service", "outbox-relay"]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jh-game-mq-consumer
+  namespace: jh-prod
+  labels:
+    app: jh-game-mq-consumer
+    env: prod
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: jh-game-mq-consumer
+  template:
+    metadata:
+      labels:
+        app: jh-game-mq-consumer
+        env: prod
+    spec:
+      containers:
+        - name: mq-consumer
+          image: jh_game_service:latest
+          imagePullPolicy: IfNotPresent
+          command: ["/app/jh_game_service", "mq-consumer"]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jh-game-clickhouse-sync
+  namespace: jh-prod
+  labels:
+    app: jh-game-clickhouse-sync
+    env: prod
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: jh-game-clickhouse-sync
+  template:
+    metadata:
+      labels:
+        app: jh-game-clickhouse-sync
+        env: prod
+    spec:
+      containers:
+        - name: clickhouse-sync
+          image: jh_game_service:latest
+          imagePullPolicy: IfNotPresent
+          command: ["/app/jh_game_service", "clickhouse-sync"]
