@@ -708,6 +708,12 @@ func (s *sGame) UpdateGameListItem(ctx context.Context, req *v1.UpdateGameListIt
 	if req.ClearCover == 1 {
 		updateData["cover_url"] = ""
 	} else if coverUrl := strings.TrimSpace(req.CoverUrl); coverUrl != "" {
+		if err := validateCoverURL(coverUrl, coverURLAllowedPrefixes(ctx)); err != nil {
+			return &v1.UpdateGameListItemRes{
+				Success: false,
+				Message: err.Error(),
+			}, nil
+		}
 		updateData["cover_url"] = coverUrl
 	}
 
