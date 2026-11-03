@@ -33,4 +33,5 @@ type GameList struct {
 	CreatedAt *gtime.Time `json:"createdAt" orm:"created_at" description:"新增时间"`
 	UpdatedAt *gtime.Time `json:"updatedAt" orm:"updated_at" description:"更新时间"`
 	GameId    int         `json:"gameId"    orm:"game_id"    description:""`
+	CoverUrl  string      `json:"coverUrl"  orm:"cover_url"  description:"自有封面地址（后台上传，三方同步不覆盖）"`
 }

@@ -236,6 +236,7 @@ message GameListItem {
     int32 like_num = 19;                   // 点赞数
     string created_at = 20;                // 创建时间
     string updated_at = 21;                // 更新时间
+    string cover_url = 22;                 // 自有封面原始地址（空=未设置；img/img1 已按自有封面优先返回）
 }
 
 // 更新游戏列表项请求
@@ -248,6 +249,8 @@ message UpdateGameListItemReq {
     int32 is_new = 6;                      // 是否新游戏（可选）-1=不修改 0=否 1=是
     int32 status = 7;                      // 状态（可选）-1=不修改 0=禁用 1=启用
     int32 sort = 8;                        // 排序（可选）-1=不修改
+    string cover_url = 9;                  // 自有封面地址（可选，非空则写入 cover_url，不改三方 img/img1）
+    int32 clear_cover = 10;                // 1=清空自有封面，恢复使用三方图片
 }
 
 // 更新游戏列表项响应

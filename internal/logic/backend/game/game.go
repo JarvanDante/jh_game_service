@@ -612,8 +612,9 @@ func (s *sGame) GetGameList(ctx context.Context, req *v1.GetGameListReq) (*v1.Ge
 			Name:      game.Name,
 			AliasName: game.AliasName,
 			Style:     game.Style,
-			Img:       game.Img,
-			Img1:      game.Img1,
+			Img:       effectiveImg(game.CoverUrl, game.Img),
+			Img1:      effectiveImg(game.CoverUrl, game.Img1),
+			CoverUrl:  game.CoverUrl,
 			Language:  game.Language,
 			Device:    game.Device,
 			Currency:  "", // 数据库中没有此字段
@@ -702,6 +703,12 @@ func (s *sGame) UpdateGameListItem(ctx context.Context, req *v1.UpdateGameListIt
 	}
 	if req.Sort >= 0 {
 		updateData["sort"] = req.Sort
+	}
+	// 自有封面单独存 cover_url，三方 img/img1 保留作兜底
+	if req.ClearCover == 1 {
+		updateData["cover_url"] = ""
+	} else if coverUrl := strings.TrimSpace(req.CoverUrl); coverUrl != "" {
+		updateData["cover_url"] = coverUrl
 	}
 
 	// 如果没有要更新的字段
@@ -1399,4 +1406,12 @@ func (s *sGame) GetSyncTasks(ctx context.Context, req *v1.GetSyncTasksReq) (*v1.
 		Page:  req.Page,
 		Size:  req.Size,
 	}, nil
+}
+
+// effectiveImg 有自有封面时优先返回自有封面，否则返回三方图片。
+func effectiveImg(coverUrl, thirdParty string) string {
+	if c := strings.TrimSpace(coverUrl); c != "" {
+		return c
+	}
+	return thirdParty
 }

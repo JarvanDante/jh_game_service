@@ -35,4 +35,5 @@ type GameList struct {
 	CreatedAt *gtime.Time // 新增时间
 	UpdatedAt *gtime.Time // 更新时间
 	GameId    any         //
+	CoverUrl  any         // 自有封面地址（后台上传，三方同步不覆盖）
 }

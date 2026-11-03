@@ -19,7 +19,6 @@ import (
 	"jh_game_service/internal/service/frontend"
 	"strings"
 	"time"
-
 )
 
 type (
@@ -344,8 +343,9 @@ func (s *sGame) GetGameList(ctx context.Context, req *v1.GetGameListReq) (*v1.Ge
 			Code:       game.Code,
 			Name:       game.Name,
 			Style:      game.Style,
-			Img:        game.Img,
-			Img1:       game.Img1,
+			Img:        effectiveImg(game.CoverUrl, game.Img),
+			Img1:       effectiveImg(game.CoverUrl, game.Img1),
+			CoverUrl:   game.CoverUrl,
 			Hot:        int32(game.Hot),
 			Recommend:  int32(game.Recommend),
 			IsNew:      int32(game.IsNew),
@@ -472,8 +472,12 @@ func (s *sGame) GetFavoriteGameList(ctx context.Context, req *v1.GetFavoriteGame
 	}
 	platforms := make([]string, 0, len(platformSet))
 	codes := make([]string, 0, len(codeSet))
-	for p := range platformSet { platforms = append(platforms, p) }
-	for c := range codeSet { codes = append(codes, c) }
+	for p := range platformSet {
+		platforms = append(platforms, p)
+	}
+	for c := range codeSet {
+		codes = append(codes, c)
+	}
 
 	var gameList []entity.GameList
 	err = dao.GameList.Ctx(ctx).
@@ -489,7 +493,9 @@ func (s *sGame) GetFavoriteGameList(ctx context.Context, req *v1.GetFavoriteGame
 
 	list := make([]*v1.GameItem, 0, len(gameList))
 	for _, game := range gameList {
-		if !favMap[game.Platform+"|"+game.Code] { continue }
+		if !favMap[game.Platform+"|"+game.Code] {
+			continue
+		}
 		item := &v1.GameItem{
 			Id:         int32(game.Id),
 			SiteId:     int32(game.SiteId),
@@ -498,8 +504,9 @@ func (s *sGame) GetFavoriteGameList(ctx context.Context, req *v1.GetFavoriteGame
 			Code:       game.Code,
 			Name:       game.Name,
 			Style:      game.Style,
-			Img:        game.Img,
-			Img1:       game.Img1,
+			Img:        effectiveImg(game.CoverUrl, game.Img),
+			Img1:       effectiveImg(game.CoverUrl, game.Img1),
+			CoverUrl:   game.CoverUrl,
 			Hot:        int32(game.Hot),
 			Recommend:  int32(game.Recommend),
 			IsNew:      int32(game.IsNew),
@@ -940,4 +947,12 @@ func (s *sGame) getLastRebateTimeFromBalance(ctx context.Context, siteId int, us
 	}
 
 	return strings.TrimSpace(res.List[0].GetTime()), nil
+}
+
+// effectiveImg 有自有封面时优先返回自有封面，否则返回三方图片。
+func effectiveImg(coverUrl, thirdParty string) string {
+	if c := strings.TrimSpace(coverUrl); c != "" {
+		return c
+	}
+	return thirdParty
 }

@@ -44,6 +44,7 @@ type GameListColumns struct {
 	CreatedAt string // 新增时间
 	UpdatedAt string // 更新时间
 	GameId    string //
+	CoverUrl  string // 自有封面地址（后台上传，三方同步不覆盖）
 }
 
 // gameListColumns holds the columns for the table game_list.
@@ -71,6 +72,7 @@ var gameListColumns = GameListColumns{
 	CreatedAt: "created_at",
 	UpdatedAt: "updated_at",
 	GameId:    "game_id",
+	CoverUrl:  "cover_url",
 }
 
 // NewGameListDao creates and returns a new DAO object for table data access.

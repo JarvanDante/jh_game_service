@@ -1653,6 +1653,7 @@ type GameListItem struct {
 	LikeNum       int32                  `protobuf:"varint,19,opt,name=like_num,json=likeNum,proto3" json:"like_num,omitempty"`      // 点赞数
 	CreatedAt     string                 `protobuf:"bytes,20,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"` // 创建时间
 	UpdatedAt     string                 `protobuf:"bytes,21,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"` // 更新时间
+	CoverUrl      string                 `protobuf:"bytes,22,opt,name=cover_url,json=coverUrl,proto3" json:"cover_url,omitempty"`    // 自有封面原始地址（空=未设置；img/img1 已按自有封面优先返回）
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1834,17 +1835,26 @@ func (x *GameListItem) GetUpdatedAt() string {
 	return ""
 }
 
+func (x *GameListItem) GetCoverUrl() string {
+	if x != nil {
+		return x.CoverUrl
+	}
+	return ""
+}
+
 // 更新游戏列表项请求
 type UpdateGameListItemReq struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	SiteId        int32                  `protobuf:"varint,1,opt,name=site_id,json=siteId,proto3" json:"site_id,omitempty"`         // 站点ID
-	Id            int32                  `protobuf:"varint,2,opt,name=id,proto3" json:"id,omitempty"`                               // 游戏ID
-	AliasName     string                 `protobuf:"bytes,3,opt,name=alias_name,json=aliasName,proto3" json:"alias_name,omitempty"` // 别名（可选）
-	Hot           int32                  `protobuf:"varint,4,opt,name=hot,proto3" json:"hot,omitempty"`                             // 是否热门（可选）-1=不修改 0=否 1=是
-	Recommend     int32                  `protobuf:"varint,5,opt,name=recommend,proto3" json:"recommend,omitempty"`                 // 是否推荐（可选）-1=不修改 0=否 1=是
-	IsNew         int32                  `protobuf:"varint,6,opt,name=is_new,json=isNew,proto3" json:"is_new,omitempty"`            // 是否新游戏（可选）-1=不修改 0=否 1=是
-	Status        int32                  `protobuf:"varint,7,opt,name=status,proto3" json:"status,omitempty"`                       // 状态（可选）-1=不修改 0=禁用 1=启用
-	Sort          int32                  `protobuf:"varint,8,opt,name=sort,proto3" json:"sort,omitempty"`                           // 排序（可选）-1=不修改
+	SiteId        int32                  `protobuf:"varint,1,opt,name=site_id,json=siteId,proto3" json:"site_id,omitempty"`              // 站点ID
+	Id            int32                  `protobuf:"varint,2,opt,name=id,proto3" json:"id,omitempty"`                                    // 游戏ID
+	AliasName     string                 `protobuf:"bytes,3,opt,name=alias_name,json=aliasName,proto3" json:"alias_name,omitempty"`      // 别名（可选）
+	Hot           int32                  `protobuf:"varint,4,opt,name=hot,proto3" json:"hot,omitempty"`                                  // 是否热门（可选）-1=不修改 0=否 1=是
+	Recommend     int32                  `protobuf:"varint,5,opt,name=recommend,proto3" json:"recommend,omitempty"`                      // 是否推荐（可选）-1=不修改 0=否 1=是
+	IsNew         int32                  `protobuf:"varint,6,opt,name=is_new,json=isNew,proto3" json:"is_new,omitempty"`                 // 是否新游戏（可选）-1=不修改 0=否 1=是
+	Status        int32                  `protobuf:"varint,7,opt,name=status,proto3" json:"status,omitempty"`                            // 状态（可选）-1=不修改 0=禁用 1=启用
+	Sort          int32                  `protobuf:"varint,8,opt,name=sort,proto3" json:"sort,omitempty"`                                // 排序（可选）-1=不修改
+	CoverUrl      string                 `protobuf:"bytes,9,opt,name=cover_url,json=coverUrl,proto3" json:"cover_url,omitempty"`         // 自有封面地址（可选，非空则写入 cover_url，不改三方 img/img1）
+	ClearCover    int32                  `protobuf:"varint,10,opt,name=clear_cover,json=clearCover,proto3" json:"clear_cover,omitempty"` // 1=清空自有封面，恢复使用三方图片
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1931,6 +1941,20 @@ func (x *UpdateGameListItemReq) GetStatus() int32 {
 func (x *UpdateGameListItemReq) GetSort() int32 {
 	if x != nil {
 		return x.Sort
+	}
+	return 0
+}
+
+func (x *UpdateGameListItemReq) GetCoverUrl() string {
+	if x != nil {
+		return x.CoverUrl
+	}
+	return ""
+}
+
+func (x *UpdateGameListItemReq) GetClearCover() int32 {
+	if x != nil {
+		return x.ClearCover
 	}
 	return 0
 }
@@ -3045,7 +3069,7 @@ const file_backend_game_v1_game_proto_rawDesc = "" +
 	"\x04list\x18\x01 \x03(\v2\x12.game.GameListItemR\x04list\x12\x14\n" +
 	"\x05total\x18\x02 \x01(\x05R\x05total\x12\x12\n" +
 	"\x04page\x18\x03 \x01(\x05R\x04page\x12\x12\n" +
-	"\x04size\x18\x04 \x01(\x05R\x04size\"\x8a\x04\n" +
+	"\x04size\x18\x04 \x01(\x05R\x04size\"\xa7\x04\n" +
 	"\fGameListItem\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\x05R\x02id\x12\x17\n" +
 	"\asite_id\x18\x02 \x01(\x05R\x06siteId\x12\x1a\n" +
@@ -3071,7 +3095,8 @@ const file_backend_game_v1_game_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\x14 \x01(\tR\tcreatedAt\x12\x1d\n" +
 	"\n" +
-	"updated_at\x18\x15 \x01(\tR\tupdatedAt\"\xd2\x01\n" +
+	"updated_at\x18\x15 \x01(\tR\tupdatedAt\x12\x1b\n" +
+	"\tcover_url\x18\x16 \x01(\tR\bcoverUrl\"\x90\x02\n" +
 	"\x15UpdateGameListItemReq\x12\x17\n" +
 	"\asite_id\x18\x01 \x01(\x05R\x06siteId\x12\x0e\n" +
 	"\x02id\x18\x02 \x01(\x05R\x02id\x12\x1d\n" +
@@ -3081,7 +3106,11 @@ const file_backend_game_v1_game_proto_rawDesc = "" +
 	"\trecommend\x18\x05 \x01(\x05R\trecommend\x12\x15\n" +
 	"\x06is_new\x18\x06 \x01(\x05R\x05isNew\x12\x16\n" +
 	"\x06status\x18\a \x01(\x05R\x06status\x12\x12\n" +
-	"\x04sort\x18\b \x01(\x05R\x04sort\"K\n" +
+	"\x04sort\x18\b \x01(\x05R\x04sort\x12\x1b\n" +
+	"\tcover_url\x18\t \x01(\tR\bcoverUrl\x12\x1f\n" +
+	"\vclear_cover\x18\n" +
+	" \x01(\x05R\n" +
+	"clearCover\"K\n" +
 	"\x15UpdateGameListItemRes\x12\x18\n" +
 	"\asuccess\x18\x01 \x01(\bR\asuccess\x12\x18\n" +
 	"\amessage\x18\x02 \x01(\tR\amessage\"B\n" +
