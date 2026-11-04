@@ -192,7 +192,7 @@ func TestUpdateGameListItem_ClearCover(t *testing.T) {
 	}
 }
 
-// 网关对未传的标志位按 0 透传（gconv 默认值），服务端会把 hot/recommend/is_new/status/sort 写成 0。
+// 服务端把 >=0 的值写入；proto 默认值 0 会写成 0。网关已把“未传”转成 -1，本用例模拟未走网关、直接传零值。
 func TestUpdateGameListItem_OmittedFlagsWrittenAsZero(t *testing.T) {
 	mock := setupCoverMock(t)
 	expectExists(mock, 1)
