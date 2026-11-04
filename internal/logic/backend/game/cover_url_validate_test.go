@@ -40,3 +40,35 @@ func TestValidateCoverURL(t *testing.T) {
 		t.Error("non-matching prefix should be rejected")
 	}
 }
+
+func TestValidateCoverURL_PrefixBypass(t *testing.T) {
+	prefixes := []string{"https://cdn.example.com/"}
+	// 用户信息 / 子域名绕过：原始字符串前缀会误判，scheme+host 匹配应拒绝
+	bypass := []string{
+		"https://cdn.example.com@evil.com/a.png",
+		"https://cdn.example.com.evil.com/a.png",
+		"https://evil.com/cdn.example.com/a.png",
+		"http://cdn.example.com/a.png", // scheme 不同
+	}
+	for _, u := range bypass {
+		if err := validateCoverURL(u, prefixes); err == nil {
+			t.Errorf("%q should be rejected by host-aware prefix match", u)
+		}
+	}
+	if err := validateCoverURL("https://cdn.example.com/uploads/a.png", prefixes); err != nil {
+		t.Errorf("same host should pass: %v", err)
+	}
+	// 带 path 的白名单
+	pathPrefixes := []string{"https://cdn.example.com/uploads/"}
+	if err := validateCoverURL("https://cdn.example.com/uploads/a.png", pathPrefixes); err != nil {
+		t.Errorf("path prefix should pass: %v", err)
+	}
+	if err := validateCoverURL("https://cdn.example.com/other/a.png", pathPrefixes); err == nil {
+		t.Error("path outside whitelist should be rejected")
+	}
+	// 无法解析为 URL 的配置项必须以 / 结尾
+	slashRequired := []string{"not-a-url-prefix"}
+	if err := validateCoverURL("not-a-url-prefix/x.png", slashRequired); err == nil {
+		t.Error("non-URL prefix without trailing slash should not match")
+	}
+}
