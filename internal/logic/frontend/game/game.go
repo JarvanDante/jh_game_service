@@ -16,6 +16,7 @@ import (
 	"jh_game_service/internal/middleware"
 	"jh_game_service/internal/model/do"
 	"jh_game_service/internal/model/entity"
+	"jh_game_service/internal/registry"
 	"jh_game_service/internal/service/frontend"
 	"strings"
 	"time"
@@ -61,9 +62,11 @@ func (s *sGame) RedirectToGame(ctx context.Context, req *v1.RedirectToGameReq) (
 		return nil, fmt.Errorf("用户名不能为空")
 	}
 
-	currency := middleware.GetCurrencyFromContext(ctx)
-	if currency == "" {
-		currency = "MMK(K)"
+	siteCodeForCurrency, _ := middleware.GetSiteCodeFromContext(ctx)
+	currency, cerr := registry.ResolveSiteCurrency(middleware.GetCurrencyFromContext(ctx), siteCodeForCurrency, int64(siteId))
+	if cerr != nil {
+		g.Log().Errorf(ctx, "确定站点币种失败: site_id=%d err=%v", siteId, cerr)
+		return nil, fmt.Errorf("站点未配置币种")
 	}
 
 	domain := middleware.GetDomainFromContext(ctx)
@@ -567,9 +570,15 @@ func (s *sGame) GetGameBalance(ctx context.Context, req *v1.GetGameBalanceReq) (
 		}, nil
 	}
 
-	currency := middleware.GetCurrencyFromContext(ctx)
-	if currency == "" {
-		currency = "MMK(K)"
+	siteCodeForCurrency, _ := middleware.GetSiteCodeFromContext(ctx)
+	currency, cerr := registry.ResolveSiteCurrency(middleware.GetCurrencyFromContext(ctx), siteCodeForCurrency, int64(siteId))
+	if cerr != nil {
+		g.Log().Errorf(ctx, "确定站点币种失败: site_id=%d err=%v", siteId, cerr)
+		return &v1.GetGameBalanceRes{
+			Balance: 0,
+			Success: false,
+			Message: "站点未配置币种",
+		}, nil
 	}
 
 	g.Log().Infof(ctx, "查询游戏余额: site_id=%d, user_id=%d, username=%s, game_id=%d",
@@ -669,9 +678,14 @@ func (s *sGame) RecallGameBalance(ctx context.Context, req *v1.RecallGameBalance
 		}, nil
 	}
 
-	currency := middleware.GetCurrencyFromContext(ctx)
-	if currency == "" {
-		currency = "MMK(K)"
+	siteCodeForCurrency, _ := middleware.GetSiteCodeFromContext(ctx)
+	currency, cerr := registry.ResolveSiteCurrency(middleware.GetCurrencyFromContext(ctx), siteCodeForCurrency, int64(siteId))
+	if cerr != nil {
+		g.Log().Errorf(ctx, "确定站点币种失败: site_id=%d err=%v", siteId, cerr)
+		return &v1.RecallGameBalanceRes{
+			Success: false,
+			Message: "站点未配置币种",
+		}, nil
 	}
 
 	g.Log().Infof(ctx, "一键回收游戏余额: site_id=%d, user_id=%d, username=%s", siteId, userId, username)
